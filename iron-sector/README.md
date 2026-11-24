@@ -52,7 +52,7 @@ On phones and tablets, the left thumb moves (push far forward to sprint) and the
   - Graphics: quality presets (low to ultra), adaptive quality that sheds detail when the frame rate drops, and field of view.
   - Controls: separate mouse, aim and controller sensitivity, invert look, and controller aim assist.
   - Audio: volume mixer.
-- **My music:** play your own songs from the main menu or the pause menu. The game's ambient music steps aside while they play; gunfire and effects keep going.
+- **Music & sound:** from the main menu or the pause menu, pick the game's own ambient score, your own songs or music app, or no music, and switch sound effects on or off. The score steps aside while your songs play.
 
 ## Code layout
 

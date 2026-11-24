@@ -78,10 +78,11 @@ async function boot() {
   requestAnimationFrame(frame);
 }
 
-// the ambient score steps aside while the player's own music (My music) is playing
+// the ambient score plays only when Music & sound is set to Game music, and steps aside while the player's own songs play
 let userMusic = false;
-const musicLevel = (v) => (userMusic ? 0 : v);
+const musicLevel = (v) => (userMusic || (window.ArcadeSound && !window.ArcadeSound.music) ? 0 : v);
 addEventListener('arcademusic', (e) => { userMusic = !!(e.detail && e.detail.playing); if (loops.music) loops.music.set(musicLevel(mode === 'game' ? 0.18 : 0.5)); });
+addEventListener('arcadesound', () => { if (G.audio) G.audio.setVolumes(); if (loops.music) loops.music.set(musicLevel(mode === 'game' ? 0.18 : 0.5)); });
 function startAmbience() {
   if (!G.audio.ready || loops.wind) return;
   loops.wind = G.audio.loop('wind'); if (loops.wind) loops.wind.set(0.18);

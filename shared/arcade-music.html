@@ -16,8 +16,9 @@
   #am-root #am-sheet { width: min(780px, 100%); max-height: calc(100vh - 16px); border-radius: 18px; border-bottom: 1px solid rgba(255, 255, 255, .12);
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto auto 1fr auto; gap: 8px 18px; padding: 12px 16px; }
   #am-root .am-head { grid-column: 1 / -1; }
-  #am-root .am-apps { grid-column: 1; grid-row: 2 / 4; align-self: start; }
-  #am-root .am-note { grid-column: 1; grid-row: 4 / 6; align-self: end; }
+  #am-root .am-sound { grid-column: 1; grid-row: 2; }
+  #am-root .am-apps { grid-column: 1; grid-row: 3 / 5; align-self: start; }
+  #am-root .am-note { grid-column: 1; grid-row: 5; align-self: end; }
   #am-root .am-files-h { grid-column: 2; grid-row: 2; }
   #am-root .am-now { grid-column: 2; grid-row: 3; align-self: start; padding: 10px; gap: 8px; }
   #am-root #am-list { grid-column: 2; grid-row: 4; min-height: 64px; max-height: none; }
@@ -75,10 +76,34 @@
 #am-root .am-app svg { width: 16px; height: 16px; fill: currentColor; flex: none; }
 #am-root .am-app:focus-visible { outline: 2px solid #8fb8ff; outline-offset: 2px; }
 #am-root .am-tip { margin: 0; font-size: 13px; color: rgba(243, 245, 251, .72); }
+#am-root .am-sound { display: flex; flex-direction: column; gap: 10px; flex: none; }
+#am-root .am-sound h3 { margin: 0; font: 700 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: .12em; text-transform: uppercase; color: rgba(243, 245, 251, .78); }
+#am-root .am-seg { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1); }
+#am-root .am-seg button { flex: 1 1 0; min-width: 0; border: 0; border-radius: 999px; padding: 9px 6px; background: none; font-weight: 700; color: rgba(243, 245, 251, .78); white-space: nowrap; }
+#am-root .am-seg button[aria-checked="true"] { background: #8fb8ff; color: #0b1020; }
+#am-root .am-gm { display: flex; align-items: center; gap: 12px; font-size: 13px; color: rgba(243, 245, 251, .72); }
+#am-root .am-gm .am-vol { margin-left: auto; }
+#am-root .am-fx { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 600; }
+#am-root .am-switch { position: relative; width: 52px; height: 30px; flex: none; padding: 0; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .2); }
+#am-root .am-switch i { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #f3f5fb; transition: transform .15s; }
+#am-root .am-switch[aria-checked="true"] { background: #8fb8ff; }
+#am-root .am-switch[aria-checked="true"] i { transform: translateX(22px); }
+/* your own music only shows when it's the music you picked */
+#am-root .am-notmine .am-apps, #am-root .am-notmine .am-files-h, #am-root .am-notmine .am-note, #am-root .am-notmine .am-now, #am-root .am-notmine #am-list, #am-root .am-notmine .am-foot { display: none; }
 </style>
 <div id="am-root" hidden role="dialog" aria-modal="true" aria-labelledby="am-title">
   <div id="am-sheet">
-    <div class="am-head"><h2 id="am-title">My music</h2><button class="am-icon" id="am-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z"/></svg></button></div>
+    <div class="am-head"><h2 id="am-title">Music &amp; sound</h2><button class="am-icon" id="am-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z"/></svg></button></div>
+    <section class="am-sound" aria-labelledby="am-sound-h">
+      <h3 id="am-sound-h">Music</h3>
+      <div class="am-seg" role="radiogroup" aria-labelledby="am-sound-h">
+        <button type="button" role="radio" data-src="game" aria-checked="true">Game music</button>
+        <button type="button" role="radio" data-src="my" aria-checked="false">My music</button>
+        <button type="button" role="radio" data-src="off" aria-checked="false">Off</button>
+      </div>
+      <div class="am-gm" id="am-gm"><span id="am-style"></span><label class="am-vol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg><input type="range" id="am-gvol" min="0" max="100" step="1" aria-label="Game music volume"></label></div>
+      <div class="am-fx"><span id="am-sfx-l">Sound effects</span><button type="button" class="am-switch" id="am-sfx" role="switch" aria-checked="true" aria-labelledby="am-sfx-l"><i></i></button></div>
+    </section>
     <section class="am-apps" aria-labelledby="am-apps-h">
       <h3 id="am-apps-h">Play from your music app</h3>
       <div class="am-appbtns" id="am-apps"></div>
@@ -112,6 +137,10 @@
   const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
   const st = Object.assign({ volume: 0.8, shuffle: false, id: null, playing: false, time: 0 }, read());
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* storage blocked */ } };
+  // Music & sound: which music plays (the game's own, yours, or none) and whether the games play their sound effects; shared by every game
+  const SKEY = "arcade-sound";
+  const scfg = Object.assign({ source: st.playing ? "my" : "game", sfx: true, vol: 0.7 }, (() => { try { return JSON.parse(localStorage.getItem(SKEY)) || {}; } catch (e) { return {}; } })());
+  const ssave = () => { try { localStorage.setItem(SKEY, JSON.stringify(scfg)); } catch (e) { /* storage blocked */ } };
   let db = null, tracks = [], cur = -1, opener = null, msgT = 0;
   // ---------- storage ----------
   const idb = (mode, fn) => dbReady.then(() => new Promise((res) => {
@@ -242,8 +271,8 @@
   }
   let lastSave = 0;
   function hook(p) {
-    p.addEventListener("play", (e) => { if (e.target !== out || quiet) return; playBtn.classList.remove("am-pulse"); if (msgEl.textContent.startsWith("Tap ▶")) say(""); st.playing = true; save(); render(); emit(); });
-    p.addEventListener("pause", (e) => { if (e.target !== out || quiet || leaving) return; if (!out.ended) { st.playing = false; st.time = out.currentTime; save(); session("ambient"); } render(); emit(); });
+    p.addEventListener("play", (e) => { if (e.target !== out || quiet) return; if (scfg.source !== "my") setSource("my"); playBtn.classList.remove("am-pulse"); if (msgEl.textContent.startsWith("Tap ▶")) say(""); st.playing = true; save(); render(); emit(); });
+    p.addEventListener("pause", (e) => { if (e.target !== out || quiet || leaving) return; if (!out.ended) { st.playing = false; st.time = out.currentTime; save(); session(mrunning ? "playback" : "ambient"); } render(); emit(); });
     p.addEventListener("ended", (e) => { if (e.target === out && !quiet) next(); });
     p.addEventListener("timeupdate", (e) => {
       if (e.target !== out || quiet) return;
@@ -296,7 +325,7 @@
   });
   $("am-apps").addEventListener("click", (e) => {
     if (!e.target.closest("a")) return;
-    wantPlay = false; if (!out.paused) out.pause(); st.playing = false; save(); session("ambient");
+    wantPlay = false; if (!out.paused) out.pause(); st.playing = false; save(); setSource("my");
   });
   // ---------- controls ----------
   playBtn.addEventListener("click", toggle); $("am-next").addEventListener("click", next); $("am-prev").addEventListener("click", prev);
@@ -351,8 +380,205 @@
     const i = tracks.findIndex((t) => t.id === st.id);
     if (i >= 0) { cur = i; media(tracks[i]); }               // nothing loads until you press play
     render();
-    if (i >= 0 && st.playing) armResume();
+    if (i >= 0 && st.playing && scfg.source === "my") armResume();
   });
+  // ======================= game music =======================
+  // Every game asks for a style and gets a soundtrack synthesised live: kick, hats, claps, bass, chord stabs, pads and leads,
+  // all made from oscillators and noise, arranged in sections (intro, groove, chords, breakdown with a riser, drop) that loop.
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  // tempo, swing, the drum kit, the bass line, chord rhythm and lead, and a four-bar loop of [bass root, chord voicing] (MIDI notes)
+  const STYLES = {
+    house:   { label: "House", bpm: 124, swing: 0.55, drums: "house", bass: "offbeat", stab: "chicago", lead: "arp",
+      prog: [[45, [57, 60, 64, 67, 71]], [41, [53, 57, 60, 64, 67]], [38, [53, 57, 60, 64]], [40, [55, 59, 62, 64]]] },
+    deep:    { label: "Deep house", bpm: 118, swing: 0.57, drums: "deep", bass: "deep", stab: "deep", lead: "pluck",
+      prog: [[38, [53, 57, 60, 64]], [46, [50, 53, 57, 60]], [43, [55, 58, 62, 65, 69]], [45, [55, 62, 64, 69]]] },
+    electro: { label: "Electro house", bpm: 126, swing: 0.5, drums: "electro", bass: "pump", stab: "pump", lead: "arp",
+      prog: [[40, [56, 59, 64, 68]], [47, [54, 59, 63, 66]], [37, [56, 61, 64, 68]], [45, [57, 61, 64, 69]]] },
+    techno:  { label: "Techno", bpm: 130, swing: 0.5, drums: "techno", bass: "rolling", stab: "dub", lead: "acid",
+      prog: [[41, [56, 60, 63, 65]], [41, [56, 60, 63, 65]], [37, [56, 60, 61, 65]], [39, [55, 58, 63, 67]]] },
+    battle:  { label: "Battle techno", bpm: 128, swing: 0.5, drums: "battle", bass: "rolling", stab: "dub", lead: "acid",
+      prog: [[40, [55, 59, 64, 67]], [36, [55, 60, 64, 67]], [45, [57, 60, 64, 69]], [47, [54, 59, 63, 66]]] },
+    xmas:    { label: "Christmas house", bpm: 124, swing: 0.54, drums: "xmas", bass: "offbeat", stab: "chicago", lead: "jingle",
+      prog: [[36, [60, 64, 67, 72]], [45, [57, 60, 64, 69]], [41, [57, 60, 65, 69]], [43, [55, 59, 62, 67]]] }
+  };
+  let mctx = null, mout, mbus, mduck, mdelay, mverb, mnoise, mstyle = null, mnextStyle = null;
+  let mwant = false, mpaused = false, mmuted = false, mrunning = false, mtimer = 0, mnext = 0, mstep = 0, mbar = 0;
+  function mbuild(c) {                                           // the mixer: drums and a ducking bus for the rest, an echo, a room, a compressor
+    mctx = c;
+    mout = c.createGain(); mout.gain.value = 0; mout.connect(c.destination);
+    const comp = c.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.2; comp.connect(mout);
+    mbus = c.createGain(); mbus.gain.value = 0.9; mbus.connect(comp);
+    mduck = c.createGain(); mduck.connect(mbus);                 // bass, chords and leads dip under every kick
+    mdelay = c.createDelay(1.5); mdelay.delayTime.value = 0.36;
+    const fb = c.createGain(), lp = c.createBiquadFilter(), wet = c.createGain();
+    fb.gain.value = 0.36; lp.type = "lowpass"; lp.frequency.value = 2600; wet.gain.value = 0.55;
+    mdelay.connect(lp); lp.connect(fb); fb.connect(mdelay); lp.connect(wet); wet.connect(mduck);
+    mverb = c.createConvolver(); const len = Math.floor(c.sampleRate * 1.6), ir = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+    mverb.buffer = ir; const vg = c.createGain(); vg.gain.value = 0.32; mverb.connect(vg); vg.connect(mbus);
+    mnoise = c.createBuffer(1, c.sampleRate, c.sampleRate); const nd = mnoise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  }
+  const env = (g, t, a, peak, d) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0002), t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
+  function osc(type, f, t, end, dest, detune = 0) { const o = mctx.createOscillator(); o.type = type; o.frequency.value = f; if (detune) o.detune.value = detune; o.connect(dest); o.start(t); o.stop(end); return o; }
+  function noise(t, end, dest) { const s = mctx.createBufferSource(); s.buffer = mnoise; s.loop = true; s.connect(dest); s.start(t, Math.random() * 0.5); s.stop(end); }
+  function filt(type, f, q = 1) { const b = mctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; return b; }
+  function kick(t, v) {
+    const g = mctx.createGain(); g.connect(mbus); env(g, t, 0.003, 0.95 * v, 0.38);
+    const o = mctx.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.09); o.connect(g); o.start(t); o.stop(t + 0.42);
+    const cg = mctx.createGain(), hp = filt("highpass", 2500); hp.connect(cg); cg.connect(mbus); env(cg, t, 0.001, 0.3 * v, 0.012); noise(t, t + 0.02, hp);
+    mduck.gain.cancelScheduledValues(t); mduck.gain.setValueAtTime(0.3, t); mduck.gain.linearRampToValueAtTime(1, t + 0.24);
+  }
+  function hat(t, open, v, tone) { const g = mctx.createGain(), hp = filt("highpass", tone); hp.connect(g); g.connect(mbus); env(g, t, 0.002, (open ? 0.2 : 0.15) * v, open ? 0.22 : 0.045); noise(t, t + (open ? 0.3 : 0.08), hp); }
+  function clap(t, v, rim) {
+    const g = mctx.createGain(); g.connect(mbus);
+    if (rim) { const bp = filt("bandpass", 1800, 3); bp.connect(g); env(g, t, 0.001, 0.38 * v, 0.05); osc("triangle", 1700, t, t + 0.06, bp); noise(t, t + 0.05, bp); return; }
+    const bp = filt("bandpass", 1300, 0.9); bp.connect(g); const s = mctx.createGain(); s.gain.value = 0.25; g.connect(s); s.connect(mverb);
+    g.gain.setValueAtTime(0.0001, t);
+    for (const k of [0, 0.011, 0.022]) { g.gain.setValueAtTime(0.45 * v, t + k); g.gain.exponentialRampToValueAtTime(0.05, t + k + 0.009); }
+    g.gain.setValueAtTime(0.42 * v, t + 0.032); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); noise(t, t + 0.25, bp);
+  }
+  function bass(t, m, len, v, kind) {
+    const g = mctx.createGain(), lp = filt("lowpass", 1, kind === "rolling" ? 8 : 5);
+    lp.frequency.setValueAtTime(kind === "deep" ? 520 : 1150, t); lp.frequency.exponentialRampToValueAtTime(kind === "deep" ? 180 : 240, t + len * 0.9);
+    lp.connect(g); g.connect(mduck);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3 * v, t + 0.006); g.gain.setTargetAtTime(0.0001, t + len * 0.7, len * 0.15);
+    const f = mtof(m); osc("sawtooth", f, t, t + len + 0.12, lp); osc(kind === "deep" ? "sine" : "square", f / 2, t, t + len + 0.12, lp);
+  }
+  function chord(t, notes, len, v, kind) {
+    const g = mctx.createGain(), lp = filt("lowpass", 1, 1.5), top = kind === "pad" ? 1800 : kind === "pump" ? 3200 : 2400;
+    if (kind === "pad") { lp.frequency.setValueAtTime(450, t); lp.frequency.linearRampToValueAtTime(top, t + len * 0.6); }
+    else { lp.frequency.setValueAtTime(top, t); lp.frequency.exponentialRampToValueAtTime(500, t + len); }
+    lp.connect(g); g.connect(mduck);
+    const send = mctx.createGain(); send.gain.value = kind === "pad" ? 0.45 : 0.22; g.connect(send); send.connect(kind === "pad" ? mverb : mdelay);
+    const peak = (kind === "pad" ? 0.06 : 0.11) * v / Math.sqrt(notes.length);
+    if (kind === "pad") { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + len * 0.4); g.gain.setTargetAtTime(0.0001, t + len * 0.85, len * 0.1); }
+    else env(g, t, 0.004, peak, len);
+    for (const m of notes) { const f = mtof(m); osc("sawtooth", f, t, t + len + 0.3, lp, -8); osc("sawtooth", f, t, t + len + 0.3, lp, 8); if (kind !== "pad") osc("square", f, t, t + len + 0.3, lp); }
+  }
+  function pluck(t, m, v, bell) {
+    const g = mctx.createGain(); g.connect(mduck); const send = mctx.createGain(); send.gain.value = 0.35; g.connect(send); send.connect(mdelay);
+    if (bell) { env(g, t, 0.002, 0.13 * v, 0.6); osc("sine", mtof(m), t, t + 0.7, g); const g2 = mctx.createGain(); g2.gain.value = 0.22; g2.connect(g); osc("sine", mtof(m) * 2.76, t, t + 0.3, g2); return; }   // glockenspiel
+    const lp = filt("lowpass", 1); lp.frequency.setValueAtTime(3400, t); lp.frequency.exponentialRampToValueAtTime(700, t + 0.18); lp.connect(g);
+    env(g, t, 0.003, 0.085 * v, 0.22); osc("square", mtof(m), t, t + 0.3, lp); osc("triangle", mtof(m) * 2, t, t + 0.3, lp);
+  }
+  function acid(t, m, len, accent, cutoff) {
+    const g = mctx.createGain(), lp = filt("lowpass", 1, 14); lp.frequency.setValueAtTime(cutoff * (accent ? 2.2 : 1.3), t); lp.frequency.exponentialRampToValueAtTime(cutoff * 0.5, t + len);
+    lp.connect(g); g.connect(mduck); const send = mctx.createGain(); send.gain.value = 0.2; g.connect(send); send.connect(mdelay);
+    env(g, t, 0.003, accent ? 0.1 : 0.065, len * 0.95); osc("sawtooth", mtof(m), t, t + len + 0.05, lp);
+  }
+  function bells(t, v) { const g = mctx.createGain(), hp = filt("highpass", 6000), pk = filt("peaking", 9500); pk.gain.value = 10; hp.connect(pk); pk.connect(g); g.connect(mbus); env(g, t, 0.001, 0.15 * v, 0.09); noise(t, t + 0.12, hp); }   // sleigh bells
+  function riser(t, dur) { const g = mctx.createGain(), bp = filt("bandpass", 400, 2); bp.frequency.setValueAtTime(400, t); bp.frequency.exponentialRampToValueAtTime(7000, t + dur); bp.connect(g); g.connect(mbus); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.11, t + dur); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.05); noise(t, t + dur + 0.1, bp); }
+  function tom(t, m) { const g = mctx.createGain(); g.connect(mbus); env(g, t, 0.003, 0.42, 0.3); const o = mctx.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(mtof(m) * 1.6, t); o.frequency.exponentialRampToValueAtTime(mtof(m), t + 0.1); o.connect(g); o.start(t); o.stop(t + 0.35); }
+  // the song: 4 bars of intro, then a 28-bar loop: groove (8), chords (8), breakdown with a riser (4), drop (8)
+  const section = (bar) => { if (bar < 4) return "intro"; const b = (bar - 4) % 28; return b < 8 ? "A" : b < 16 ? "B" : b < 20 ? "break" : "drop"; };
+  const JINGLE = [[[76, 0], [76, 4], [76, 8]], [[76, 0], [76, 4], [76, 8]], [[76, 0], [79, 4], [72, 8], [74, 12]], [[76, 0]]];   // an old public-domain sleigh-ride tune
+  function schedStep(t, s, bar) {
+    const S = STYLES[mstyle], sec = section(bar), [root, ch] = S.prog[bar % 4], sd = 60 / S.bpm / 4, d = S.drums;
+    const inLoop = bar < 4 ? bar : (bar - 4) % 28, fill = sec !== "break" && sec !== "intro" && inLoop % 8 === 7;
+    if (sec !== "break" && !(fill && s >= 14) && s % 4 === 0) kick(t, d === "deep" ? 0.85 : 1);
+    if (d === "techno" || d === "battle") {
+      if (sec !== "intro" || bar >= 2) hat(t, false, s % 4 === 2 ? 1 : 0.45, 9000);
+      if ((sec === "drop" || sec === "B") && s % 4 === 2) hat(t, true, 0.6, 7000);
+      if (sec === "drop" && s % 4 === 0) hat(t, true, 0.22, 11000);
+      if ((d === "battle" ? sec !== "intro" && sec !== "break" : sec === "drop") && (s === 4 || s === 12)) clap(t, 0.9, false);
+      if (d === "battle" && fill && s >= 12) tom(t, [45, 43, 40, 36][s - 12]);
+    } else {
+      if (s % 4 === 2 && sec !== "intro") hat(t, true, d === "deep" ? 0.5 : 0.8, 7500);
+      if (s % 2 === 1) { if (d === "xmas") bells(t, s % 4 === 3 ? 0.9 : 0.6); else hat(t, false, d === "deep" ? 0.35 : 0.5, 9000); }
+      if (d === "xmas" && s % 2 === 0 && sec !== "intro") bells(t, 0.4);
+      if (sec !== "intro" && sec !== "break" && (s === 4 || s === 12)) clap(t, d === "deep" ? 0.8 : 1, d === "deep");
+      if (d === "electro" && fill && s >= 8) clap(t, 0.35 + (s - 8) * 0.08, false);
+    }
+    if (sec === "break" && inLoop === 19 && s === 0) riser(t, sd * 16);
+    if (sec !== "break" && (sec !== "intro" || bar >= 2)) {
+      if (S.bass === "offbeat" && s % 4 === 2) bass(t, root + (s === 10 && bar % 2 ? 12 : 0), sd * 1.6, 1, "offbeat");
+      if (S.bass === "deep" && [0, 3, 6, 10, 11, 14].includes(s)) bass(t, root + (s === 11 ? 12 : s === 14 ? 7 : 0), sd * (s === 0 ? 2.5 : 1.5), s === 0 ? 1 : 0.75, "deep");
+      if (S.bass === "pump" && s % 4 === 2) bass(t, root, sd * 1.4, 1, "pump");
+      if (S.bass === "pump" && s % 4 === 3) bass(t, root + 12, sd * 0.9, 0.6, "pump");
+      if (S.bass === "rolling" && s % 4 !== 0) bass(t, root + (s % 4 === 3 && s > 8 ? 12 : 0), sd * 0.9, s % 4 === 2 ? 1 : 0.7, "rolling");
+    }
+    if (sec === "break") { if (s === 0) chord(t, ch, sd * 16, 1, "pad"); }
+    else if (sec === "B" || sec === "drop") {
+      if (S.stab === "chicago" && [0, 3, 6, 10, 13].includes(s)) chord(t, ch, sd * 1.2, s === 0 ? 1 : 0.8, "stab");
+      if (S.stab === "deep" && [2, 7, 10].includes(s)) chord(t, ch, sd * 2.5, 0.9, "stab");
+      if (S.stab === "pump" && s % 4 === 2) chord(t, ch, sd * 1.6, 1, "pump");
+      if (S.stab === "dub" && (s === 3 || s === 11 || (sec === "drop" && s === 14))) chord(t, ch.slice(0, 3), sd * 1.5, 0.9, "stab");
+    }
+    if (sec === "drop" || (sec === "B" && S.lead === "acid")) {
+      if (S.lead === "arp") pluck(t, ch[[0, 1, 2, 3, 2, 1, 3, 1][s % 8] % ch.length] + 12, s % 4 === 0 ? 1 : 0.7, false);
+      if (S.lead === "pluck" && [0, 3, 6, 8, 11, 14].includes(s)) pluck(t, ch[(s * 3 + bar) % ch.length] + 12, 0.8, false);
+      if (S.lead === "acid") { const seq = [0, 0, 12, 0, 3, 0, 15, 0, 7, 0, 12, 10, 0, 3, 0, 5], acc = [1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0]; if (seq[s] || s % 2 === 0) acid(t, root + 12 + seq[s], sd * 0.9, acc[s], 350 + 900 * (0.5 + 0.5 * Math.sin((bar * 16 + s) / 40))); }
+      if (S.lead === "jingle") { for (const [m, at] of JINGLE[bar % 4]) if (at === s) pluck(t, m, 1, true); if (s % 4 === 2) pluck(t, ch[(s / 2 + bar) % ch.length] + 24, 0.4, true); }
+    } else if (S.lead === "jingle" && (sec === "A" || sec === "B") && s % 4 === 0) pluck(t, ch[(s / 4 + bar) % ch.length] + 24, 0.5, true);   // a glockenspiel twinkle
+  }
+  function mtick() {
+    if (!mctx || !mstyle) return;
+    while (mnext < mctx.currentTime + 0.14) {
+      const S = STYLES[mstyle], sd = 60 / S.bpm / 4, sw = mstep % 2 ? (S.swing - 0.5) * 2 * sd : 0;
+      try { schedStep(mnext + sw, mstep, mbar); } catch (e) { /* one bad note never stops the beat */ }
+      mnext += sd;
+      if (++mstep >= 16) { mstep = 0; mbar++; if (mnextStyle) { mstyle = mnextStyle; mnextStyle = null; } }
+    }
+  }
+  const musicPlaying = () => mrunning;
+  function mapply() {                                            // play exactly when this game wants music, it's on, and nothing stops it
+    const run = mwant && !!mstyle && !mpaused && !mmuted && scfg.source === "game" && !document.hidden && !!mctx && mctx.state === "running";
+    if (run && !mrunning) {
+      mrunning = true; mnext = mctx.currentTime + 0.06; mstep = 0;
+      clearInterval(mtimer); mtimer = setInterval(mtick, 25); mtick();
+      mout.gain.cancelScheduledValues(mctx.currentTime); mout.gain.setTargetAtTime(0.7 * scfg.vol, mctx.currentTime, 0.08);
+    } else if (!run && mrunning) {
+      mrunning = false; clearInterval(mtimer);
+      mout.gain.cancelScheduledValues(mctx.currentTime); mout.gain.setTargetAtTime(0, mctx.currentTime, 0.05);
+    }
+    session(isPlaying() || mrunning ? "playback" : "ambient");
+  }
+  function mensure() {
+    if (!mctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; try { mbuild(new AC()); } catch (e) { mctx = null; return; } }
+    if (mctx.state !== "running") try { mctx.resume().then(mapply, () => {}); } catch (e) { /* needs a tap */ }
+    mapply();
+  }
+  // phones only start sound on a finished tap: if the music is waiting, the next one starts it
+  for (const ev of ["pointerup", "touchend", "click", "keydown"]) addEventListener(ev, () => { if (mwant && scfg.source === "game" && mctx && mctx.state !== "running") try { mctx.resume().then(mapply, () => {}); } catch (e) { /* later */ } }, true);
+  document.addEventListener("visibilitychange", mapply);
+  // ---------- the Music & sound settings in the panel ----------
+  const fireSound = () => window.dispatchEvent(new CustomEvent("arcadesound", { detail: { sfx: scfg.sfx, source: scfg.source } }));
+  function setSource(v) {
+    if (scfg.source === v) return;
+    scfg.source = v; ssave();
+    if (v !== "my" && isPlaying()) { wantPlay = false; out.pause(); }
+    mapply(); renderSound(); fireSound();
+  }
+  function renderSound() {
+    for (const b of root.querySelectorAll("[data-src]")) b.setAttribute("aria-checked", String(b.dataset.src === scfg.source));
+    $("am-sheet").classList.toggle("am-notmine", scfg.source !== "my");
+    $("am-gm").classList.toggle("am-hide", scfg.source !== "game");
+    $("am-style").textContent = mstyle ? `This game: ${STYLES[mstyle].label} · ${STYLES[mstyle].bpm} BPM` : "Every game has its own soundtrack";
+    const fx = $("am-sfx"); fx.setAttribute("aria-checked", String(scfg.sfx));
+  }
+  for (const b of root.querySelectorAll("[data-src]")) b.addEventListener("click", () => { setSource(b.dataset.src); if (b.dataset.src === "game") mensure(); });
+  $("am-sfx").addEventListener("click", () => { scfg.sfx = !scfg.sfx; ssave(); renderSound(); fireSound(); });
+  const gvol = $("am-gvol"); gvol.value = Math.round(scfg.vol * 100);
+  gvol.addEventListener("input", () => { scfg.vol = gvol.value / 100; ssave(); if (mctx && mrunning) mout.gain.setTargetAtTime(0.7 * scfg.vol, mctx.currentTime, 0.05); });
+  renderSound();
+  window.ArcadeSound = {
+    get sfx() { return scfg.sfx; }, get music() { return scfg.source === "game"; }, get source() { return scfg.source; }, get playing() { return musicPlaying(); },
+    style(name) { if (!STYLES[name]) return; if (mrunning && mstyle && name !== mstyle) mnextStyle = name; else mstyle = name; renderSound(); },
+    play() { mwant = true; mensure(); },                      // call from the tap that starts a game
+    pause(on) { mpaused = !!on; mapply(); },
+    mute(on) { mmuted = !!on; mapply(); },
+    stop() { mwant = false; mapply(); },
+    // test hook: render a few bars of a style without a speaker, to check levels
+    render(name, bars = 8, from = 4) {
+      const S = STYLES[name], OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!S || !OAC) return Promise.resolve(null);
+      const sd = 60 / S.bpm / 4, dur = bars * 16 * sd + 2, off = new OAC(2, Math.ceil(dur * 44100), 44100);
+      const keep = { mctx, mout, mbus, mduck, mdelay, mverb, mnoise, mstyle };
+      mbuild(off); mout.gain.value = 0.7 * scfg.vol; mstyle = name;
+      for (let b = 0; b < bars; b++) for (let s = 0; s < 16; s++) schedStep(0.05 + (b * 16 + s) * sd + (s % 2 ? (S.swing - 0.5) * 2 * sd : 0), s, b + from);
+      ({ mctx, mout, mbus, mduck, mdelay, mverb, mnoise, mstyle } = keep);
+      return off.startRendering();
+    }
+  };
   window.ArcadeMusic = { open, close, toggle, next, get playing() { return isPlaying(); }, get count() { return tracks.length; }, get engine() { return out === el ? "element" : "webaudio"; } };
 })();
 </script>

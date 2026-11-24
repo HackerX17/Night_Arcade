@@ -13,9 +13,17 @@ Six original browser games. They run on phones and computers with nothing to ins
 | Chopper Cave | Hold-to-climb cave flyer through a neon tunnel that changes colour every 250 m. | [`chopper-cave/`](chopper-cave/) |
 | Iron Sector | First-person wave-survival shooter with an armory, attachments and air support. | [`iron-sector/`](iron-sector/) |
 
-## My music
+## Music & sound
 
-Every game, and the home page, has a **My music** button. At the top are buttons that open your music app (on iPhone: Apple Music, Spotify or YouTube Music; on Android: YouTube Music, Spotify or Apple Music): start a song there and come back, and it keeps playing under the game. A web page can't reach the phone's music library itself, and streaming songs are copy-protected, so this is the way to use them. Below that you can add music files from your phone or computer; they play while you game and carry on when you switch to another game. The files stay in your own browser (IndexedDB) and are never uploaded. The player lives in `shared/arcade-music.html`; after editing it, run `python3 tools/sync-music.py` to copy it into every page, so each game stays one self-contained page.
+Every game, and the home page, has a **Music & sound** button. Pick the music you want:
+
+- **Game music**: each game's own soundtrack, synthesised live in the browser (no audio files): house in Sandblade Legion, deep house in Sandblade, electro house in Skyline Leap (Christmas house in its Christmas version), battle techno in Sandblade Siege, techno in Chopper Cave, and Iron Sector's own score. It starts when you start playing, pauses with the game, and has its own volume.
+- **My music**: your own songs or your music app (below).
+- **Off**: no music.
+
+**Sound effects** has its own on/off switch, so you can have music without effects or effects without music. The choices are shared by every game. Each game's mute button still silences that game, music included. The soundtrack engine lives in the same shared file as the player (`shared/arcade-music.html`).
+
+In **My music**, buttons at the top that open your music app (on iPhone: Apple Music, Spotify or YouTube Music; on Android: YouTube Music, Spotify or Apple Music): start a song there and come back, and it keeps playing under the game. A web page can't reach the phone's music library itself, and streaming songs are copy-protected, so this is the way to use them. Below that you can add music files from your phone or computer; they play while you game and carry on when you switch to another game. The files stay in your own browser (IndexedDB) and are never uploaded. The player lives in `shared/arcade-music.html`; after editing it, run `python3 tools/sync-music.py` to copy it into every page, so each game stays one self-contained page.
 
 ## Running locally
 

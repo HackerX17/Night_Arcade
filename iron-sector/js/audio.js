@@ -39,7 +39,8 @@ export class AudioEngine {
   get ready() { return !!this.ctx; }
   setVolumes() {
     if (!this.ctx) return;
-    this.master.gain.value = settings.master; this.sfx.gain.value = settings.sfx; this.ui.gain.value = settings.sfx * 0.8; this.music.gain.value = settings.music * 0.7;
+    const fx = !window.ArcadeSound || window.ArcadeSound.sfx;                         // Sound effects on/off from Music & sound
+    this.master.gain.value = settings.master; this.sfx.gain.value = fx ? settings.sfx : 0; this.ui.gain.value = fx ? settings.sfx * 0.8 : 0; this.music.gain.value = settings.music * 0.7;
   }
   _impulse(len, decay) {
     const ctx = this.ctx, n = Math.floor(ctx.sampleRate * len), b = ctx.createBuffer(2, n, ctx.sampleRate);

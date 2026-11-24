@@ -32,6 +32,6 @@ Power-ups show up often, mostly Gale speed boosts and Skyward jumps. About a thi
 - **Flow** (new): for 8 seconds every landing counts as a perfect one, so combos and Fever chain easily
 - **Echo** (new): for 10 seconds a see-through twin rides just above you and grabs the shards you'd pass under
 
-**My music** (on the menu, pause and game-over screens) plays your own songs while you ride.
+**Music & sound** (on the menu, pause and game-over screens): the game's own deep-house soundtrack, your own music, or none, and a separate switch for sound effects.
 
 Single file, no dependencies: HTML5 canvas and Web Audio.

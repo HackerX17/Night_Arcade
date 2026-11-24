@@ -8,7 +8,7 @@ A neon cave-flying game: steer a glowing helicopter through a tunnel of light fo
 - Every 250 m the cave changes colour scheme, through the same neon schemes as the other Night Arcade games.
 - Your best distance is saved on your device.
 
-The note button (and My music on the pause screen) plays your own songs or opens your music app; opening it pauses the flight.
+The note button (and Music & sound on the pause screen) picks the music: the game's own techno soundtrack, your own songs or music app, or none, with a separate switch for sound effects. Opening it pauses the flight.
 
 Open `index.html` in any browser. It plays best with the phone turned sideways.
 Single file, no dependencies.

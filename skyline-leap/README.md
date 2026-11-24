@@ -27,6 +27,6 @@ Power-ups float in the middle of the gap, so you grab them mid-leap. Each one sh
 ## Christmas version
 Pick **Christmas** on the menu (the game remembers your choice). Same game, all dressed up: snow falling, northern lights, strings of Christmas lights down both towers, wreaths and snowy window sills, a Santa hat and candy-cane headband on the ninja, baubles instead of coins, presents for power-ups, potted Christmas trees, frosty AC units with icicles, JOY and NOEL signs, reindeer drones, falling icicles, and sleigh bells. Five districts: Candy Cane Lane, Evergreen Heights, Frost Spires, Gingerbread Row and Tinsel Tower.
 
-**My music** (on the menu, pause and game-over screens) plays your own songs while you climb.
+**Music & sound** (on the menu, pause and game-over screens): the game's own electro-house soundtrack (Christmas house in the Christmas version), your own music, or none, and a separate switch for sound effects.
 
 Single file, no dependencies: HTML5 canvas and Web Audio. Bloom and afterimages switch off automatically on slow devices.
