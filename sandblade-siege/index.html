@@ -180,7 +180,8 @@ body {
   background: rgba(4, 5, 10, .58); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   font: 500 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #f3f5fb; text-align: left;
   padding: 0 max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); touch-action: none; }
-#am-root #am-sheet { width: min(520px, 100%); max-height: min(88vh, 660px); display: flex; flex-direction: column; gap: 12px;
+#am-root #am-sheet { width: min(520px, 100%); max-height: min(90vh, 700px); display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior: contain;
   background: #15171f; border: 1px solid rgba(255, 255, 255, .12); border-bottom: 0; border-radius: 20px 20px 0 0;
   box-shadow: 0 -12px 40px rgba(0, 0, 0, .55); padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 600px) and (min-height: 520px) { #am-root { align-items: center; } #am-root #am-sheet { border-radius: 20px; border-bottom: 1px solid rgba(255, 255, 255, .12); } }
@@ -188,12 +189,14 @@ body {
 @media (min-width: 600px) and (max-height: 519px) {
   #am-root { align-items: center; }
   #am-root #am-sheet { width: min(780px, 100%); max-height: calc(100vh - 16px); border-radius: 18px; border-bottom: 1px solid rgba(255, 255, 255, .12);
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; gap: 10px 18px; padding: 12px 16px; }
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto auto 1fr auto; gap: 8px 18px; padding: 12px 16px; }
   #am-root .am-head { grid-column: 1 / -1; }
-  #am-root .am-note { grid-column: 1; grid-row: 2; }
-  #am-root .am-now { grid-column: 1; grid-row: 3; align-self: start; }
-  #am-root .am-foot { grid-column: 1; grid-row: 4; }
-  #am-root #am-list { grid-column: 2; grid-row: 2 / 5; }
+  #am-root .am-apps { grid-column: 1; grid-row: 2 / 4; align-self: start; }
+  #am-root .am-note { grid-column: 1; grid-row: 4 / 6; align-self: end; }
+  #am-root .am-files-h { grid-column: 2; grid-row: 2; }
+  #am-root .am-now { grid-column: 2; grid-row: 3; align-self: start; padding: 10px; gap: 8px; }
+  #am-root #am-list { grid-column: 2; grid-row: 4; min-height: 64px; max-height: none; }
+  #am-root .am-foot { grid-column: 2; grid-row: 5; }
 }
 #am-root * { box-sizing: border-box; }
 #am-root button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -205,7 +208,7 @@ body {
 #am-root .am-icon svg { width: 18px; height: 18px; fill: currentColor; }
 #am-root .am-icon[aria-pressed="true"] { background: #8fb8ff; color: #0b1020; border-color: #8fb8ff; }
 #am-root .am-note { margin: 0; font-size: 13px; color: rgba(243, 245, 251, .66); }
-#am-root .am-now { background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+#am-root .am-now { flex: none; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 #am-root #am-np { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 21px; }
 #am-root #am-np small { display: block; font-weight: 500; font-size: 12px; color: rgba(243, 245, 251, .6); }
 #am-root .am-bar { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, .14); overflow: hidden; }
@@ -217,7 +220,7 @@ body {
 #am-root .am-vol svg { width: 18px; height: 18px; flex: none; fill: currentColor; }
 #am-root .am-vol input { flex: 1; width: 100%; min-width: 0; margin: 0; accent-color: #8fb8ff; }
 #am-root #am-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior: contain;
-  min-height: 0; flex: 1 1 auto; border-top: 1px solid rgba(255, 255, 255, .08); }
+  min-height: 104px; flex: 1 0 auto; max-height: 40vh; border-top: 1px solid rgba(255, 255, 255, .08); }
 #am-root #am-list li { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid rgba(255, 255, 255, .06); }
 #am-root .am-track { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 11px 4px; display: flex; align-items: center; gap: 10px; }
 #am-root .am-track span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -238,11 +241,26 @@ body {
 #am-root .am-add { position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 999px; background: #8fb8ff; color: #0b1020; font-weight: 700; cursor: pointer; }
 #am-root .am-add input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }   /* the tap lands on the real file input */
 #am-root #am-msg { font-size: 13px; color: rgba(243, 245, 251, .7); flex: 1; min-width: 140px; }
+#am-root .am-apps { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; flex: none; border-radius: 14px; background: linear-gradient(135deg, rgba(143, 184, 255, .18), rgba(255, 255, 255, .04)); border: 1px solid rgba(143, 184, 255, .32); }
+#am-root .am-apps h3, #am-root .am-files-h { margin: 0; font: 700 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: .12em; text-transform: uppercase; color: rgba(243, 245, 251, .78); }
+#am-root .am-appbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+#am-root .am-app { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 12px; border-radius: 999px;
+  background: #f3f5fb; color: #0b1020; font-weight: 700; text-decoration: none; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+#am-root .am-app:first-child { background: #8fb8ff; }
+#am-root .am-app svg { width: 16px; height: 16px; fill: currentColor; flex: none; }
+#am-root .am-app:focus-visible { outline: 2px solid #8fb8ff; outline-offset: 2px; }
+#am-root .am-tip { margin: 0; font-size: 13px; color: rgba(243, 245, 251, .72); }
 </style>
 <div id="am-root" hidden role="dialog" aria-modal="true" aria-labelledby="am-title">
   <div id="am-sheet">
     <div class="am-head"><h2 id="am-title">My music</h2><button class="am-icon" id="am-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z"/></svg></button></div>
-    <p class="am-note">Play your own music files while you play. They stay in this browser on this device and are never uploaded.</p>
+    <section class="am-apps" aria-labelledby="am-apps-h">
+      <h3 id="am-apps-h">Play from your music app</h3>
+      <div class="am-appbtns" id="am-apps"></div>
+      <p class="am-tip" id="am-tip">Start a song there, then come back: it keeps playing under the game.</p>
+    </section>
+    <h3 class="am-files-h">Or play music files</h3>
+    <p class="am-note">Songs saved as files on this device. They stay in this browser, never uploaded.</p>
     <div class="am-now">
       <div id="am-np">Nothing playing</div>
       <div class="am-bar"><i id="am-prog"></i></div>
@@ -255,7 +273,7 @@ body {
       </div>
     </div>
     <ul id="am-list" aria-label="Your songs"></ul>
-    <div class="am-foot"><label class="am-add" tabindex="0">+ Add songs<input type="file" id="am-file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.webm" multiple></label><span id="am-msg" role="status" aria-live="polite"></span></div>
+    <div class="am-foot"><label class="am-add" tabindex="0">+ Add music files<input type="file" id="am-file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.webm" multiple></label><span id="am-msg" role="status" aria-live="polite"></span></div>
   </div>
 </div>
 <script>
@@ -324,6 +342,17 @@ body {
   const el = new Audio(); el.preload = "auto";
   let out = el, wa = null, quiet = false, leaving = false, unlocked = false, wantPlay = false;
   const urls = new Map(), urlOf = (t) => { if (!urls.has(t.id)) urls.set(t.id, URL.createObjectURL(t.blob)); return urls.get(t.id); };
+  // ---------- music apps: a web page can't reach the phone's music library, but it can open the music app itself ----------
+  const UA = navigator.userAgent || "", IOS = /iPad|iPhone|iPod/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1), ANDROID = /Android/i.test(UA);
+  const intent = (path, scheme, pkg, fallback) => `intent://${path}#Intent;scheme=${scheme};package=${pkg};S.browser_fallback_url=${encodeURIComponent(fallback)};end`;
+  const APPS = IOS ? [["Apple Music", "music://"], ["Spotify", "spotify://"], ["YouTube Music", "https://music.youtube.com/", 1]]
+    : ANDROID ? [["YouTube Music", intent("music.youtube.com/", "https", "com.google.android.apps.youtube.music", "https://music.youtube.com/")],
+      ["Spotify", intent("open", "spotify", "com.spotify.music", "https://open.spotify.com/")],
+      ["Apple Music", intent("music.apple.com/", "https", "com.apple.android.music", "https://music.apple.com/")]]
+    : [["Spotify", "https://open.spotify.com/", 1], ["Apple Music", "https://music.apple.com/", 1], ["YouTube Music", "https://music.youtube.com/", 1]];
+  const NOTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z"/></svg>';
+  $("am-apps").innerHTML = APPS.map(([name, href, tab]) => `<a class="am-app" href="${href}"${tab ? ' target="_blank" rel="noopener"' : ""}>${NOTE}${name}</a>`).join("");
+  if (!IOS && !ANDROID) $("am-tip").textContent = "Opens the web player in a new tab. Start a song there, then come back here to play.";
   // iPhone: until you play your own songs, the games' sounds mix with music from other apps instead of stopping it
   const session = (type) => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (e) { /* not supported */ } };
   session("ambient");
@@ -336,9 +365,9 @@ body {
     playIco.setAttribute("d", playing ? PAUSE : PLAY); playBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
     $("am-shuf").setAttribute("aria-pressed", String(st.shuffle));
     const t = tracks[cur];
-    $("am-np").innerHTML = t ? `${esc(t.name)}<small>${playing ? "Playing" : "Paused"} · song ${cur + 1} of ${tracks.length}</small>` : tracks.length ? `Ready<small>${tracks.length} song${tracks.length === 1 ? "" : "s"} · press play</small>` : "Nothing playing<small>Add songs from your device to get started</small>";
+    $("am-np").innerHTML = t ? `${esc(t.name)}<small>${playing ? "Playing" : "Paused"} · song ${cur + 1} of ${tracks.length}</small>` : tracks.length ? `Ready<small>${tracks.length} song${tracks.length === 1 ? "" : "s"} · press play</small>` : "Nothing playing<small>Add music files to play them here</small>";
     if (!tracks.length) {
-      list.innerHTML = '<li class="am-empty"><b>No songs yet.</b> Tap “Add songs” and choose music files saved on this device, such as MP3 or M4A files in the Files app on iPhone or in Downloads on Android.<br><br><b>Use Spotify or Apple Music?</b> Their songs can’t be added here, but you don’t need to: start your music in that app, then come back. On iPhone the games play their sound effects over it.</li>';
+      list.innerHTML = `<li class="am-empty"><b>No music files yet.</b> ${IOS ? "On iPhone, “Add music files” opens the Files app, so it only finds songs saved there as files (MP3 or M4A). Songs in Apple Music or Spotify are copy-protected and can’t be added to a game: play them with the buttons above instead." : ANDROID ? "“Add music files” lets you pick songs saved on your phone (MP3, M4A and more). Songs in Spotify or YouTube Music can’t be added to a game: play them with the buttons above instead." : "“Add music files” lets you pick songs from this computer, such as MP3 or M4A files."}</li>`;
       return;
     }
     list.innerHTML = tracks.map((tr, i) => `<li class="${i === cur ? "am-on" : ""} ${i === cur && playing ? "am-playing" : ""}"><button class="am-track" type="button" data-i="${i}"><i aria-hidden="true">${i === cur ? "<b></b><b></b><b></b>" : i + 1}</i><span>${esc(tr.name)}</span></button><button class="am-del" type="button" data-del="${i}" aria-label="Remove ${esc(tr.name)}">✕</button></li>`).join("");
@@ -405,9 +434,9 @@ body {
   hook(el);
   if (st.wa && (window.AudioContext || window.webkitAudioContext)) try { wa = new WebAudioPlayer(); hook(wa); out = wa; } catch (e) { /* stay on <audio> */ }   // this site needed Web Audio last time
   if ("mediaSession" in navigator) for (const [a, f] of [["play", toggle], ["pause", () => { wantPlay = false; out.pause(); }], ["nexttrack", next], ["previoustrack", prev]]) { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) { /* unsupported action */ } }
-  // Phones only let a page start sound during a tap. Tapping "Add songs" plays a moment of silence, which unlocks the player
+  // Phones only let a page start sound during a tap. Tapping "Add music files" plays a moment of silence, which unlocks the player
   // so the first song you pick can start by itself once the file picker closes.
-  const SILENCE = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+  const SILENCE = "data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
   function unlock() {
     if (wa) try { wa.ctx.resume(); } catch (e) { /* fine */ }
     if (unlocked || out !== el || !el.paused) return;
@@ -439,6 +468,10 @@ body {
       else if (i < cur) cur--;
       render(); emit();
     }
+  });
+  $("am-apps").addEventListener("click", (e) => {
+    if (!e.target.closest("a")) return;
+    wantPlay = false; if (!out.paused) out.pause(); st.playing = false; save(); session("ambient");
   });
   // ---------- controls ----------
   playBtn.addEventListener("click", toggle); $("am-next").addEventListener("click", next); $("am-prev").addEventListener("click", prev);
