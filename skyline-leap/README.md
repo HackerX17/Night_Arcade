@@ -19,4 +19,6 @@ Open `index.html` in any browser. On a phone, "Add to Home Screen" makes it feel
 - **Magnet**: pulls in coins for 8 seconds
 - **Rocket**: blasts you straight up for about 3 seconds, smashing everything
 
+**My music** (on the menu, pause and game-over screens) plays your own songs while you climb.
+
 Single file, no dependencies: HTML5 canvas and Web Audio. Bloom and afterimages switch off automatically on slow devices.

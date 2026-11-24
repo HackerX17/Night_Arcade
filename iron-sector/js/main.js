@@ -78,10 +78,14 @@ async function boot() {
   requestAnimationFrame(frame);
 }
 
+// the ambient score steps aside while the player's own music (My music) is playing
+let userMusic = false;
+const musicLevel = (v) => (userMusic ? 0 : v);
+addEventListener('arcademusic', (e) => { userMusic = !!(e.detail && e.detail.playing); if (loops.music) loops.music.set(musicLevel(mode === 'game' ? 0.18 : 0.5)); });
 function startAmbience() {
   if (!G.audio.ready || loops.wind) return;
   loops.wind = G.audio.loop('wind'); if (loops.wind) loops.wind.set(0.18);
-  loops.music = G.audio.loop('drone'); if (loops.music) loops.music.set(0.5);
+  loops.music = G.audio.loop('drone'); if (loops.music) loops.music.set(musicLevel(0.5));
   loops.fires = G.mapInfo.fires.slice(0, 6).map((p) => { const l = G.audio.loop('fire', p); if (l) l.set(0.22, p); return l; });
 }
 
@@ -116,7 +120,7 @@ function toMenu() {
   G.renderer.vmPass.enabled = false;
   const prof = G.game.profile; G.ui.showRank('m', prof.xp);
   $('bestLine').textContent = prof.bestWave ? `Best: wave ${prof.bestWave} · ${fmt(prof.bestScore)} points` : 'No missions flown yet.';
-  if (loops.music) loops.music.set(0.5);
+  if (loops.music) loops.music.set(musicLevel(0.5));
   show('menu');
   const first = document.querySelector('#menu .item'); if (first && !isTouch) first.focus({ preventScroll: true });
 }
@@ -130,7 +134,7 @@ function deploy() {
 function startGame() {
   G.game.start(); mode = 'game'; paused = false; perf.skip = 3; perf.acc = 0; perf.n = 0; G.input.capture = true; G.input.clear();
   G.renderer.vmPass.enabled = true; show(null); hud(true);
-  if (loops.music) loops.music.set(0.18);
+  if (loops.music) loops.music.set(musicLevel(0.18));
   if (!G.input.locked && !isTouch && !G.debug) G.input.requestLock(G.renderer.r.domElement);
 }
 function pauseGame() {
@@ -183,7 +187,7 @@ function gameOver() {
   $('oAcc').textContent = `${st.shots ? Math.round((st.hits / st.shots) * 100) : 0}%`; $('oScore').textContent = fmt(st.score); $('oCash').textContent = `$${fmt(st.cashEarned)}`;
   $('overKicker').textContent = `Survival · ${settings.difficulty} · ${waves} wave${waves === 1 ? '' : 's'}`;
   G.ui.showRank('o', g.profile.xp); $('oXp').textContent += ` · +${fmt(g.xp)} this mission`;
-  if (loops.music) loops.music.set(0.5);
+  if (loops.music) loops.music.set(musicLevel(0.5));
   show('over');
 }
 

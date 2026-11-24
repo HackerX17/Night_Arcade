@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Sandblade</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -77,7 +78,8 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   text-shadow: 0 0 6px #00f0ff, 0 0 22px #00b3ff, 0 0 44px #ff2bd6;
 }
 .logo p { margin: 10px 0 0; font-size: 15px; letter-spacing: .3em; text-transform: uppercase; color: #ff7bf0; text-shadow: 0 0 10px #ff2bd6; font-weight: 600; }
-.how { max-width: 34ch; font-size: 16px; line-height: 1.5; text-shadow: 0 1px 6px rgba(20,0,50,.6); }
+.how { max-width: 34ch; font-size: 16px; line-height: 1.5; text-wrap: pretty; text-shadow: 0 1px 6px rgba(20,0,50,.6);
+  background: rgba(16,0,46,.46); padding: 10px 16px; border-radius: 16px; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }   /* stays readable over bright hills */
 .how b { color: var(--lime); font-weight: 700; }
 .cta {
   font: 600 18px var(--body); letter-spacing: .12em; text-transform: uppercase; color: #fff;
@@ -93,6 +95,19 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
 .statsgrid strong { font-family: var(--display); font-weight: 400; font-size: 28px; }
 .newbest { color: var(--glow); letter-spacing: .2em; text-transform: uppercase; font-size: 13px; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .cta { transition: none; } }
+.cta.music { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; padding: 10px 22px; }
+.cta.music .note { width: 16px; height: 16px; }
+/* short screens (phones on their side): a smaller title and tighter menus so nothing overlaps */
+@media (max-height: 500px) {
+  .logo { top: calc(env(safe-area-inset-top, 0px) + 10px); }
+  .logo h1 { font-size: clamp(28px, 10vh, 44px); }
+  .logo p { margin-top: 2px; font-size: 12px; }
+  .overlay { gap: 8px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); }
+  .how { max-width: 62ch; font-size: 14px; line-height: 1.4; }
+  .cta { padding: 12px 38px; font-size: 16px; }
+  .over h2 { font-size: clamp(24px, 9vh, 36px); }
+  .statsgrid strong { font-size: 22px; }
+}
 </style>
 
 <canvas id="c" aria-label="Sandblade game"></canvas>
@@ -109,8 +124,9 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
 <div class="logo" id="logo"><h1>Sandblade</h1><p>Outrun the storm</p></div>
 
 <div class="overlay" id="menu">
-  <div class="how"><b>Hold</b> anywhere to get heavy and dive down the hills.<br><b>Let go</b> on the way up to launch and glide.<br>Land smoothly on downslopes to chain a <b>Fever</b>, grab power-ups, and race from island to island before the storm.</div>
+  <div class="how"><b>Hold</b> anywhere to get heavy and dive down the hills.<br><b>Let go</b> on the way up to launch and glide.<br>Dive, then land on a downslope to chain a <b>Fever</b>. Hit the big ramp at the end of each island to jump to the next one before the storm catches you.</div>
   <button class="cta" id="play">Ride</button>
+  <button class="cta ghost music" data-am-open><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z" fill="currentColor"/></svg>My music</button>
   <div class="best" id="bestMenu"></div>
 </div>
 
@@ -118,6 +134,7 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   <h2>Paused</h2>
   <button class="cta" id="resume">Resume</button>
   <button class="cta ghost" id="restart">Restart</button>
+  <button class="cta ghost music" data-am-open><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z" fill="currentColor"/></svg>My music</button>
 </div>
 
 <div class="overlay over" id="over" hidden>
@@ -129,9 +146,235 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
     <div><span>Score</span><strong id="oScore">0</strong></div>
   </div>
   <button class="cta" id="again">Ride again</button>
+  <button class="cta ghost music" data-am-open><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z" fill="currentColor"/></svg>My music</button>
   <div class="best" id="bestOver"></div>
 </div>
 
+<!-- arcade-music:start · generated from shared/arcade-music.html by tools/sync-music.py; edit that file, then run the script -->
+<style>
+#am-root[hidden], #am-root .am-hide { display: none !important; }
+#am-root { position: fixed; inset: 0; z-index: 2147483000; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(4, 5, 10, .58); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  font: 500 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #f3f5fb; text-align: left;
+  padding: 0 max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); touch-action: none; }
+#am-root #am-sheet { width: min(520px, 100%); max-height: min(88vh, 660px); display: flex; flex-direction: column; gap: 12px;
+  background: #15171f; border: 1px solid rgba(255, 255, 255, .12); border-bottom: 0; border-radius: 20px 20px 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, .55); padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 600px) and (min-height: 520px) { #am-root { align-items: center; } #am-root #am-sheet { border-radius: 20px; border-bottom: 1px solid rgba(255, 255, 255, .12); } }
+/* phones on their side: two columns (player on the left, songs on the right) so everything fits the short screen */
+@media (min-width: 600px) and (max-height: 519px) {
+  #am-root { align-items: center; }
+  #am-root #am-sheet { width: min(780px, 100%); max-height: calc(100vh - 16px); border-radius: 18px; border-bottom: 1px solid rgba(255, 255, 255, .12);
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; gap: 10px 18px; padding: 12px 16px; }
+  #am-root .am-head { grid-column: 1 / -1; }
+  #am-root .am-note { grid-column: 1; grid-row: 2; }
+  #am-root .am-now { grid-column: 1; grid-row: 3; align-self: start; }
+  #am-root .am-foot { grid-column: 1; grid-row: 4; }
+  #am-root #am-list { grid-column: 2; grid-row: 2 / 5; }
+}
+#am-root * { box-sizing: border-box; }
+#am-root button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#am-root button:focus-visible, #am-root input:focus-visible + span, #am-root label:focus-within { outline: 2px solid #8fb8ff; outline-offset: 2px; }
+#am-root .am-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#am-root .am-head h2 { margin: 0; font: 700 20px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: .01em; }
+#am-root .am-icon { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .16); background: rgba(255, 255, 255, .06);
+  display: inline-grid; place-items: center; padding: 0; flex: none; }
+#am-root .am-icon svg { width: 18px; height: 18px; fill: currentColor; }
+#am-root .am-icon[aria-pressed="true"] { background: #8fb8ff; color: #0b1020; border-color: #8fb8ff; }
+#am-root .am-note { margin: 0; font-size: 13px; color: rgba(243, 245, 251, .66); }
+#am-root .am-now { background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+#am-root #am-np { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 21px; }
+#am-root #am-np small { display: block; font-weight: 500; font-size: 12px; color: rgba(243, 245, 251, .6); }
+#am-root .am-bar { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, .14); overflow: hidden; }
+#am-root .am-bar i { display: block; height: 100%; width: 0; background: #8fb8ff; }
+#am-root .am-ctrls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+#am-root .am-ctrls .am-big { width: 52px; height: 52px; background: #f3f5fb; color: #0b1020; border: 0; }
+#am-root .am-ctrls .am-big svg { width: 22px; height: 22px; }
+#am-root .am-vol { margin-left: auto; flex: 1 1 72px; max-width: 200px; display: flex; align-items: center; gap: 6px; color: rgba(243, 245, 251, .7); }
+#am-root .am-vol svg { width: 18px; height: 18px; flex: none; fill: currentColor; }
+#am-root .am-vol input { flex: 1; width: 100%; min-width: 0; margin: 0; accent-color: #8fb8ff; }
+#am-root #am-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior: contain;
+  min-height: 0; flex: 1 1 auto; border-top: 1px solid rgba(255, 255, 255, .08); }
+#am-root #am-list li { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+#am-root .am-track { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 11px 4px; display: flex; align-items: center; gap: 10px; }
+#am-root .am-track span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#am-root .am-track i { flex: none; width: 18px; height: 14px; display: inline-flex; align-items: flex-end; gap: 2px; color: rgba(243, 245, 251, .45); font-style: normal; font-size: 12px; }
+#am-root .am-track i b { width: 3px; background: #8fb8ff; border-radius: 1px; height: 30%; }
+#am-root .am-on .am-track { color: #b8d0ff; font-weight: 700; }
+#am-root .am-playing .am-track i b { animation: am-eq .9s ease-in-out infinite alternate; }
+#am-root .am-playing .am-track i b:nth-child(2) { animation-delay: -.3s; } #am-root .am-playing .am-track i b:nth-child(3) { animation-delay: -.6s; }
+@keyframes am-eq { from { height: 25%; } to { height: 100%; } }
+@media (prefers-reduced-motion: reduce) { #am-root .am-playing .am-track i b { animation: none; height: 70%; } }
+#am-root .am-del { background: none; border: 0; width: 40px; height: 40px; border-radius: 50%; color: rgba(243, 245, 251, .5); }
+#am-root .am-del:hover { color: #ff9b8f; background: rgba(255, 255, 255, .06); }
+#am-root .am-empty { padding: 18px 4px; color: rgba(243, 245, 251, .6); font-size: 14px; }
+#am-root .am-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#am-root .am-add { position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 999px; background: #8fb8ff; color: #0b1020; font-weight: 700; cursor: pointer; }
+#am-root .am-add input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+#am-root #am-msg { font-size: 13px; color: rgba(243, 245, 251, .7); flex: 1; min-width: 140px; }
+</style>
+<div id="am-root" hidden role="dialog" aria-modal="true" aria-labelledby="am-title">
+  <div id="am-sheet">
+    <div class="am-head"><h2 id="am-title">My music</h2><button class="am-icon" id="am-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z"/></svg></button></div>
+    <p class="am-note">Play your own songs while you play. Your files stay in this browser on this device; nothing is uploaded.</p>
+    <div class="am-now">
+      <div id="am-np">Nothing playing</div>
+      <div class="am-bar"><i id="am-prog"></i></div>
+      <div class="am-ctrls">
+        <button class="am-icon" id="am-prev" type="button" aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM9.5 12 19 5v14z"/></svg></button>
+        <button class="am-icon am-big" id="am-play" type="button" aria-label="Play"><svg viewBox="0 0 24 24"><path id="am-play-ico" d="M8 5v14l11-7z"/></svg></button>
+        <button class="am-icon" id="am-next" type="button" aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM5 5l9.5 7L5 19z"/></svg></button>
+        <button class="am-icon" id="am-shuf" type="button" aria-label="Shuffle" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M14.8 4H20v5.2l-1.9-1.9-3.4 3.4-1.4-1.4 3.4-3.4zM4 5.4 5.4 4 20 18.6V14h0l-1.9 1.9-3.3-3.3 1.4-1.4 3.3 3.3L20 14v6h-5.2l1.9-1.9L4 5.4zM9.9 13.5l1.4 1.4L5.4 20.8 4 19.4z"/></svg></button>
+        <label class="am-vol" id="am-volwrap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg><input type="range" id="am-volume" min="0" max="100" step="1" aria-label="Music volume"></label>
+      </div>
+    </div>
+    <ul id="am-list" aria-label="Your songs"></ul>
+    <div class="am-foot"><label class="am-add" tabindex="0">+ Add songs<input type="file" id="am-file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.webm" multiple></label><span id="am-msg" role="status" aria-live="polite"></span></div>
+  </div>
+</div>
+<script>
+// My music: play your own songs while any arcade game runs. Songs live in IndexedDB (shared by every page on the same site),
+// settings in localStorage; playback resumes after the first tap when you move between games.
+(() => {
+  "use strict";
+  const KEY = "arcade-music", $ = (id) => document.getElementById(id);
+  const root = $("am-root"), sheet = $("am-sheet"), list = $("am-list"), msgEl = $("am-msg"), playBtn = $("am-play"), playIco = $("am-play-ico");
+  const PLAY = "M8 5v14l11-7z", PAUSE = "M6 5h4v14H6zm8 0h4v14h-4z";
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
+  const st = Object.assign({ volume: 0.8, shuffle: false, id: null, playing: false, time: 0 }, read());
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* storage blocked */ } };
+  let db = null, tracks = [], cur = -1, opener = null, msgT = 0;
+  const urls = new Map(), audio = new Audio(); audio.preload = "auto";
+  // ---------- storage ----------
+  const idb = (mode, fn) => dbReady.then(() => new Promise((res) => {
+    if (!db) return res(null);
+    try { const tx = db.transaction("tracks", mode), out = fn(tx.objectStore("tracks")); tx.oncomplete = () => res(out && "result" in out ? out.result : true); tx.onerror = tx.onabort = () => res(null); } catch (e) { res(null); }
+  }));
+  const openDB = () => new Promise((res) => {
+    try { const r = indexedDB.open(KEY, 1); r.onupgradeneeded = () => r.result.createObjectStore("tracks", { keyPath: "id" }); r.onsuccess = () => res(r.result); r.onerror = () => res(null); r.onblocked = () => res(null); }
+    catch (e) { res(null); }
+  });
+  const dbReady = openDB().then((d) => { db = d; });
+  // ---------- ui ----------
+  const say = (t) => { msgEl.textContent = t; clearTimeout(msgT); if (t) msgT = setTimeout(() => { msgEl.textContent = ""; }, 6000); };
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  function render() {
+    const playing = !audio.paused && cur >= 0;
+    playIco.setAttribute("d", playing ? PAUSE : PLAY); playBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
+    $("am-shuf").setAttribute("aria-pressed", String(st.shuffle));
+    const t = tracks[cur];
+    $("am-np").innerHTML = t ? `${esc(t.name)}<small>${playing ? "Playing" : "Paused"} · song ${cur + 1} of ${tracks.length}</small>` : tracks.length ? `Ready<small>${tracks.length} song${tracks.length === 1 ? "" : "s"} · press play</small>` : "Nothing playing<small>Add songs from your device to get started</small>";
+    if (!tracks.length) { list.innerHTML = '<li class="am-empty">No songs yet. Tap “Add songs” and pick music files from your phone or computer.</li>'; return; }
+    list.innerHTML = tracks.map((tr, i) => `<li class="${i === cur ? "am-on" : ""} ${i === cur && playing ? "am-playing" : ""}"><button class="am-track" type="button" data-i="${i}"><i aria-hidden="true">${i === cur ? "<b></b><b></b><b></b>" : i + 1}</i><span>${esc(tr.name)}</span></button><button class="am-del" type="button" data-del="${i}" aria-label="Remove ${esc(tr.name)}">✕</button></li>`).join("");
+  }
+  function emit() { window.dispatchEvent(new CustomEvent("arcademusic", { detail: { playing: !audio.paused } })); }
+  function media(t) {
+    if (!("mediaSession" in navigator)) return;
+    try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.name, artist: "My music", album: document.title }); } catch (e) { /* not supported */ }
+  }
+  // ---------- playback ----------
+  const urlOf = (t) => { if (!urls.has(t.id)) urls.set(t.id, URL.createObjectURL(t.blob)); return urls.get(t.id); };
+  function playIndex(i, at = 0) {
+    if (!tracks.length) return;
+    cur = ((i % tracks.length) + tracks.length) % tracks.length; const t = tracks[cur];
+    audio.src = urlOf(t); audio.volume = st.volume; st.id = t.id; st.time = 0; save();
+    if (at > 0) audio.addEventListener("loadedmetadata", () => { try { audio.currentTime = Math.min(at, (audio.duration || at) - 1); } catch (e) { /* not seekable */ } }, { once: true });
+    const p = audio.play(); if (p && p.catch) p.catch((err) => { if (err && err.name === "NotAllowedError") say("Tap ▶ to start the music."); render(); });
+    media(t); render();
+  }
+  const pickNext = () => (st.shuffle && tracks.length > 1 ? (cur + 1 + Math.floor(Math.random() * (tracks.length - 1))) % tracks.length : cur + 1);
+  function toggle() { if (!tracks.length) { say("Add some songs first."); return; } if (cur < 0) playIndex(0); else if (audio.paused) { const p = audio.play(); if (p && p.catch) p.catch(() => {}); } else audio.pause(); }
+  const next = () => tracks.length && playIndex(pickNext());
+  const prev = () => { if (!tracks.length) return; if (audio.currentTime > 3) audio.currentTime = 0; else playIndex(cur - 1); };
+  audio.addEventListener("ended", next);
+  audio.addEventListener("play", () => { st.playing = true; save(); render(); emit(); });
+  audio.addEventListener("pause", () => { if (!audio.ended) { st.playing = false; st.time = audio.currentTime; save(); } render(); emit(); });
+  let lastSave = 0;
+  audio.addEventListener("timeupdate", () => {
+    if (audio.duration) $("am-prog").style.width = `${(audio.currentTime / audio.duration) * 100}%`;
+    const now = Date.now(); if (now - lastSave > 3000) { lastSave = now; st.time = audio.currentTime; save(); }
+  });
+  audio.addEventListener("error", () => { if (cur < 0) return; say(`Couldn't play “${tracks[cur].name}”. Skipping it.`); if (tracks.length > 1) setTimeout(next, 800); });
+  if ("mediaSession" in navigator) for (const [a, f] of [["play", toggle], ["pause", () => audio.pause()], ["nexttrack", next], ["previoustrack", prev]]) { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) { /* unsupported action */ } }
+  // ---------- adding and removing songs ----------
+  const AUDIO_EXT = /\.(mp3|m4a|aac|wav|ogg|oga|opus|flac|webm|mp4)$/i;
+  $("am-file").addEventListener("change", async (e) => {
+    const files = [...e.target.files].filter((f) => (f.type || "").startsWith("audio") || AUDIO_EXT.test(f.name)); e.target.value = "";
+    if (!files.length) { say("Those files don't look like music."); return; }
+    const first = tracks.length, n = files.length, plural = n === 1 ? "" : "s", now = Date.now();
+    const added = files.map((f, i) => ({ id: now.toString(36) + i + Math.random().toString(36).slice(2, 7), name: f.name.replace(/\.[^.]+$/, "") || "Untitled", blob: f, added: now + i }));
+    tracks.push(...added); say(`Added ${n} song${plural}.`);
+    if (cur < 0 || audio.paused) playIndex(first); else render();   // start straight away; saving can take a moment
+    let kept = true;
+    for (const t of added) if (!(await idb("readwrite", (s) => s.put(t)))) kept = false;
+    if (!kept) say(`Added ${n} song${plural} for this visit; there wasn't room to keep ${n === 1 ? "it" : "them"} for next time.`);
+  });
+  list.addEventListener("click", async (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.i != null) { const i = +b.dataset.i; if (i === cur) toggle(); else playIndex(i); return; }
+    if (b.dataset.del != null) {
+      const i = +b.dataset.del, t = tracks[i]; await idb("readwrite", (s) => s.delete(t.id));
+      if (urls.has(t.id)) { URL.revokeObjectURL(urls.get(t.id)); urls.delete(t.id); }
+      tracks.splice(i, 1);
+      if (i === cur) { audio.pause(); audio.removeAttribute("src"); cur = -1; st.id = null; save(); if (tracks.length && st.playing) playIndex(i); }
+      else if (i < cur) cur--;
+      render(); emit();
+    }
+  });
+  // ---------- controls ----------
+  playBtn.addEventListener("click", toggle); $("am-next").addEventListener("click", next); $("am-prev").addEventListener("click", prev);
+  $("am-shuf").addEventListener("click", () => { st.shuffle = !st.shuffle; save(); render(); });
+  const vol = $("am-volume"); vol.value = Math.round(st.volume * 100);
+  vol.addEventListener("input", () => { st.volume = vol.value / 100; audio.volume = st.volume; save(); });
+  audio.volume = 0.5; if (audio.volume !== 0.5) $("am-volwrap").classList.add("am-hide");   // iPhones fix media volume to the hardware buttons
+  audio.volume = st.volume;
+  // ---------- the panel ----------
+  const panelEvent = (open) => window.dispatchEvent(new CustomEvent("arcademusicpanel", { detail: { open } }));   // games can pause while it is open
+  // Safari only lets a page start sound from a tap; loading the empty player during the tap that opens the panel
+  // lets the first song you add start by itself after the file picker closes
+  const unlock = () => { if (audio.paused && !audio.getAttribute("src")) try { audio.load(); } catch (e) { /* nothing to unlock */ } };
+  function open() { opener = document.activeElement; root.hidden = false; unlock(); render(); panelEvent(true); setTimeout(() => $("am-close").focus(), 30); }
+  function close() { root.hidden = true; panelEvent(false); if (opener && opener.focus) try { opener.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
+  $("am-close").addEventListener("click", close);
+  root.addEventListener("click", (e) => { if (e.target === root) close(); });
+  // keep taps and keys inside the panel away from the game underneath
+  for (const t of ["pointerdown", "pointerup", "pointermove", "mousedown", "mouseup", "touchstart", "touchmove", "touchend", "click", "contextmenu", "wheel"]) root.addEventListener(t, (e) => e.stopPropagation());
+  addEventListener("keydown", (e) => {
+    if (root.hidden) return;
+    if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); close(); return; }
+    if (e.key === "Tab") {                                       // keep keyboard focus inside the panel
+      const f = [...root.querySelectorAll("button, input, [tabindex='0']")].filter((el) => el.offsetParent !== null);
+      const i = f.indexOf(document.activeElement);
+      if (e.shiftKey ? i <= 0 : i === f.length - 1) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
+    }
+    if (!root.contains(e.target)) e.stopImmediatePropagation();
+  }, true);
+  addEventListener("keyup", (e) => { if (!root.hidden && !root.contains(e.target)) e.stopImmediatePropagation(); }, true);
+  root.addEventListener("keydown", (e) => e.stopPropagation()); root.addEventListener("keyup", (e) => e.stopPropagation());
+  const add = root.querySelector(".am-add");
+  add.addEventListener("click", unlock);
+  add.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); unlock(); $("am-file").click(); } });
+  addEventListener("pagehide", () => { if (!audio.paused) { st.time = audio.currentTime; save(); } });   // pick up where you left off in the next game
+  // any button or link with data-am-open opens the panel
+  document.addEventListener("click", (e) => { const b = e.target.closest && e.target.closest("[data-am-open]"); if (b) { e.preventDefault(); e.stopPropagation(); open(); } }, true);
+  // ---------- start up: load saved songs; carry on playing after the first tap if music was on ----------
+  dbReady.then(async () => {
+    const saved = (await idb("readonly", (s) => s.getAll())) || [];
+    const playingId = cur >= 0 ? tracks[cur].id : null;          // songs added while the library was still loading
+    tracks = saved.sort((a, b) => a.added - b.added).concat(tracks.filter((t) => !saved.some((s) => s.id === t.id)));
+    if (playingId) { cur = tracks.findIndex((t) => t.id === playingId); render(); return; }
+    const i = tracks.findIndex((t) => t.id === st.id);
+    if (i >= 0) { cur = i; audio.src = urlOf(tracks[i]); media(tracks[i]); }
+    render();
+    if (i >= 0 && st.playing) {
+      const resume = () => { removeEventListener("pointerdown", resume, true); removeEventListener("keydown", resume, true); if (audio.paused && cur >= 0) playIndex(cur, st.time); };
+      addEventListener("pointerdown", resume, true); addEventListener("keydown", resume, true);
+    }
+  });
+  window.ArcadeMusic = { open, close, toggle, next, get playing() { return !audio.paused; }, get count() { return tracks.length; } };
+})();
+</script>
+<!-- arcade-music:end -->
 <script>
 (() => {
 "use strict";
@@ -174,23 +417,74 @@ const ISLANDS = [
   { name: "Ultraviolet",     hill: ["#c94dff", "#6a00ff", "#1e0057"], crest: "#ecc2ff", pat: "chevrons", sky: ["#0a0018", "#2c0070", "#ff00e6"], city: ["#1c0042", "#2a0060"], spray: "225,170,255", w: [680, 940],  h: [160, 260] },
   { name: "Acid Pier",       hill: ["#5dff2a", "#00b8a9", "#00334d"], crest: "#d4ffab", pat: "stripes",  sky: ["#00121a", "#003a4d", "#3dff7a"], city: ["#022a33", "#033a47"], spray: "190,255,150", w: [640, 900],  h: [170, 280] }
 ];
-const isl = k => ISLANDS[k % ISLANDS.length];
-// Moon Chaser-style hills: a chain of alternating hilltops and valleys at random spacing and heights,
+ISLANDS.push(
+  { name: "Frost Palace",    hill: ["#e8fbff", "#7fd4ff", "#123a6e"], crest: "#ffffff", pat: "grid",     sky: ["#020a1f", "#0b2a5c", "#7fe8ff"], city: ["#071a3a", "#0c2550"], spray: "220,250,255", w: [760, 1020], h: [130, 230] },
+  { name: "Ember Fields",    hill: ["#ff7a1a", "#d62600", "#3a0800"], crest: "#ffd0a0", pat: "zigzag",   sky: ["#140300", "#4a0d05", "#ff6a1a"], city: ["#2a0806", "#3a0d08"], spray: "255,170,90",  w: [660, 920],  h: [150, 250] },
+  { name: "Jade Temple",     hill: ["#3dffb0", "#00a86b", "#00331f"], crest: "#d6ffe9", pat: "chevrons", sky: ["#00140d", "#003d2a", "#ffd34a"], city: ["#022a1d", "#043a28"], spray: "170,255,210", w: [720, 980],  h: [140, 240] },
+  { name: "Midnight Orchid", hill: ["#ff6ad5", "#8a2be2", "#24003d"], crest: "#ffd1f3", pat: "bands",    sky: ["#08000f", "#260040", "#ff6ad5"], city: ["#1a0030", "#240040"], spray: "255,170,235", w: [700, 960],  h: [160, 260] }
+);
+// ---------- colour helpers ----------
+const hx = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mixRGB = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const rgbS = a => `rgb(${a[0] | 0},${a[1] | 0},${a[2] | 0})`;
+const toHex = a => "#" + a.map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("");
+function hsl(h, s, l) {
+  h = ((h % 360) + 360) % 360 / 360; const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p2 = 2 * l - q;
+  const f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p2 + (q - p2) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p2 + (q - p2) * (2 / 3 - t) * 6 : p2; };
+  return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255];
+}
+// Spectrum Run: every 15th island slowly changes colour as you ride it, blue to green to yellow to red and round again
+const RAINBOW = { name: "Spectrum Run", type: "rainbow", hill: ["#3d7bff", "#1f3fd1", "#0a0f40"], crest: "#ffffff", pat: "bands",
+  sky: ["#05001a", "#140a45", "#3d7bff"], city: ["#10082a", "#180c3a"], spray: "200,220,255", w: [760, 1050], h: [150, 250] };
+// Two-colour islands: the ground slowly melts from one colour into the other and back as you ride
+const COMBOS = [
+  { name: "Electric Bloom", A: ["#00b4ff", "#0050e0", "#06104f"], B: ["#ff3de0", "#a800ff", "#33005c"], skyA: ["#02001f", "#14106a", "#1e9bff"], skyB: ["#130020", "#4a006a", "#ff3de0"], pat: "bands",    w: [720, 980],  h: [140, 240] },
+  { name: "Firestorm",      A: ["#ffc23a", "#ff6a00", "#4d1500"], B: ["#ff2e4d", "#c4001e", "#38000a"], skyA: ["#1a0600", "#5a1a05", "#ff9a2b"], skyB: ["#160008", "#4a0618", "#ff2e4d"], pat: "zigzag",   w: [660, 900],  h: [160, 260] },
+  { name: "Aurora",         A: ["#2bffb4", "#00a87c", "#00332a"], B: ["#a36bff", "#5a1ee0", "#1b0a52"], skyA: ["#000f12", "#003a3a", "#2bffb4"], skyB: ["#06001a", "#25105c", "#a36bff"], pat: "stripes",  w: [760, 1040], h: [130, 230] },
+  { name: "Citrus Sunrise", A: ["#fff25a", "#ffb800", "#5a3800"], B: ["#ff6aa8", "#e8186e", "#4a0022"], skyA: ["#120a2e", "#3d2a6e", "#ffd23f"], skyB: ["#18021e", "#5a0f45", "#ff6aa8"], pat: "dots",     w: [700, 960],  h: [150, 250] },
+  { name: "Toxic Tide",     A: ["#c8ff2a", "#4fd400", "#173d00"], B: ["#2ae8ff", "#008ad8", "#00264f"], skyA: ["#041200", "#163d05", "#9dff3a"], skyB: ["#000d1f", "#003352", "#2ae8ff"], pat: "grid",     w: [680, 940],  h: [170, 270] },
+  { name: "Royal Flush",    A: ["#ffd84a", "#d99a00", "#4a2e00"], B: ["#8a4dff", "#4b00c9", "#160043"], skyA: ["#140a00", "#3d2a05", "#ffd84a"], skyB: ["#07001a", "#24006e", "#8a4dff"], pat: "chevrons", w: [740, 1000], h: [150, 250] },
+  { name: "Cotton Candy",   A: ["#ffa6d9", "#ff4fb0", "#5a0a3a"], B: ["#9aeeff", "#3ab8ff", "#0a3568"], skyA: ["#1c0220", "#5a1050", "#ffa6d9"], skyB: ["#020a24", "#0f3a70", "#9aeeff"], pat: "dots",     w: [780, 1060], h: [130, 230] },
+  { name: "Lava Lamp",      A: ["#ff5a1f", "#c22d00", "#3d0b00"], B: ["#ffe14d", "#ff9f00", "#5a2f00"], skyA: ["#1a0300", "#4d0f00", "#ff5a1f"], skyB: ["#1a1000", "#4d3300", "#ffe14d"], pat: "bands",    w: [660, 920],  h: [170, 280] }
+].map(c => {
+  const sky = (S) => S, city = (S) => [toHex(mixRGB(hx(S[0]), hx(S[1]), 0.55)), toHex(mixRGB(hx(S[0]), hx(S[1]), 0.85))];
+  return Object.assign(c, { type: "blend", hill: c.A, crest: toHex(mixRGB(mixRGB(hx(c.A[0]), hx(c.B[0]), 0.5), [255, 255, 255], 0.55)), sky: sky(c.skyA), cityA: city(c.skyA), cityB: city(c.skyB),
+    city: city(c.skyA), spray: mixRGB(mixRGB(hx(c.A[0]), hx(c.B[0]), 0.5), [255, 255, 255], 0.3).map(v => v | 0).join(","), ARGB: c.A.map(hx), BRGB: c.B.map(hx), skyARGB: c.skyA.map(hx), skyBRGB: c.skyB.map(hx) });
+});
+for (const I of ISLANDS) { I.hillRGB = I.hill.map(hx); I.skyRGB = I.sky.map(hx); }
+RAINBOW.skyRGB = RAINBOW.sky.map(hx);
+// Levels 1-14 are hand-made, 15 is Spectrum Run, then two-colour islands with a solid one every third, and Spectrum Run every 15th
+function theme(k) {
+  const n = k + 1;
+  if (n % 15 === 0) return RAINBOW;
+  if (k < ISLANDS.length) return ISLANDS[k];
+  const j = k - 15, slot = ((j % 3) + 3) % 3, round = Math.floor(j / 3);
+  if (slot < 2) return COMBOS[(round * 2 + slot) % COMBOS.length];
+  return ISLANDS[(round * 5 + 3) % ISLANDS.length];
+}
+const isl = theme;
+// Rolling hills: a chain of alternating hilltops and valleys at random spacing and heights,
 // joined by cosine curves. Every downhill is one long clean slope, every top a rounded launch point,
 // and no slope is ever steeper than ~45 degrees.
-const GAP = 4200, RAMP = 2400, LAND = 1500, ABYSS = 1e5, WATER_Y = 900, STORM_GRACE = 120;
+const GAP = 4200, RAMP = 2400, ABYSS = 1e5, WATER_Y = 900, STORM_GRACE = 120;
+// every island after the first opens with a long landing slope (steepest, ~35 degrees, where the jump comes down),
+// a deep valley and a big hill straight after it, so the jump's own energy carries you down and whips you back up
+const LAND_W = 2000, LAND_TOP = -360, LAND_DROP = 900, WHIP_W = 1500, WHIP_TOP = -150;
+const islandLen = k => 3 * (10000 + Math.min(k, 15) * 1200);
 let BOUNDS = [], END = [], KP = [];
 function buildIslands() {
   BOUNDS = []; END = []; KP = [];
-  let e = 11000;
-  for (let k = 0; k < 60; k++) { END.push(e); BOUNDS.push(e + GAP); e += GAP + 10000 + (k + 1) * 1200; }
+  let e = 41000;
+  for (let k = 0; k < 60; k++) { END.push(e); BOUNDS.push(e + GAP); e += GAP + islandLen(k + 1); }
   for (let k = 0; k <= 60; k++) {
     const I = isl(k), d = Math.min(k, 8) / 8, as = 0.85 + d * 0.45, ws = 1 - d * 0.12;
-    const x0 = k === 0 ? -4000 : BOUNDS[k - 1] - 400, x1 = (k < END.length ? END[k] : x0 + 30000) + 400;
-    // islands after the first start on a rounded crest at the very edge, then one long smooth downhill
-    // into the regular hills, so a ramp jump lands you straight into momentum
+    const x0 = k === 0 ? -4000 : BOUNDS[k - 1] - 400, x1 = (k < END.length ? END[k] : x0 + 90000) + 400;
     const xs = [x0], ys = [0]; let x = x0, i = 0;
-    if (k > 0) { xs[0] = BOUNDS[k - 1]; ys[0] = -320; x = xs[0] + 1300; xs.push(x); ys.push(220); }
+    if (k > 0) {
+      xs[0] = BOUNDS[k - 1]; ys[0] = LAND_TOP;
+      x = xs[0] + LAND_W; xs.push(x); ys.push(LAND_TOP + LAND_DROP);
+      x += WHIP_W; xs.push(x); ys.push(WHIP_TOP); i = 1;
+    }
     while (x < x1) {
       const w = (I.w[0] + Math.random() * (I.w[1] - I.w[0])) * ws;
       const big = Math.random() < 0.18 ? 1.35 : 1;                         // now and then a bigger launch hill
@@ -246,7 +540,7 @@ function reset() {
   seed = Math.random() * 1000;
   P1 = Math.random() * TAU; P2 = Math.random() * TAU; P3 = Math.random() * TAU;
   buildIslands();
-  p = { x: 0, y: groundY(0), vx: 560, vy: 0, rot: 0, grounded: true, air: 0, spin: 0, launch: false };
+  p = { x: 0, y: groundY(0), vx: 560, vy: 0, rot: 0, grounded: true, air: 0, spin: 0, launch: false, dive: 0, trick: false };
   cam = { x: -200, y: groundY(0) - 400, zoom: 1 };
   storm = { x: -3000, v: 0, woke: false };
   shards = []; particles = []; popups = []; trail = [];
@@ -406,23 +700,24 @@ function spawnShards() {
 // ---------- physics ----------
 // Hold = heavy (dive). Release = light (launch and glide). Smooth landings on
 // downslopes keep momentum and chain into Fever; slamming into a rise costs speed.
-const HOLD_G = 3.1, AIR_G = 0.78, MAX_SPEED = 2700, MIN_SPEED = 300, CRUISE = 680;
+const HOLD_G = 3.1, AIR_G = 0.78, MAX_SPEED = 2700, MIN_SPEED = 240, CRUISE = 430;   // MIN_SPEED: a steep climb slows you to a crawl, not a standstill
 
 function land(a) {
   const vAng = Math.atan2(p.vy, p.vx), d = Math.abs(wrap(vAng - a));
   const downhill = Math.sin(a) > 0.12;
   if (d < 0.38 && downhill && p.air > 0.35) {
+    if (!p.trick) { burst(p.x, p.y, 10, 140, `rgba(${sprayAt(p.x)},`, 0.6, 4); squash(3); return { boost: 0 }; }   // no dive, no reward
     combo++;
     const pts = 50 * Math.min(combo, 10) * (fever > 0 ? 2 : 1); trickScore += pts;
     popup(combo >= 3 ? `Smooth ×${combo}  +${pts}` : `Smooth landing  +${pts}`, combo >= 3);
     if (combo === 3 || (combo > 3 && combo % 3 === 0)) startFever();
     chime(Math.min(combo + 2, SCALE.length - 1));
-    burst(p.x, p.y, 16, 160, `rgba(${isl(islandAt(p.x)).spray},`, 0.6, 4);
-    ring(p.x, p.y, isl(islandAt(p.x)).crest, 160 + combo * 10, 0.5, 8); squash(3 + Math.min(p.air, 1.5) * 2);
-    return { boost: 110 + combo * 12 };
+    burst(p.x, p.y, 16, 160, `rgba(${sprayAt(p.x)},`, 0.6, 4);
+    ring(p.x, p.y, crestAt(p.x), 160 + combo * 10, 0.5, 8); squash(3 + Math.min(p.air, 1.5) * 2);
+    return { boost: 150 + Math.min(combo, 10) * 14 };
   }
   if (d > 0.7 && p.air > 0.35) { combo = 0; popup("Rough landing"); thud(); shake = 0.2; burst(p.x, p.y, 26, 220, "rgba(255,80,220,", 0.9, 6); ring(p.x, p.y, "#ff2bd6", 140, 0.45, 6); squash(7); }
-  else { burst(p.x, p.y, 10, 140, `rgba(${isl(islandAt(p.x)).spray},`, 0.6, 4); if (p.air > 0.35) squash(3); }
+  else { burst(p.x, p.y, 10, 140, `rgba(${sprayAt(p.x)},`, 0.6, 4); if (p.air > 0.35) squash(3); }
   return { boost: 0 };
 }
 
@@ -433,16 +728,21 @@ function startFever() {
 }
 
 function launch(k) {
-  const L = BOUNDS[k] + 350, yL = groundY(L), vx = clamp(p.vx, 1500, 2000);
-  const T = (L - p.x) / vx, g = G * AIR_G;
-  p.vx = vx; p.vy = (yL - p.y - 0.5 * g * T * T) / T;
+  // The jump uses your own speed (slow riders get a gentle minimum so they still make it). The launch angle is
+  // chosen so the arc comes down exactly along the landing slope: the flight's energy turns into slide speed
+  // with nothing added on top.
+  const L = BOUNDS[k] + LAND_W * 0.5, yL = groundY(L), D = L - p.x, dy = yL - p.y;
+  const v = clamp(Math.hypot(p.vx, p.vy), 1250, MAX_SPEED), desc = Math.atan(slopeAt(L));
+  const th = clamp(Math.atan(Math.tan(desc) - 2 * dy / D), -0.6, 1.1), vx = v * Math.cos(th);
+  const T = D / vx, vy0 = -v * Math.sin(th), g = 2 * (dy - vy0 * T) / (T * T);
+  p.vx = vx; p.vy = vy0; p.launchG = g;
   p.launch = true; p.grounded = false; p.air = 0.01;
   for (let t = 0.3; t < T - 0.25; t += 0.16) shards.push({ x: p.x + vx * t, y: p.y + p.vy * t + 0.5 * g * t * t - 30, ph: Math.random() * TAU });
   popup("RAMP LAUNCH!", true); flashT = 0.45; shake = 0.35; chord();
   slowmo = 0.9; camPunch = 1;                                   // bullet time at the lip
   arcPath = { x0: p.x, y0: p.y, vx, vy: p.vy, g, T, t: 0, fade: 1, color: isl(k + 1).crest };
   ring(p.x, p.y, "#00f0ff", 360, 0.7, 14); ring(p.x, p.y, "#ff2bd6", 240, 0.5, 8);
-  burst(p.x, p.y, 40, 320, `rgba(${isl(k).spray},`, 0.9, 6);
+  burst(p.x, p.y, 40, 320, `rgba(${sprayAt(p.x - 10)},`, 0.9, 6);
 }
 
 function step(dt, auto) {
@@ -452,29 +752,34 @@ function step(dt, auto) {
   if (h) mult = p.grounded && Math.sin(a0) < -0.15 ? 1.5 : HOLD_G;   // holding on a climb only mildly hurts
   else mult = p.grounded ? 1 : AIR_G;
   if (powers.sky > 0 && !h) mult *= 0.42;
-  if (p.launch) mult = AIR_G;                                        // the ramp flight is fixed                             // Skyward: floaty glide
+  if (p.launch) mult = p.launchG / G;                               // the ramp flight follows its planned arc
   p.vy += G * mult * dt;
 
   // speed powers
   const sp = Math.hypot(p.vx, p.vy) || 1;
   if (!p.launch && powers.gale > 0 && sp < 2300) { p.vx += p.vx / sp * 1500 * dt; p.vy += p.vy / sp * 1500 * dt; }
   if (!p.launch && fever > 0 && sp < 1900) { p.vx += p.vx / sp * 450 * dt; p.vy += p.vy / sp * 450 * dt; }
-  if (!p.launch && p.grounded && sp < CRUISE) { p.vx += p.vx / sp * 240 * dt; p.vy += p.vy / sp * 240 * dt; }   // higher base speed: always eases back up to cruising pace
+  if (!p.launch && p.grounded && sp < CRUISE && Math.abs(Math.sin(a0)) < 0.15) { p.vx += p.vx / sp * 140 * dt; p.vy += p.vy / sp * 140 * dt; }   // flat ground only: a crawl so you never stall; hills need real diving
 
   const wasGrounded = p.grounded;
+  if (h && p.grounded) p.dive = 1.6; else p.dive = Math.max(0, p.dive - dt);   // a dive counts for a moment after you let go
   p.x += p.vx * dt; p.y += p.vy * dt;
   const gy = groundY(p.x), a = Math.atan(slopeAt(p.x));
   if (p.y >= gy) {
     let res = { boost: 0 }, sprung = false;
-    if (p.launch) { p.launch = false; combo++; res = { boost: 260, keep: true }; burst(p.x, p.y, 40, 260, `rgba(${isl(islandAt(p.x)).spray},`, 0.9, 6); shake = 0.3; ring(p.x, p.y, isl(islandAt(p.x)).crest, 420, 0.8, 16); squash(8); }
+    if (p.launch) {                                                  // island touchdown: a clean landing, no free speed
+      p.launch = false; combo++; popup(combo >= 3 ? `Clean landing ×${combo}` : "Clean landing");
+      if (combo === 3 || (combo > 3 && combo % 3 === 0)) startFever();
+      burst(p.x, p.y, 40, 260, `rgba(${sprayAt(p.x)},`, 0.9, 6); shake = 0.3; ring(p.x, p.y, crestAt(p.x), 420, 0.8, 16); squash(8);
+    }
     else if (!p.grounded && p.air > 0.2) { res = land(a); sprung = powers.spring > 0; }
     p.y = gy;
     const tx = Math.cos(a), ty = Math.sin(a);
     let s = p.vx * tx + p.vy * ty;
-    if (res.keep) s = Math.max(s, Math.hypot(p.vx, p.vy) * 0.95);   // island landings keep the flight's speed
-    s = s * (1 - 0.025 * dt) + res.boost;
+    if (!wasGrounded) s = Math.max(s, Math.hypot(p.vx, p.vy) * 0.4);   // a rough landing hurts, but never stops you dead
+    s = s * (1 - 0.06 * dt) + res.boost;                              // rolling friction: diving is what keeps you fast
     const rk = islandAt(p.x);
-    if (rk < END.length && p.x > END[rk] - RAMP * 0.4) s = Math.max(s, 1150);   // the ramp always gets you up
+    if (rk < END.length && p.x > END[rk] - RAMP * 0.4) s = Math.max(s, 900);    // never roll back down the ramp
     s = clamp(s, MIN_SPEED, MAX_SPEED);
     p.vx = s * tx; p.vy = s * ty;
     p.grounded = true; p.air = 0;
@@ -490,8 +795,8 @@ function step(dt, auto) {
     p.air = 0;
   } else {
     p.grounded = false; p.air += dt;
-    // takeoff kick: leaving a crest fast and light sends you higher
-    if (wasGrounded && !h && p.vy < 0) p.vy -= Math.min(260, sp * 0.13);
+    // takeoff: leaving a crest after a dive (and letting go) is a trick jump with an extra kick upward
+    if (wasGrounded) { p.trick = p.dive > 0 && !h; if (p.trick && p.vy < 0) p.vy -= Math.min(260, sp * 0.13); }
   }
   const target = p.grounded ? a : Math.atan2(p.vy, p.vx) * 0.75;
   p.rot = lerpAngle(p.rot, target, 1 - Math.exp(-(p.grounded ? 18 : 6) * dt));
@@ -579,8 +884,8 @@ function spawnPickups(viewW) {
     // mostly speed (Gale) and jump (Skyward) boosts
     // Gale 41%, Skyward 20%, Ward 14%, Time Warp 9%, Prism 8%, Spring 6%, Magnet 2%
     const r = Math.random(), type = r < 0.41 ? "gale" : r < 0.61 ? "sky" : r < 0.75 ? "ward" : r < 0.84 ? "warp" : r < 0.92 ? "prism" : r < 0.98 ? "spring" : "magnet";
-    // most sit right on the ground so you ride straight through them; a few hover just above
-    const lift = Math.random() < 0.75 ? 42 : 100 + Math.random() * 60;
+    // about a third sit on the sand where you ride through them; the rest float a hop above it, so you jump to catch them
+    const lift = Math.random() < 0.35 ? 42 : 110 + Math.random() * 90;
     pickups.push({ x: nextPowerX, y: groundY(nextPowerX) - lift, type, ph: Math.random() * TAU });
     nextPowerX += 1380 + Math.random() * 1150;
   }
@@ -631,9 +936,9 @@ function update(dt) {
     if (stormT < 0) { storm.x = p.x - 3000; storm.v = 0; }
     else {
       if (!storm.woke) { storm.woke = true; popup("The storm is coming!", true); thud(); }
-      storm.v = Math.min(220 + stormT * 4, 740);
+      storm.v = stormT < 130 ? 380 + stormT * 7 : Math.min(1290 + (stormT - 130) * 0.6, 1650);   // keeps getting faster: only good riding stays ahead
       storm.x += (powers.warp > 0 ? 0 : storm.v) * dt;          // Time Warp freezes the storm
-      if (p.x - storm.x > 3000) storm.x = p.x - 3000;
+      if (p.x - storm.x > 5500) storm.x = p.x - 5500;            // one slow climb won't sink you; staying slow will
     }
     if (p.x - storm.x < 0) {
       if (powers.ward > 0) { powers.ward = 0; storm.x = p.x - 1600; popup("Ward broke · storm thrown back", true); flashT = 0.6; shake = 0.4; chord(); }
@@ -650,7 +955,7 @@ function update(dt) {
     for (const k of ["gale", "sky", "magnet", "warp", "prism", "spring"]) powers[k] = Math.max(0, powers[k] - dt);
     fever = Math.max(0, fever - dt);
     const alt = surf(p.x) - p.y;
-    if (!p.grounded && alt > 1400 && !skyMsg) { skyMsg = true; popup(`Sky high!  ${Math.round(alt / 10)} m up`, true); trickScore += 300; }
+    if (!p.grounded && !p.launch && alt > 1400 && !skyMsg) { skyMsg = true; popup(`Sky high!  ${Math.round(alt / 10)} m up`, true); trickScore += 300; }
     if (p.grounded) skyMsg = false;
     maxAlt = Math.max(maxAlt, alt);
     renderPowers();
@@ -701,7 +1006,7 @@ function update(dt) {
     const n = speed > 900 ? 3 : speed > 500 ? 2 : 1;
     for (let i = 0; i < n; i++) {
       const bx = p.x - Math.cos(p.rot) * 34, by = p.y - Math.sin(p.rot) * 34;
-      particles.push({ x: bx, y: by, vx: -p.vx * 0.15 + (Math.random() - 0.5) * 80, vy: -80 - Math.random() * 120 * (speed / 800), life: 0.7, max: 0.7, size: 3 + Math.random() * 4, color: `rgba(${isl(islandAt(p.x)).spray},` });
+      particles.push({ x: bx, y: by, vx: -p.vx * 0.15 + (Math.random() - 0.5) * 80, vy: -80 - Math.random() * 120 * (speed / 800), life: 0.7, max: 0.7, size: 3 + Math.random() * 4, color: `rgba(${sprayAt(p.x)},` });
     }
   }
   for (let i = particles.length - 1; i >= 0; i--) {
@@ -721,8 +1026,10 @@ function update(dt) {
       shards.splice(i, 1);
       if (playing) {
         shardCount += (fever > 0 ? 2 : 1) * (powers.prism > 0 ? 3 : 1);
-        const sp = Math.hypot(p.vx, p.vy), k = Math.min(1, 1750 / (sp + 40));
-        p.vx += 40 * Math.cos(p.rot) * k; p.vy += 40 * Math.sin(p.rot) * k;
+        if (!p.launch) {                          // a small nudge on the ground, but never during an island jump
+          const sp = Math.hypot(p.vx, p.vy), k = Math.min(1, 1750 / (sp + 40));
+          p.vx += 40 * Math.cos(p.rot) * k; p.vy += 40 * Math.sin(p.rot) * k;
+        }
         chime(comboTimer > 0 ? (shardCount % SCALE.length) : 0);
         comboTimer = 1.2;
       }
@@ -743,11 +1050,13 @@ function update(dt) {
   const sc = baseScale();
   const above = surf(p.x) - p.y;
   const tz = clamp(1 - Math.max(0, above - 160) / 1700, 0.3, 1);
-  cam.zoom = lerp(cam.zoom, tz * (1 + 0.22 * Math.sin(Math.min(1, camPunch) * Math.PI)), 1 - Math.exp(-3 * dt));
+  const zt = tz * (1 + 0.22 * Math.sin(Math.min(1, camPunch) * Math.PI));
+  cam.zoom = lerp(cam.zoom, zt, 1 - Math.exp(-(zt < cam.zoom ? 5 : 2.5) * dt));   // pull out quickly on a big launch, ease back in on the way down
   const s2 = sc * cam.zoom, viewW = W / s2, viewH = H / s2;
   cam.x = p.x - viewW * 0.3;
   const gy = surf(p.x);
-  const desiredTop = Math.min(p.y - viewH * 0.28, gy - viewH * 0.66);
+  const anchor = 0.28 - 0.1 * clamp(((gy - p.y) / viewH - 0.38) / 0.4, 0, 1) * clamp(p.vy / 700, 0, 1);   // falling from high up: show more of what's below
+  const desiredTop = Math.min(p.y - viewH * anchor, gy - viewH * 0.66);
   cam.y = lerp(cam.y, desiredTop, 1 - Math.exp(-6 * dt));
 
   // audio
@@ -773,15 +1082,43 @@ const streaks = Array.from({ length: 22 }, () => ({ x: Math.random(), y: Math.ra
 const stars = Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random() * 0.55, r: Math.random() * 1.4 + 0.3, ph: Math.random() * TAU }));
 const hexRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 function mixHex(a, b, t) { const A = hexRgb(a), B = hexRgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",")})`; }
+// colours that change along an island: two-colour islands melt back and forth, Spectrum Run drifts round the colour wheel
+const islandStart = k => (k === 0 ? -4000 : BOUNDS[k - 1]);
+const blendT = (k, x) => 0.5 - 0.5 * Math.cos(TAU * (x - islandStart(k)) / 9000);
+const rainbowHue = x => { const u = (x - islandStart(islandAt(x))) / 36000; return (((220 - 360 * u) % 360) + 360) % 360; };   // one full turn of the colour wheel every 36 km
+function hillAt(k, x) {
+  const T = isl(k);
+  if (T.type === "rainbow") { const h = rainbowHue(x); return [hsl(h, 0.95, 0.58), hsl(h, 0.9, 0.4), hsl(h, 0.8, 0.14)]; }
+  if (T.type === "blend") { const t = blendT(k, x); return [0, 1, 2].map(i => mixRGB(T.ARGB[i], T.BRGB[i], t)); }
+  return T.hillRGB;
+}
+function crestAt(x) {
+  const k = islandAt(x), T = isl(k);
+  if (T.type === "rainbow") return rgbS(hsl(rainbowHue(x), 1, 0.8));
+  if (T.type === "blend") return rgbS(mixRGB(hillAt(k, x)[0], [255, 255, 255], 0.55));
+  return T.crest;
+}
+function sprayAt(x) {
+  const k = islandAt(x), T = isl(k);
+  if (T.type === "rainbow") return hsl(rainbowHue(x) + Math.random() * 16, 1, 0.72).map(v => v | 0).join(",");
+  if (T.type === "blend") return mixRGB(hillAt(k, x)[0], [255, 255, 255], 0.3).map(v => v | 0).join(",");
+  return T.spray;
+}
+function skyOf(k, x) {
+  const T = isl(k);
+  if (T.type === "rainbow") { const h = rainbowHue(x), glow = hsl(h, 1, 0.6); return { sky: [T.skyRGB[0], mixRGB(T.skyRGB[1], hsl(h, 0.8, 0.2), 0.5), glow], city: T.city, glow }; }
+  if (T.type === "blend") { const t = blendT(k, x), sky = [0, 1, 2].map(i => mixRGB(T.skyARGB[i], T.skyBRGB[i], t)); return { sky, city: t < 0.5 ? T.cityA : T.cityB, glow: sky[2] }; }
+  return { sky: T.skyRGB, city: T.city, glow: T.skyRGB[2] };
+}
 // palette for the sky/city follows the camera and cross-fades near each island gate
 function scenePal() {
   const cx = cam.x + W / (baseScale() * cam.zoom) * 0.5, k = islandAt(cx);
-  const A = isl(k);
+  let S = skyOf(k, cx);
   if (k < BOUNDS.length && BOUNDS[k] - cx < 1500) {
-    const t = Math.round(smooth(1 - (BOUNDS[k] - cx) / 1500) * 6) / 6, B = isl(k + 1);
-    return { sky: A.sky.map((c, i) => mixHex(c, B.sky[i], t)), city: t < 0.5 ? A.city : B.city, glow: t < 0.5 ? A.sky[2] : B.sky[2] };
+    const t = Math.round(smooth(1 - (BOUNDS[k] - cx) / 1500) * 6) / 6, B = skyOf(k + 1, BOUNDS[k] + 1);
+    S = { sky: S.sky.map((c, i) => mixRGB(c, B.sky[i], t)), city: t < 0.5 ? S.city : B.city, glow: t < 0.5 ? S.glow : B.glow };
   }
-  return { sky: A.sky, city: A.city, glow: A.sky[2] };
+  return { sky: S.sky.map(rgbS), city: S.city, glow: rgbS(S.glow) };
 }
 
 function drawSky(t, pal) {
@@ -793,7 +1130,7 @@ function drawSky(t, pal) {
     ctx.fillRect(st.x * W, st.y * H, st.r, st.r);
   }
   // the moon: the storm creeps across it as it closes in
-  const mr = Math.min(W, H) * 0.12, mx = W * 0.74, my = H * 0.15;
+  const mr = Math.min(W, H) * 0.12, mx = W * 0.8, my = H * 0.3;   // clear of the title and the buttons
   const mg = ctx.createRadialGradient(mx, my, mr * 0.8, mx, my, mr * 2.6);
   mg.addColorStop(0, "rgba(140,250,255,.5)"); mg.addColorStop(1, "rgba(255,43,214,0)");
   ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mx, my, mr * 2.6, 0, TAU); ctx.fill();
@@ -949,16 +1286,34 @@ function drawGround(sc) {
     ctx.beginPath(); ctx.moveTo(pts[0], H);
     for (let i = 0; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
     ctx.lineTo(pts[pts.length - 2], H); ctx.closePath();
-    const g = ctx.createLinearGradient(0, Math.max(0, minY), 0, H + 160 * sc);
-    g.addColorStop(0, I.hill[0]); g.addColorStop(0.35, I.hill[1]); g.addColorStop(1, I.hill[2]);
-    ctx.fillStyle = g; ctx.fill();
+    let crestStyle = I.crest, crestGlow = `rgba(${hexRgb(I.crest).join(",")},.35)`;
+    if (!I.type) {
+      const g = ctx.createLinearGradient(0, Math.max(0, minY), 0, H + 160 * sc);
+      g.addColorStop(0, I.hill[0]); g.addColorStop(0.35, I.hill[1]); g.addColorStop(1, I.hill[2]);
+      ctx.fillStyle = g; ctx.fill();
+    } else {
+      // the surface colour changes along the ground (a horizontal gradient), then darkens with depth
+      const x0 = pts[0], x1 = Math.max(x0 + 1, pts[pts.length - 2]), N = 8;
+      const gH = ctx.createLinearGradient(x0, 0, x1, 0), gC = ctx.createLinearGradient(x0, 0, x1, 0);
+      for (let i = 0; i <= N; i++) {
+        const wx = cam.x + (x0 + (x1 - x0) * i / N) / sc, c = hillAt(run.k, wx);
+        gH.addColorStop(i / N, rgbS(c[0]));
+        gC.addColorStop(i / N, rgbS(mixRGB(c[0], [255, 255, 255], 0.55)));
+      }
+      ctx.fillStyle = gH; ctx.fill();
+      const gV = ctx.createLinearGradient(0, Math.max(0, minY), 0, H + 160 * sc);
+      gV.addColorStop(0, "rgba(0,0,0,0)"); gV.addColorStop(0.35, "rgba(0,0,0,.3)"); gV.addColorStop(1, "rgba(0,0,0,.8)");
+      ctx.fillStyle = gV; ctx.fill();
+      crestStyle = gC; crestGlow = gC;
+    }
     ctx.clip(); drawPattern(I, pts, minY, sc); ctx.restore();
     // glowing crest line
     ctx.beginPath();
     for (let i = 0; i < pts.length; i += 2) i ? ctx.lineTo(pts[i], pts[i + 1]) : ctx.moveTo(pts[i], pts[i + 1]);
     ctx.lineJoin = "round";
-    ctx.strokeStyle = `rgba(${hexRgb(I.crest).join(",")},.35)`; ctx.lineWidth = Math.max(6, 14 * sc); ctx.stroke();
-    ctx.strokeStyle = I.crest; ctx.lineWidth = Math.max(2, 4 * sc); ctx.stroke();
+    ctx.save(); ctx.globalAlpha = I.type ? 0.35 : 1;
+    ctx.strokeStyle = crestGlow; ctx.lineWidth = Math.max(6, 14 * sc); ctx.stroke(); ctx.restore();
+    ctx.strokeStyle = crestStyle; ctx.lineWidth = Math.max(2, 4 * sc); ctx.stroke();
   }
 }
 
@@ -1038,7 +1393,11 @@ function drawPickups(sc, t) {
   }
 }
 
-function trailColor() { return powers.gale > 0 ? "255,170,70" : fever > 0 ? "255,215,110" : powers.sky > 0 ? "205,170,255" : "120,240,255"; }
+function trailColor() {
+  if (powers.gale > 0) return "255,170,70"; if (fever > 0) return "255,215,110"; if (powers.sky > 0) return "205,170,255";
+  if (isl(islandAt(p.x)).type === "rainbow") return hsl(rainbowHue(p.x), 1, 0.72).map(v => v | 0).join(",");
+  return "120,240,255";
+}
 // Effekseer-style ribbon: one tapered polygon, drawn twice additively (wide glow + bright core)
 function drawTrail(sc) {
   if (trail.length < 3) return;
@@ -1141,6 +1500,40 @@ function drawArcPath(sc, t) {
   ctx.restore();
 }
 
+// Where you'll come down, when the ground is below the screen: a marker on the bottom edge that tilts with the slope you'll hit.
+// Green means a smooth downhill landing (keep your speed), red means you'll hit it at a bad angle and slow down.
+function predictLanding() {
+  let x = p.x, y = p.y, vx = p.vx, vy = p.vy, m = hold ? HOLD_G : AIR_G;
+  if (powers.sky > 0 && !hold) m *= 0.42;
+  for (let i = 0; i < 360; i++) {
+    vy += G * m / 30; x += vx / 30; y += vy / 30;
+    const gy = groundY(x);
+    if (gy >= ABYSS) return null;                                   // heading for the water: the ramp flight takes over
+    if (y >= gy) return { x, gy, vx, vy };
+  }
+  return null;
+}
+function drawLandingMarker(sc, t) {
+  if (state !== "play" || p.grounded || p.launch) return;
+  const L = predictLanding(); if (!L) return;
+  const [lx, ly] = toS(L.x, L.gy, sc);
+  if (ly < H - 24) return;                                          // the landing spot is on screen already
+  const a = Math.atan(slopeAt(L.x)), good = Math.abs(wrap(Math.atan2(L.vy, L.vx) - a)) < 0.38 && Math.sin(a) > 0.12;
+  const col = good ? "#7dff3a" : "#ff5d6c", x = clamp(lx, 30, W - 30), y = H - Math.max(60, H * 0.1), r = 17 + (good ? 2 * Math.sin(t * 10) : 0);
+  ctx.save();
+  ctx.shadowColor = col; ctx.shadowBlur = 14;
+  ctx.fillStyle = "rgba(12,4,40,.72)"; ctx.strokeStyle = col; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 6, y + r + 4); ctx.lineTo(x + 6, y + r + 4); ctx.lineTo(x, y + r + 11); ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+  ctx.translate(x, y); ctx.rotate(a); ctx.lineCap = "round"; ctx.lineWidth = 3.5;   // the slope you'll land on
+  ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.stroke();
+  ctx.restore();
+  ctx.font = "700 13px Jost, system-ui, sans-serif"; ctx.textAlign = "center";
+  const label = `${Math.round((L.gy - p.y) / 10)} m`, lx2 = clamp(x, 26, W - 26);
+  ctx.fillStyle = "rgba(10,2,30,.8)"; ctx.fillText(label, lx2 + 1, y - r - 6);
+  ctx.fillStyle = col; ctx.fillText(label, lx2, y - r - 7);
+}
+
 function drawSpeedLines(t) {
   const speed = Math.hypot(p.vx, p.vy), k = clamp((speed - 1400) / 1000, 0, 1) + (powers.gale > 0 ? 0.6 : 0) + (p.launch ? 0.4 : 0);
   if (k <= 0 || state !== "play") return;
@@ -1216,7 +1609,7 @@ function bloom() {
 
 function drawVignette() {
   if (state !== "play") return;
-  if (elapsed < STORM_GRACE) {
+  if (elapsed < STORM_GRACE && !paused) {
     ctx.fillStyle = "rgba(185,251,255,.85)"; ctx.font = "13px Audiowide, system-ui, sans-serif"; ctx.textAlign = "center";
     ctx.fillText(`STORM ARRIVES IN ${Math.ceil(STORM_GRACE - elapsed)}s`, W / 2, H - Math.max(28, H * 0.05));
   }
@@ -1274,12 +1667,14 @@ function render(t) {
   drawSpeedLines(t);
   bloom();
   drawVignette();
+  drawLandingMarker(sc, t);
   drawPopups();
 }
 
 let last = performance.now();
 let ftAvg = 16, slowFor = 0;
 function frame(now) {
+  if (window.__hold) { requestAnimationFrame(frame); return; }
   const raw = now - last, dt = Math.min(0.033, raw / 1000); last = now;
   // quality guard: if frames stay slow for 2s, drop bloom, afterimages and extra particles
   ftAvg = ftAvg * 0.94 + Math.min(raw, 100) * 0.06;
@@ -1292,5 +1687,13 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+// test hook (add #debug to the address)
+if (/debug/.test(location.hash)) window.__SB = {
+  get p() { return p; }, get cam() { return cam; }, view: () => ({ W, H, s: baseScale() * cam.zoom }), surf: (x) => surf(x), get state() { return state; }, get islandIdx() { return islandIdx; }, get elapsed() { return elapsed; }, get storm() { return storm; }, get combo() { return combo; },
+  BOUNDS: () => BOUNDS, END: () => END, groundY, start, score, setHold(v) { hold = v; }, autoHold,
+  sim(sec, dt = 1 / 60, bot) { for (let i = 0; i < sec / dt && state === "play"; i++) { if (bot) hold = bot(); update(dt); } },
+  render(t = performance.now() / 1000) { render(t); },
+  jumpTo(k, dx = 3000) { const x = (k === 0 ? 0 : BOUNDS[k - 1]) + dx; p.x = x; p.y = groundY(x) - 2; p.vx = 900; p.vy = 0; p.grounded = false; islandIdx = k; storm.x = x - 3000; cam.x = x - 300; cam.y = groundY(x) - 400; elapsed = STORM_GRACE - 30; }
+};
 })();
 </script>
