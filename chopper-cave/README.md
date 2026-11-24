@@ -1,12 +1,14 @@
 # Chopper Cave
 
-A retro cave-flying game in the classic green-on-black style.
+A neon cave-flying game: steer a glowing helicopter through a tunnel of light for as long as you can.
 
 - **Hold** (tap and hold, mouse, Space or Up arrow) to climb; **let go** to drop.
-- Dodge the cave walls and the green pillars. The cave narrows and speeds up the further you get.
+- Controls react the moment you touch: a touch catches the helicopter on the spot, even the quickest tap gives a short burst of lift, and the engine keeps running while any finger is down (so swapping thumbs doesn't cut it).
+- Dodge the cave walls and the pillars. The cave starts roomy, narrows and speeds up the further you get, but never closes below a comfortable gap.
+- Every 250 m the cave changes colour scheme, through the same neon schemes as the other Night Arcade games.
 - Your best distance is saved on your device.
 
-The ♫ button (and MY MUSIC on the pause screen) plays your own songs while you fly; opening it pauses the flight.
+The note button (and My music on the pause screen) plays your own songs or opens your music app; opening it pauses the flight.
 
 Open `index.html` in any browser. It plays best with the phone turned sideways.
 Single file, no dependencies.

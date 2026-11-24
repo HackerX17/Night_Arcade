@@ -8,9 +8,9 @@ Six original browser games. They run on phones and computers with nothing to ins
 | --- | --- | --- |
 | Sandblade | Hill rider: dive down neon hills, ramp from island to island (each with its own colour scheme), and outrun the storm. 11 power-ups. | [`sandblade/`](sandblade/) |
 | Skyline Leap | Wall climber: leap between two towers, dodge window hazards and smash drones mid-air. 7 power-ups, and a Christmas version. | [`skyline-leap/`](skyline-leap/) |
-| Sandblade Legion | Crowd runner: steer your army through multiplier gates, blast through walls to the big bonus, and crush the horde. | [`sandblade-legion/`](sandblade-legion/) |
+| Sandblade Legion | Crowd runner: steer your army down a neon road through multiplier gates, blast through walls to the big bonus, and crush the horde. Each level has its own colour scheme. | [`sandblade-legion/`](sandblade-legion/) |
 | Sandblade Siege | Army flood in 3D: a huge horde charges your gate; aim a cannon of riders through multiplier gates and mow it down. Each level wears one of Sandblade's neon colour schemes. | [`sandblade-siege/`](sandblade-siege/) |
-| Chopper Cave | Retro hold-to-climb cave flyer. | [`chopper-cave/`](chopper-cave/) |
+| Chopper Cave | Hold-to-climb cave flyer through a neon tunnel that changes colour every 250 m. | [`chopper-cave/`](chopper-cave/) |
 | Iron Sector | First-person wave-survival shooter with an armory, attachments and air support. | [`iron-sector/`](iron-sector/) |
 
 ## My music
