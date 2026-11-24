@@ -93,6 +93,14 @@ body {
 #hint { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 5vh); z-index: 6; pointer-events: none; text-align: center;
   font: 700 14px var(--body); letter-spacing: .24em; text-transform: uppercase; color: var(--cream); text-shadow: 0 1px 6px rgba(50,25,10,.8); transition: opacity .6s; }
 #flash { position: fixed; inset: 0; z-index: 7; pointer-events: none; background: #fff3d6; opacity: 0; }
+#hurt { position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0; background: radial-gradient(ellipse 90% 60% at 50% 100%, rgba(210, 30, 18, .6), rgba(210, 30, 18, 0) 70%); }
+#gate { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 5; pointer-events: none;
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 14px; border-radius: 99px; background: rgba(40, 22, 10, .62); color: var(--cream);
+  font: 800 12px var(--body); letter-spacing: .16em; text-transform: uppercase; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+#gate i { display: block; width: 96px; height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .18); overflow: hidden; }
+#gate b { display: block; height: 100%; width: 100%; border-radius: 99px; background: linear-gradient(90deg, #8be86a, #3fbf5c); transition: width .25s; }
+#gate.low b { background: linear-gradient(90deg, #ffb35c, #e03c2c); }
+#lose h2 { color: #ff8a70; text-shadow: 0 2px 0 #7a2416; }
 .cta.music { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; padding: 10px 22px; }
 .cta.music .note { width: 16px; height: 16px; }
 /* short screens (phones on their side): a smaller title and tighter menus so nothing overlaps */
@@ -105,6 +113,7 @@ body {
   .cta { padding: 12px 38px; font-size: 16px; }
   .result h2 { font-size: clamp(24px, 9vh, 36px); }
   .result strong { font-size: 24px; }
+  #banner { top: 24%; font-size: clamp(30px, 13vh, 56px); }
 }
 </style>
 
@@ -113,6 +122,8 @@ body {
 <div id="flash"></div>
 <div id="banner"></div>
 <div id="hint" hidden>◀ Drag to aim ▶</div>
+<div id="hurt"></div>
+<div id="gate" hidden><span>Gate</span><i><b id="gateBar"></b></i></div>
 
 <div class="hud" id="hud" hidden>
   <div class="row">
@@ -126,12 +137,19 @@ body {
 <div class="logo" id="logo"><h1>Sandblade</h1><p>Siege</p></div>
 
 <div class="overlay" id="menu">
-  <div class="how"><b>Drag</b> to aim the cannon. Every rider who runs through a gate is multiplied. Find the path through the biggest gates and crush the horde.</div>
+  <div class="how"><b>Drag</b> to aim the cannon. Every rider who runs through a gate is multiplied. The horde charges your gate: send your riders through the biggest gates and crush it before it gets inside the walls.</div>
   <button class="cta" id="play">Fire</button>
   <button class="cta ghost music" data-am-open><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z" fill="currentColor"/></svg>My music</button>
   <div class="sub" id="menuLvl"></div>
 </div>
 
+<div class="overlay result" id="lose" hidden>
+  <h2>Overrun</h2>
+  <p>The horde broke through your gate.</p>
+  <div class="sub" id="loseSub"></div>
+  <button class="cta" id="retry">Try again</button>
+  <button class="cta ghost music" data-am-open><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z" fill="currentColor"/></svg>My music</button>
+</div>
 <div class="overlay result" id="pauseMenu" hidden>
   <h2>Paused</h2>
   <button class="cta" id="resume">Resume</button>
@@ -499,6 +517,7 @@ const short = (v) => (v < 10000 ? String(v) : fmt(v));
 const UNIT_R = 0.17, CONTACT = 0.37, CONTACT_HEAVY = 0.68, LANE_SPEED = 5.2, ARENA_SPEED = 5.2, RED_SPEED = 3.2, ENGAGE_R = 4;
 const BLUE_CAP = 2200, RED_SPACING = 0.4, WALL_H = 1.25, RAMP_H = 1.9;
 const RAMP_D = 30, ARENA_D0 = 31, ARENA_D1 = 71, ARENA_X = 11.6, HORDE_D0 = 41, HORDE_D1 = 69;
+const GOAL_D = 1.6, MARCH_DELAY = 1.4, LANE_RUSH = 2.1;   // the horde reaches your gate at GOAL_D; it starts marching after MARCH_DELAY and runs faster once inside the walls
 
 // =====================================================================================
 // levels: walls are [x0, x1, d0, d1]; gates are { x0, x1, d, op, v, move }
@@ -547,7 +566,9 @@ function makeLevel(n) {
   L.open = L.open.map(([a, b]) => mx(a, b)).sort((a, b) => a[0] - b[0]);
   L.gates = L.gates.map((g) => { const [x0, x1] = mx(g.x0, g.x1); return { ...g, x0, x1, move: g.move ? { ...g.move } : null }; });
   L.walls = [...OUTER(), ...L.walls, ...RAMPART(L.open)];
-  L.horde = horde; L.rate = Math.min(10 + (n - 1) * 0.5, 15); L.rateMax = 24 + Math.min(n, 8); L.par = 34; L.name = levelName(n);
+  L.horde = horde; L.rate = Math.min(10 + (n - 1) * 0.5, 15); L.rateMax = 24 + Math.min(n, 8); L.par = 38; L.name = levelName(n);
+  L.march = n === 1 ? 0.68 : Math.min(0.8 + (n - 1) * 0.05, 1.2);   // how fast the horde walks at you (m/s); the first level is gentler
+  L.gate = horde * (n === 1 ? 0.14 : 0.08);                        // how much of the horde your gate can take before it falls
   return L;
 }
 
@@ -719,6 +740,7 @@ function buildLevel(n) {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4, 6).translate(0, 2, 0), M.wood); pole.position.set(x, 0, -(ARENA_D1 + 1.2)); levelGroup.add(pole);
     const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9).translate(0.7, 3.4, 0), M.cloth); fl.position.copy(pole.position); levelGroup.add(fl);
   }
+  buildFlow();
   // gates
   gates = L.gates.map((g, i) => ({ ...g, id: i, bit: 1 << i, mega: g.op === '×' && g.v >= 100, pulse: 0, added: 0, popT: 0, announced: false, half: (g.x1 - g.x0) / 2, c0: (g.x0 + g.x1) / 2 }));
   gateMeshes = gates.map((g) => {
@@ -733,6 +755,49 @@ function buildLevel(n) {
     return { grp, curtain, sign };
   });
   renderer.shadowMap.needsUpdate = true;
+}
+
+// ---- the horde's map to your gate: the walking distance from every spot on the field to the gate, around the walls ----
+const FS = 0.4, FX0 = -12.4, FD0 = -1.2, FNX = Math.ceil(24.8 / FS), FND = Math.ceil((ARENA_D1 + 2 - FD0) / FS);
+const flowX = new Float32Array(FNX * FND), flowD = new Float32Array(FNX * FND);
+const flowAt = (x, d) => { const i = Math.floor((x - FX0) / FS), j = Math.floor((d - FD0) / FS); return i < 0 || j < 0 || i >= FNX || j >= FND ? -1 : j * FNX + i; };
+let flowDbg = null;
+function buildFlow() {
+  const N = FNX * FND, open = new Uint8Array(N), dist = new Float64Array(N).fill(1e9); flowDbg = { open, dist };   // 64-bit: the queue compares exact distances
+  for (let j = 0; j < FND; j++) for (let i = 0; i < FNX; i++) {
+    const x = FX0 + (i + 0.5) * FS, d = FD0 + (j + 0.5) * FS, lim = d > RAMP_D + 1.1 ? ARENA_X - 0.1 : 7.85;
+    if (Math.abs(x) > lim || d > ARENA_D1) continue;
+    if (walls.some((w) => x > w.x0 - 0.25 && x < w.x1 + 0.25 && d > w.d0 - 0.25 && d < w.d1 + 0.25)) continue;
+    open[j * FNX + i] = 1;
+  }
+  const heap = [];
+  const push = (v, c) => { heap.push([v, c]); let k = heap.length - 1; while (k > 0) { const q = (k - 1) >> 1; if (heap[q][0] <= heap[k][0]) break; [heap[q], heap[k]] = [heap[k], heap[q]]; k = q; } };
+  const pop = () => { const top = heap[0], end = heap.pop(); if (heap.length) { heap[0] = end; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+  for (let j = 0; j < FND && FD0 + (j + 0.5) * FS < GOAL_D; j++) for (let i = 0; i < FNX; i++) { const c = j * FNX + i; if (open[c]) { dist[c] = 0; push(0, c); } }
+  const NB = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]];
+  while (heap.length) {
+    const [dc, c] = pop(); if (dc > dist[c]) continue;
+    const i = c % FNX, j = (c / FNX) | 0;
+    for (const [di, dj, cost] of NB) {
+      const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= FNX || jj >= FND) continue;
+      const n = jj * FNX + ii; if (!open[n] || (di && dj && (!open[j * FNX + ii] || !open[jj * FNX + i]))) continue;   // no cutting corners
+      const nd = dc + cost * FS; if (nd < dist[n]) { dist[n] = nd; push(nd, n); }
+    }
+  }
+  // every open spot points downhill; spots inside a wall's margin point at the best open neighbour, so nobody sticks to a wall
+  const ok = (ii, jj) => ii >= 0 && jj >= 0 && ii < FNX && jj < FND && open[jj * FNX + ii] && dist[jj * FNX + ii] < 1e9;
+  for (let j = 0; j < FND; j++) for (let i = 0; i < FNX; i++) {
+    const c = j * FNX + i; flowX[c] = 0; flowD[c] = -1;
+    if (ok(i, j)) {
+      const at = (ii, jj) => (ok(ii, jj) ? dist[jj * FNX + ii] : dist[c] + FS);
+      const gx = at(i + 1, j) - at(i - 1, j), gd = at(i, j + 1) - at(i, j - 1), l = Math.hypot(gx, gd);
+      if (l > 1e-6) { flowX[c] = -gx / l; flowD[c] = -gd / l; }
+    } else {
+      let best = 1e9, bx = 0, bd = -1;
+      for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) if ((di || dj) && ok(i + di, j + dj) && dist[(j + dj) * FNX + i + di] < best) { best = dist[(j + dj) * FNX + i + di]; const l = Math.hypot(di, dj); bx = di / l; bd = dj / l; }
+      flowX[c] = bx; flowD[c] = bd;
+    }
+  }
 }
 
 // =====================================================================================
@@ -814,13 +879,12 @@ function nearestIn(grid, arr, x, d, maxR, pred) {
   }
   return best;
 }
-const inArena = (o) => o.arena;
 // cells within reach of a rider who has broken into the field: only the horde there needs to look for a fight
 const hot = new Uint32Array(GNX * GND), seen = new Uint32Array(GNX * GND); let hotGen = 0, sample = [], sampleT = 0;
 function markHot() {
   hotGen++; const R = Math.ceil(ENGAGE_R / GCS);
   for (const u of blue) {
-    if (!u.arena || u.w <= 0) continue;
+    if (u.w <= 0 || u.d < 4) continue;
     const ci = Math.floor((u.x - GX0) / GCS), cj = Math.floor((u.d - GD0) / GCS), c = cj * GNX + ci;
     if (ci < 0 || cj < 0 || ci >= GNX || cj >= GND || seen[c] === hotGen) continue; seen[c] = hotGen;
     for (let j = Math.max(0, cj - R); j <= Math.min(GND - 1, cj + R); j++) for (let i = Math.max(0, ci - R); i <= Math.min(GNX - 1, ci + R); i++) hot[j * GNX + i] = hotGen;
@@ -852,7 +916,8 @@ function collideWalls(u) {
 
 let level = Math.max(1, +(store.get('siege-level') || 1));
 let phase = 'menu', paused = false, blue = [], red = [], dying = [], t = 0, fireAcc = 0, frameNo = 0, blueTotal = 0, redTotal = 0, redStart = 1, elapsed = 0;
-let shownBlue = 0, shownRed = 0, charged = false, shake = 0, hordeFront = HORDE_D0, nextId = 1, aimed = false;
+let shownBlue = 0, shownRed = 0, charged = false, shake = 0, hordeFront = HORDE_D0, hordeBack = HORDE_D1, nextId = 1, aimed = false;
+let gateHP = 1, marching = false, breached = false, hurtT = 0, slain = 0;
 const cannon = { x: 0, tx: 0, recoil: 0 };
 
 function reset() {
@@ -862,8 +927,9 @@ function reset() {
   redStart = L.horde;
   const cols = Math.floor((ARENA_X * 2 - 0.6) / RED_SPACING), rows = Math.floor((HORDE_D1 - HORDE_D0) / RED_SPACING), w = redStart / (cols * rows);
   for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++)
-    red.push({ x: -ARENA_X + 0.3 + i * RED_SPACING + (j % 2) * RED_SPACING * 0.5 + rnd(-0.05, 0.05), d: HORDE_D0 + j * RED_SPACING + rnd(-0.05, 0.05), w, ph: Math.random() * TAU, tg: null, eng: false, vx: 0, vd: 0 });
-  redTotal = shownRed = redStart; blueTotal = shownBlue = 0; hordeFront = HORDE_D0;
+    red.push({ x: -ARENA_X + 0.3 + i * RED_SPACING + (j % 2) * RED_SPACING * 0.5 + rnd(-0.09, 0.09), d: HORDE_D0 + j * RED_SPACING + rnd(-0.09, 0.09), w, ph: Math.random() * TAU, spd: rnd(0.8, 1.25), st: 0, tg: null, eng: false, mv: false, vx: 0, vd: 0 });   // each runs at its own pace, so the front breaks up as they charge
+  redTotal = shownRed = redStart; blueTotal = shownBlue = 0; hordeFront = HORDE_D0; hordeBack = HORDE_D1;
+  gateHP = L.gate; marching = false; breached = false; hurtT = 0; slain = 0;
 }
 function spawnBlue() {
   if (blue.length >= BLUE_CAP) return;
@@ -889,6 +955,14 @@ function applyGate(u, g) {
 }
 function killRed(o) { dying.push({ x: o.x, d: o.d, t: 0, red: true }); if (Math.random() < 0.08) spark(o.x, 0.4, o.d, rnd(-1, 1), rnd(1, 2.5), rnd(-1, 1), 0.5, 0.3, 0.85, 0.72, 0.55, 0.6, 3); }
 function killBlue(u) { dying.push({ x: u.x, d: u.d, t: 0, red: false }); }
+function hitGate(o) {
+  const dmg = o.w; o.w = 0; killRed(o);
+  for (let k = 0; k < 2; k++) spark(o.x, 0.6, o.d, rnd(-1, 1), rnd(1.5, 3), rnd(-2, -0.5), 0.5, 0.3, 1, 0.32, 0.2, 1, 6);
+  if (phase !== 'play') return;
+  gateHP -= dmg; hurtT = 0.35; shake = Math.max(shake, 0.18); sfx.hurt();
+  if (!breached) { breached = true; banner('AT THE GATE!', 'Hold them at the wall'); }
+  if (gateHP <= 0) { gateHP = 0; lose(); }
+}
 
 function moveGates() { for (const g of gates) if (g.move) { const c = g.c0 + Math.sin(t * g.move.w + g.move.p) * g.move.a; g.x0 = c - g.half; g.x1 = c + g.half; } }
 function step(dt) {
@@ -929,11 +1003,11 @@ function step(dt) {
           const ex = u.x - o.x, ed = u.d - o.d, q = ex * ex + ed * ed;
           if (q < S2 && q > 1e-6) { const dq = Math.sqrt(q), push = ((0.34 - dq) / dq) * 0.25; u.x += ex * push; u.d += ed * push * (u.arena ? 1 : 0.3); }
         }
-        if (u.d > RAMP_D) for (let n = redGrid.head[cell]; n !== -1; n = redGrid.next[n]) {
+        for (let n = redGrid.head[cell]; n !== -1; n = redGrid.next[n]) {
           const o = red[n]; if (o.w <= 0) continue;
           const ex = u.x - o.x, ed = u.d - o.d;
           if (ex * ex + ed * ed < (u.w > o.w * 3 ? CH2 : C2)) {
-            const m = Math.min(u.w, o.w); u.w -= m; o.w -= m;
+            const m = Math.min(u.w, o.w); u.w -= m; o.w -= m; slain += m;
             if (!charged) { charged = true; banner('CHARGE!', ''); shake = 0.3; }
             sfx.clash();
             if (o.w <= 1e-9) { o.w = 0; killRed(o); }
@@ -950,26 +1024,44 @@ function step(dt) {
     for (const g of gates) if (!(u.passed & g.bit) && pd < g.d && u.d >= g.d && u.x >= g.x0 && u.x <= g.x1) applyGate(u, g);
     if (!u.arena && u.d > RAMP_D + 1.15) { u.arena = true; u.fan = rnd(-1, 1) * 7 * Math.min(1, blue.length / 300); }
   }
-  // ---- the horde: the nearest ranks charge riders that break into the field ----
-  let front = 1e9;
+  // ---- the horde: marches on your gate along the flow field, queues behind its own front line, and charges riders near it ----
+  if (phase === 'play' && !marching && elapsed > MARCH_DELAY) { marching = true; banner('HERE THEY COME', ''); sfx.horn(); shake = 0.3; }
+  let front = 1e9, back = -1e9;
+  const Q2 = 0.44 * 0.44;
   for (let k = 0; k < red.length; k++) {
     const o = red[k]; if (o.w <= 0) continue;
-    if ((frameNo + k) % 6 === 0) { const ci = Math.floor((o.x - GX0) / GCS), cj = Math.floor((o.d - GD0) / GCS); o.tg = ci >= 0 && cj >= 0 && ci < GNX && cj < GND && hot[cj * GNX + ci] === hotGen ? nearestIn(blueGrid, blue, o.x, o.d, ENGAGE_R, inArena) : null; }
-    if (o.tg && o.tg.w > 0) {
-      const dx = o.tg.x - o.x, dd = o.tg.d - o.d, l = Math.hypot(dx, dd) || 1;
-      o.vx += ((dx / l) * RED_SPEED - o.vx) * kV; o.vd += ((dd / l) * RED_SPEED - o.vd) * kV; o.eng = true;
-    } else { o.tg = null; o.eng = false; }
-    if (o.eng) {
+    if ((frameNo + k) % 6 === 0) { const ci = Math.floor((o.x - GX0) / GCS), cj = Math.floor((o.d - GD0) / GCS); o.tg = ci >= 0 && cj >= 0 && ci < GNX && cj < GND && hot[cj * GNX + ci] === hotGen ? nearestIn(blueGrid, blue, o.x, o.d, ENGAGE_R) : null; }
+    let tx = 0, td = 0, sp = 0;
+    if (o.tg && o.tg.w > 0) { const dx = o.tg.x - o.x, dd = o.tg.d - o.d, l = Math.hypot(dx, dd) || 1; tx = dx / l; td = dd / l; sp = RED_SPEED; o.eng = true; }
+    else {
+      o.tg = null; o.eng = false;
+      if (marching) { const c = flowAt(o.x, o.d); if (c >= 0) { tx = flowX[c]; td = flowD[c]; } else td = -1; sp = L.march * o.spd * (o.d < RAMP_D + 0.5 ? LANE_RUSH : 1); }
+    }
+    if (sp > 0) {
+      // keep a little room around each soldier, and follow the one in front at its pace instead of walking through it
       const ci = Math.floor((o.x - GX0) / GCS), cj = Math.floor((o.d - GD0) / GCS);
+      let lead = Infinity;
       for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
         if (i < 0 || j < 0 || i >= GNX || j >= GND) continue;
-        for (let n = redGrid.head[j * GNX + i]; n !== -1; n = redGrid.next[n]) { const p = red[n]; if (p === o || p.w <= 0) continue; const ex = o.x - p.x, ed = o.d - p.d, q = ex * ex + ed * ed; if (q < 0.09 && q > 1e-6) { const dq = Math.sqrt(q), push = ((0.3 - dq) / dq) * 0.3; o.x += ex * push; o.d += ed * push; } }
+        for (let n = redGrid.head[j * GNX + i]; n !== -1; n = redGrid.next[n]) {
+          const p = red[n]; if (p === o || p.w <= 0) continue;
+          const ex = p.x - o.x, ed = p.d - o.d, q = ex * ex + ed * ed;
+          if (q < 0.09 && q > 1e-6) { const dq = Math.sqrt(q), push = ((0.3 - dq) / dq) * 0.3; o.x -= ex * push; o.d -= ed * push; }
+          if (!o.eng && q < Q2 && ex * tx + ed * td > 0.45 * Math.sqrt(q)) { const f = p.vx * tx + p.vd * td; if (f < lead) lead = f; }
+        }
       }
-      o.x = clamp(o.x + o.vx * dt, -ARENA_X, ARENA_X); o.d = clamp(o.d + o.vd * dt, RAMP_D + 1.3, ARENA_D1 - 0.3);
+      if (lead < Infinity && o.st < 1.2) sp = Math.min(sp, Math.max(0.05, lead + 0.1));
+      if (o.st >= 1.2) { const k2 = o.ph > Math.PI ? 1 : -1, ux = tx, ud = td; tx = ux * 0.5 - ud * 0.87 * k2; td = ud * 0.5 + ux * 0.87 * k2; if (o.st > 1.9) o.st = 0; }   // been stuck a while: sidestep and push on
     }
-    if (o.d < front) front = o.d;
+    o.st = !o.eng && marching && Math.hypot(o.vx, o.vd) < 0.15 ? o.st + dt : o.st >= 1.2 ? o.st + dt : 0;
+    o.vx += (tx * sp - o.vx) * kV; o.vd += (td * sp - o.vd) * kV; o.mv = sp > 0.3;
+    o.x += o.vx * dt; o.d += o.vd * dt;
+    if (o.d < RAMP_D + 1.7) collideWalls(o);
+    const lim = o.d > RAMP_D + 1.1 ? ARENA_X : 7.83; o.x = clamp(o.x, -lim, lim); o.d = Math.min(o.d, ARENA_D1 - 0.3);
+    if (o.d < GOAL_D) { hitGate(o); continue; }        // they reached your gate
+    if (o.d < front) front = o.d; if (o.d > back) back = o.d;
   }
-  if (front < 1e8) hordeFront = front;
+  if (front < 1e8) { hordeFront = front; hordeBack = back; }
   // clear the fallen
   let n = 0; for (let k = 0; k < blue.length; k++) if (blue[k].w > 0) blue[n++] = blue[k]; blue.length = n;
   n = 0; for (let k = 0; k < red.length; k++) if (red[k].w > 0) red[n++] = red[k]; red.length = n;
@@ -980,7 +1072,7 @@ function step(dt) {
   if (phase === 'play') for (const g of gates) { g.popT -= dt; if (g.added !== 0 && g.popT <= 0) { popup((g.added > 0 ? '+' : '−') + fmt(Math.abs(g.added)), (g.x0 + g.x1) / 2, g.d >= RAMP_D ? 5.4 : 4.7, g.d, g.mega ? 'gold' : ''); g.added = 0; g.popT = 0.55; } }
   for (const p of parts) { p.life -= dt; p.vy -= p.grav * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.d += p.vd * dt; if (p.y < 0.02 && p.grav > 0) { p.y = 0.02; p.vy *= -0.3; p.vx *= 0.6; p.vd *= 0.6; } }
   parts = parts.filter((p) => p.life > 0);
-  shake = Math.max(0, shake - dt);
+  shake = Math.max(0, shake - dt); hurtT = Math.max(0, hurtT - dt);
   shownBlue = Math.abs(blueTotal - shownBlue) < 1 ? blueTotal : lerp(shownBlue, blueTotal, 1 - Math.exp(-8 * dt));
   shownRed = Math.abs(redTotal - shownRed) < 1 ? redTotal : lerp(shownRed, redTotal, 1 - Math.exp(-8 * dt));
 }
@@ -1008,7 +1100,7 @@ function solveRig(nearD, farD, nearW, farW) {
 function updateCamera(dt, instant = false) {
   PITCH = THREE.MathUtils.degToRad(camera.aspect > 1 ? 47 : 55);
   const intro = phase === 'menu' || (phase === 'play' && elapsed < 1.6);
-  const farD = intro ? HORDE_D0 + 10 : clamp(hordeFront + 4, RAMP_D + 6, HORDE_D1 - 6);
+  const farD = intro ? HORDE_D0 + 10 : clamp(Math.max(HORDE_D0 + 10, hordeFront + 8), RAMP_D + 6, HORDE_D1 - 2);   // hold the whole field while they charge, so you see them come; follow them back if you push them
   const want = solveRig(-1.2, farD, 8.1, 0), k = instant ? 1 : 1 - Math.exp(-1.6 * dt);
   rig.dist = lerp(rig.dist, want.dist, k); rig.td = lerp(rig.td, want.td, k);
   const sp = Math.sin(PITCH), cp = Math.cos(PITCH), s = shake * shake * 0.5;
@@ -1033,7 +1125,7 @@ function draw() {
   }
   for (const o of red) {
     if (nr >= RED_MAX) break;
-    const bob = o.eng ? Math.abs(Math.sin(t * 14 + o.ph)) * 0.06 : Math.sin(t * 3 + o.ph) * 0.012;
+    const bob = o.eng || o.mv ? Math.abs(Math.sin(t * 13 + o.ph)) * 0.07 : Math.sin(t * 3 + o.ph) * 0.012;
     put(mArr.r, nr++, o.x, bob, -o.d, 1);
     put(mArr.s, ns++, o.x, 0.02, -o.d, 0.9);
   }
@@ -1069,10 +1161,10 @@ function placeLabels() {
     p.t += 1 / 60; const [sx, sy] = toScreen(p.x, p.y + p.t * 1.4, p.d), a = p.t < 0.15 ? p.t / 0.15 : 1 - Math.max(0, (p.t - 0.6) / 0.4), s = 1 + Math.max(0, 0.2 - p.t) * 2;
     p.el.style.opacity = a; p.el.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-50%) scale(${s})`;
   }
-  const playing = phase === 'play' || phase === 'won';
+  const playing = phase === 'play' || phase === 'won' || phase === 'lost';
   let bx = 0, bd = -1e9, n = 0; for (const u of blue) if (u.arena) { bx += u.x; if (u.d > bd) bd = u.d; n++; }
   if (playing && n > 6) { const [sx, sy] = toScreen(bx / n, 1.5, bd); tagBlue.style.opacity = 1; tagBlue.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-100%)`; tagBlue.textContent = fmt(shownBlue); } else tagBlue.style.opacity = 0;
-  if (playing && red.length) { const [sx, sy0] = toScreen(0, 1.2, Math.min(HORDE_D1 - 6, (hordeFront + HORDE_D1) / 2)), sy = Math.max(sy0, 128); tagRed.style.opacity = 1; tagRed.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-50%)`; tagRed.textContent = fmt(shownRed); } else tagRed.style.opacity = 0;
+  if (playing && red.length) { const [sx, sy0] = toScreen(0, 1.2, clamp((Math.max(hordeFront, RAMP_D + 2) + hordeBack) / 2, RAMP_D + 4, HORDE_D1 - 6)), sy = Math.max(sy0, 128); tagRed.style.opacity = 1; tagRed.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-50%)`; tagRed.textContent = fmt(shownRed); } else tagRed.style.opacity = 0;
 }
 
 // =====================================================================================
@@ -1090,7 +1182,7 @@ function tone(f, dur = 0.3, vol = 0.1, type = 'sine', delay = 0, slide = 0) {
   g.gain.setValueAtTime(0, tt); g.gain.linearRampToValueAtTime(vol, tt + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, tt + dur);
   o.connect(g); g.connect(master); o.start(tt); o.stop(tt + dur + 0.05);
 }
-let lastPop = 0, lastClash = 0, lastShot = 0;
+let lastPop = 0, lastClash = 0, lastShot = 0, lastHurt = 0;
 const sfx = {
   shot() { const now = performance.now(); if (now - lastShot < 60) return; lastShot = now; tone(150, 0.09, 0.05, 'triangle', 0, 0.5); },
   gate(big) { const now = performance.now(); if (now - lastPop < 60) return; lastPop = now; tone(big ? 880 : 600 + Math.random() * 160, 0.12, big ? 0.06 : 0.04, 'sine'); },
@@ -1098,7 +1190,9 @@ const sfx = {
   mega() { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, 0.6, 0.08, 'triangle', i * 0.06)); tone(65, 0.8, 0.2, 'sine'); },
   clash() { const now = performance.now(); if (now - lastClash < 40) return; lastClash = now; tone(90 + Math.random() * 110, 0.06, 0.045, 'square'); },
   horn() { tone(147, 0.9, 0.12, 'sawtooth', 0, 1.01); tone(220, 0.9, 0.08, 'sawtooth', 0.05, 1.01); },
-  win() { [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => tone(f, 0.8, 0.08, 'triangle', i * 0.08)); }
+  win() { [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => tone(f, 0.8, 0.08, 'triangle', i * 0.08)); },
+  hurt() { const now = performance.now(); if (now - lastHurt < 140) return; lastHurt = now; tone(72, 0.26, 0.14, 'sawtooth', 0, 0.5); tone(50, 0.3, 0.12, 'square'); },
+  lose() { [392, 330, 262, 196].forEach((f, i) => tone(f, 0.7, 0.09, 'sawtooth', i * 0.16, 0.98)); tone(55, 1.2, 0.2, 'sine'); }
 };
 function setMuted(m) { muted = m; store.set('siege-muted', m ? '1' : '0'); $('mute').innerHTML = m ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9zm12.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4z"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>'; $('mute').setAttribute('aria-pressed', String(m)); if (master) master.gain.value = m ? 0 : 0.6; }
 setMuted(muted);
@@ -1136,24 +1230,31 @@ $('mute').addEventListener('click', () => { initAudio(); setMuted(!muted); });
 $('play').addEventListener('click', start);
 $('next').addEventListener('click', () => { level++; store.set('siege-level', String(level)); start(); });
 $('again').addEventListener('click', start);
+$('retry').addEventListener('click', start);
 function start() {
   initAudio(); reset(); phase = 'play'; paused = false; aimed = false; $('pauseMenu').hidden = true; labelLayer.hidden = false;
   for (const p of pops) p.t = p.max;
-  for (const id of ['menu', 'win', 'logo']) $(id).hidden = true;
-  $('hud').hidden = false; $('lvl').innerHTML = `Level ${level}<small>${L.name}</small>`;
+  for (const id of ['menu', 'win', 'lose', 'logo']) $(id).hidden = true;
+  $('hud').hidden = false; $('gate').hidden = false; $('lvl').innerHTML = `Level ${level}<small>${L.name}</small>`;
   const hint = $('hint'); hint.hidden = false; hint.style.opacity = 1;
   banner(`HORDE OF ${fmt(redStart)}`, L.name); sfx.horn();
 }
 function win() {
   phase = 'won';
-  const stars = elapsed <= L.par ? 3 : elapsed <= L.par * 1.6 ? 2 : 1;
+  const gateLeft = clamp(gateHP / L.gate, 0, 1);
+  const stars = Math.max(1, (elapsed <= L.par ? 3 : elapsed <= L.par * 1.6 ? 2 : 1) - (gateLeft < 0.5 ? 1 : 0));   // a battered gate costs a star
   $('stars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < stars ? '' : 'off'}">★</span>`).join('');
   $('winTitle').textContent = stars === 3 ? 'Total domination' : stars === 2 ? 'Victory' : 'They fell at last';
   $('winCount').textContent = fmt(blueTotal);
-  $('winSub').textContent = `${fmt(redStart)} defeated in ${elapsed.toFixed(1)}s · three stars under ${L.par}s`;
+  $('winSub').textContent = `${fmt(redStart)} defeated in ${elapsed.toFixed(1)}s · gate ${Math.round(gateLeft * 100)}%` + (stars < 3 ? ` · ★★★ under ${L.par}s, gate above half` : '');
   sfx.win(); flash(0.5); banner('VICTORY', `${fmt(redStart)} defeated`);
   const best = +(store.get('siege-stars-' + level) || 0); if (stars > best) store.set('siege-stars-' + level, String(stars));
-  setTimeout(() => { if (phase === 'won') { $('hud').hidden = true; $('hint').hidden = true; $('win').hidden = false; labelLayer.hidden = true; } }, 1600);
+  setTimeout(() => { if (phase === 'won') { $('hud').hidden = true; $('hint').hidden = true; $('gate').hidden = true; $('win').hidden = false; labelLayer.hidden = true; } }, 1600);
+}
+function lose() {
+  phase = 'lost'; sfx.lose(); shake = 0.6; flash(0.25); banner('OVERRUN', 'The horde broke through');
+  $('loseSub').textContent = slain >= 1 ? `You took down ${fmt(slain)} of ${fmt(redStart)} in ${elapsed.toFixed(1)}s` : `${fmt(redStart)} came for your gate`;
+  setTimeout(() => { if (phase === 'lost') { $('hud').hidden = true; $('hint').hidden = true; $('gate').hidden = true; $('lose').hidden = false; labelLayer.hidden = true; } }, 1800);
 }
 function setPaused(on) { if (on && phase !== 'play') return; paused = on; $('pauseMenu').hidden = !on; if (on) dragging = false; }
 $('pauseBtn').addEventListener('click', () => setPaused(true));
@@ -1166,6 +1267,8 @@ function hud() {
   if (phase !== 'play' && phase !== 'won') return;
   $('blueN').textContent = fmt(shownBlue); $('redN').textContent = fmt(shownRed);
   $('bar').style.width = `${clamp(1 - shownRed / redStart, 0, 1) * 100}%`;
+  const g = clamp(gateHP / L.gate, 0, 1); $('gateBar').style.width = `${g * 100}%`; $('gate').classList.toggle('low', g < 0.4);
+  $('hurt').style.opacity = hurtT / 0.35;
 }
 
 // =====================================================================================
@@ -1173,7 +1276,7 @@ function hud() {
 // =====================================================================================
 let last = performance.now();
 function tick(dt) {
-  if ((phase === 'play' || phase === 'won') && !paused) step(dt);
+  if ((phase === 'play' || phase === 'won' || phase === 'lost') && !paused) step(dt);
   else if (phase === 'menu') { t += dt; moveGates(); }
   updateCamera(dt);
   draw(); hud();
@@ -1185,5 +1288,5 @@ function frame(now) {
 }
 const fontsReady = document.fonts && document.fonts.load ? Promise.race([document.fonts.load('800 100px Jost'), new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve();
 fontsReady.then(() => { reset(); updateMenu(); updateCamera(0, true); requestAnimationFrame(frame); });
-if (DEBUG) window.__S = { get state() { return { phase, level, blue: blue.length, red: red.length, blueTotal, redTotal, elapsed, hordeFront, cannon: cannon.x }; }, sim(sec, stp = 1 / 60) { for (let i = 0; i < sec / stp; i++) { if (phase === 'play' || phase === 'won') step(stp); updateCamera(stp); } draw(); hud(); }, aim(x) { cannon.tx = x; }, start, setLevel(n) { level = n; }, blues: () => blue };
+if (DEBUG) window.__S = { get state() { return { phase, level, blue: blue.length, red: red.length, blueTotal, redTotal, elapsed, hordeFront, hordeBack, gateHP, gateMax: L.gate, marching, cannon: cannon.x }; }, sim(sec, stp = 1 / 60, render = true) { for (let i = 0; i < sec / stp; i++) { if (phase === 'play' || phase === 'won' || phase === 'lost') step(stp); updateCamera(stp); } if (render) { draw(); hud(); } }, aim(x) { cannon.tx = x; }, start, setLevel(n) { level = n; }, blues: () => blue, reds: () => red, walls: () => walls, level: () => L, tune(o) { Object.assign(L, o); }, flow: (x, d) => { const c = flowAt(x, d); return c < 0 ? null : [+flowX[c].toFixed(2), +flowD[c].toFixed(2), flowDbg.open[c], Math.round(flowDbg.dist[c] * 10) / 10]; } };
 </script>
