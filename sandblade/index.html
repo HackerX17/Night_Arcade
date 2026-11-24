@@ -634,6 +634,7 @@ const G = 1100;
 let state = "menu";
 let p, cam, storm, shards, particles, popups, trail, scarf, nextShardX, elapsed, shardCount, trickScore, combo, comboTimer, flashT, shake;
 let powers, pickups, nextPowerX, fever, islandIdx, maxAlt, skyMsg;
+let meteors = [], starT = 0, echoHist = [], echo = null, flowT = 0;   // Starfall's falling shards, Echo's twin, Flow's ripples
 let rings = [], ghosts = [], ghostT = 0, slowmo = 0, camPunch = 0, arcPath = null, lightning = null, lightT = 1.5;
 let paused = false, hold = false, best = +(store.get("sandblade-best") || 0), muted = store.get("sandblade-muted") === "1";
 
@@ -646,7 +647,8 @@ function reset() {
   storm = { x: -3000, v: 0, woke: false };
   shards = []; particles = []; popups = []; trail = [];
   scarf = Array.from({ length: 8 }, () => ({ x: p.x, y: p.y - 50 }));
-  powers = { gale: 0, sky: 0, magnet: 0, ward: 0, warp: 0, prism: 0, spring: 0 }; pickups = []; nextPowerX = 900; fever = 0; islandIdx = 0; maxAlt = 0; skyMsg = false;
+  powers = { gale: 0, sky: 0, magnet: 0, ward: 0, warp: 0, prism: 0, spring: 0, comet: 0, starfall: 0, flow: 0, echo: 0 }; pickups = [];
+  meteors = []; starT = 0; echoHist = []; echo = null; flowT = 0; nextPowerX = 900; fever = 0; islandIdx = 0; maxAlt = 0; skyMsg = false;
   rings = []; ghosts = []; arcPath = null; lightning = null; slowmo = 0; camPunch = 0;
   nextShardX = 900; elapsed = 0; shardCount = 0; trickScore = 0; combo = 0; comboTimer = 0; flashT = 0; shake = 0;
 }
@@ -751,6 +753,18 @@ function gameOver() {
   thud();
 }
 
+function grabShard(x, y, playing, byTwin) {
+  if (playing) {
+    shardCount += (fever > 0 ? 2 : 1) * (powers.prism > 0 ? 3 : 1);
+    if (!p.launch && !byTwin) {                 // a small nudge on the ground, but never during an island jump
+      const sp = Math.hypot(p.vx, p.vy), k = Math.min(1, 1750 / (sp + 40));
+      p.vx += 40 * Math.cos(p.rot) * k; p.vy += 40 * Math.sin(p.rot) * k;
+    }
+    chime(comboTimer > 0 ? (shardCount % SCALE.length) : 0);
+    comboTimer = 1.2;
+  }
+  burst(x, y, 10, 140, byTwin ? "rgba(225,232,255," : "rgba(190,240,255,", 0.6, 4);
+}
 function popup(text, big) { popups.push({ text, t: 0, big: !!big }); if (popups.length > 3) popups.shift(); }
 
 // ---------- particles ----------
@@ -805,9 +819,10 @@ const HOLD_G = 3.1, AIR_G = 0.78, MAX_SPEED = 2700, MIN_SPEED = 240, CRUISE = 43
 
 function land(a) {
   const vAng = Math.atan2(p.vy, p.vx), d = Math.abs(wrap(vAng - a));
-  const downhill = Math.sin(a) > 0.12;
-  if (d < 0.38 && downhill && p.air > 0.35) {
-    if (!p.trick) { burst(p.x, p.y, 10, 140, `rgba(${sprayAt(p.x)},`, 0.6, 4); squash(3); return { boost: 0 }; }   // no dive, no reward
+  const downhill = Math.sin(a) > 0.12, flow = powers.flow > 0 && p.air > 0.3;   // Flow: every landing counts as a perfect one
+  if (flow || (d < 0.38 && downhill && p.air > 0.35)) {
+    if (flow) ring(p.x, p.y, "#00ffc6", 230, 0.55, 10);
+    else if (!p.trick) { burst(p.x, p.y, 10, 140, `rgba(${sprayAt(p.x)},`, 0.6, 4); squash(3); return { boost: 0 }; }   // no dive, no reward
     combo++;
     const pts = 50 * Math.min(combo, 10) * (fever > 0 ? 2 : 1); trickScore += pts;
     popup(combo >= 3 ? `Smooth ×${combo}  +${pts}` : `Smooth landing  +${pts}`, combo >= 3);
@@ -820,6 +835,19 @@ function land(a) {
   if (d > 0.7 && p.air > 0.35) { combo = 0; popup("Rough landing"); thud(); shake = 0.2; burst(p.x, p.y, 26, 220, "rgba(255,80,220,", 0.9, 6); ring(p.x, p.y, "#ff2bd6", 140, 0.45, 6); squash(7); }
   else { burst(p.x, p.y, 10, 140, `rgba(${sprayAt(p.x)},`, 0.6, 4); if (p.air > 0.35) squash(3); }
   return { boost: 0 };
+}
+
+// Comet: every landing from the air is a smash: a shockwave that pulls in nearby shards, a burst of speed and a combo step
+function cometSmash() {
+  const k = Math.min(p.air, 1.6), boost = 230 + k * 170;
+  for (const s2 of shards) if (Math.hypot(s2.x - p.x, s2.y - p.y) < 480) s2.pull = true;
+  ring(p.x, p.y, "#ff5a36", 380 + k * 140, 0.7, 18); ring(p.x, p.y, "#ffd35c", 250, 0.5, 10);
+  burst(p.x, p.y, 44, 380, "rgba(255,120,60,", 0.9, 7); burst(p.x, p.y, 18, 240, "rgba(255,220,120,", 0.6, 4);
+  shake = Math.max(shake, 0.3 + k * 0.15); squash(7); thud(); tone(62, 0.5, 0.22, "sawtooth");
+  combo++; const pts = 100 * Math.min(combo, 10) * (fever > 0 ? 2 : 1); trickScore += pts;
+  popup(`Comet smash${combo >= 2 ? " ×" + combo : ""}  +${pts}`, combo >= 3);
+  if (combo === 3 || (combo > 3 && combo % 3 === 0)) startFever();
+  return { boost };
 }
 
 function startFever() {
@@ -853,6 +881,7 @@ function step(dt, auto) {
   if (h) mult = p.grounded && Math.sin(a0) < -0.15 ? 1.5 : HOLD_G;   // holding on a climb only mildly hurts
   else mult = p.grounded ? 1 : AIR_G;
   if (powers.sky > 0 && !h) mult *= 0.42;
+  if (powers.comet > 0 && h && !p.grounded) mult *= 1.45;            // Comet: a dive in the air is a plunge
   if (p.launch) mult = p.launchG / G;                               // the ramp flight follows its planned arc
   p.vy += G * mult * dt;
 
@@ -873,7 +902,7 @@ function step(dt, auto) {
       if (combo === 3 || (combo > 3 && combo % 3 === 0)) startFever();
       burst(p.x, p.y, 40, 260, `rgba(${sprayAt(p.x)},`, 0.9, 6); shake = 0.3; ring(p.x, p.y, crestAt(p.x), 420, 0.8, 16); squash(8);
     }
-    else if (!p.grounded && p.air > 0.2) { res = land(a); sprung = powers.spring > 0; }
+    else if (!p.grounded && p.air > 0.2) { res = powers.comet > 0 && p.air > 0.3 ? cometSmash() : land(a); sprung = powers.spring > 0; }
     p.y = gy;
     const tx = Math.cos(a), ty = Math.sin(a);
     let s = p.vx * tx + p.vy * ty;
@@ -975,16 +1004,22 @@ const POWER = {
   ward:   { name: "Ward",    color: "#9ef0a6", glyph: "✦", dur: 0 },
   warp:   { name: "Time Warp", color: "#ffe14d", glyph: "◷", dur: 6 },
   prism:  { name: "Prism",   color: "#ff7bf0", glyph: "◇", dur: 10 },
-  spring: { name: "Spring",  color: "#7dff3a", glyph: "⇑", dur: 8 }
+  spring: { name: "Spring",  color: "#7dff3a", glyph: "⇑", dur: 8 },
+  comet:    { name: "Comet",    color: "#ff5a36", glyph: "✸", dur: 6 },
+  starfall: { name: "Starfall", color: "#7f9bff", glyph: "✶", dur: 6 },
+  flow:     { name: "Flow",     color: "#00ffc6", glyph: "∞", dur: 8 },
+  echo:     { name: "Echo",     color: "#dfe6ff", glyph: "◑", dur: 10 }
 };
+const POWER_KEYS = Object.keys(POWER);
+// how often each power-up turns up
+const SPAWN = [["gale", 0.3], ["sky", 0.14], ["ward", 0.11], ["comet", 0.09], ["warp", 0.07], ["starfall", 0.07], ["flow", 0.06], ["prism", 0.05], ["spring", 0.05], ["echo", 0.04], ["magnet", 0.02]];
 function spawnPickups(viewW) {
   while (nextPowerX < cam.x + viewW + 600) {
     const kk = islandAt(nextPowerX);
     if (kk < END.length && nextPowerX > END[kk] - RAMP) { nextPowerX = BOUNDS[kk] + 900; continue; }
-    // two-thirds of power-ups are Gale speed boosts; the rest split between the others
-    // mostly speed (Gale) and jump (Skyward) boosts
-    // Gale 41%, Skyward 20%, Ward 14%, Time Warp 9%, Prism 8%, Spring 6%, Magnet 2%
-    const r = Math.random(), type = r < 0.41 ? "gale" : r < 0.61 ? "sky" : r < 0.75 ? "ward" : r < 0.84 ? "warp" : r < 0.92 ? "prism" : r < 0.98 ? "spring" : "magnet";
+    // mostly speed (Gale) and jump (Skyward) boosts, then the rest
+    const r = Math.random(); let type = "magnet", acc = 0;
+    for (const [k, w] of SPAWN) { acc += w; if (r < acc) { type = k; break; } }
     // about a third sit on the sand where you ride through them; the rest float a hop above it, so you jump to catch them
     const lift = Math.random() < 0.35 ? 42 : 110 + Math.random() * 90;
     pickups.push({ x: nextPowerX, y: groundY(nextPowerX) - lift, type, ph: Math.random() * TAU });
@@ -1009,6 +1044,10 @@ function collectPower(type) {
     for (let i = 0; i < 14; i++) { const x = p.x + 260 + i * 95, g = groundY(x); if (g < ABYSS) shards.push({ x, y: g - 50, ph: Math.random() * TAU }); }
   }
   if (type === "spring") { powers.spring = P.dur; popup("SPRING!  every landing bounces", true); }
+  if (type === "comet") { powers.comet = P.dur; popup("COMET!  dive, then smash the dunes", true); }
+  if (type === "starfall") { powers.starfall = P.dur; starT = 0; popup("STARFALL!  shards rain from the sky", true); }
+  if (type === "flow") { powers.flow = P.dur; flowT = 0; popup("FLOW!  every landing is perfect", true); }
+  if (type === "echo") { powers.echo = P.dur; echoHist = []; popup("ECHO!  your twin grabs the shards above", true); }
 }
 function chip(color, glyph, name, frac) {
   const C = 50.27, off = (C * (1 - Math.round(frac * 20) / 20)).toFixed(1);
@@ -1016,7 +1055,7 @@ function chip(color, glyph, name, frac) {
 }
 function renderPowers() {
   const el = $("powers"); let html = "";
-  for (const k of ["gale", "sky", "magnet", "ward", "warp", "prism", "spring"]) {
+  for (const k of POWER_KEYS) {
     const v = powers[k]; if (v <= 0) continue;
     const P = POWER[k], frac = k === "ward" ? 1 : v / P.dur;
     html += chip(P.color, P.glyph, P.name, frac);
@@ -1053,7 +1092,7 @@ function update(dt) {
       popup(`Island ${ik + 1} · ${isl(ik).name}`, true); popup(`Storm pushed back  +${bonus}`);
       flashT = 0.6; shake = 0.25; chord();
     }
-    for (const k of ["gale", "sky", "magnet", "warp", "prism", "spring"]) powers[k] = Math.max(0, powers[k] - dt);
+    for (const k of POWER_KEYS) if (k !== "ward") powers[k] = Math.max(0, powers[k] - dt);
     fever = Math.max(0, fever - dt);
     const alt = surf(p.x) - p.y;
     if (!p.grounded && !p.launch && alt > 1400 && !skyMsg) { skyMsg = true; popup(`Sky high!  ${Math.round(alt / 10)} m up`, true); trickScore += 300; }
@@ -1122,21 +1161,35 @@ function update(dt) {
   for (let i = shards.length - 1; i >= 0; i--) {
     const s = shards[i];
     if (s.x < cam.x - 300) { shards.splice(i, 1); continue; }
-    if (powers.magnet > 0) { const dx = p.x - s.x, dy = p.y - 30 - s.y, d = Math.hypot(dx, dy); if (d < 520) { const k = Math.min(1, dt * 7); s.x += dx * k; s.y += dy * k; } }
-    if (state !== "over" && Math.hypot(s.x - p.x, s.y - (p.y - 30)) < 52) {
-      shards.splice(i, 1);
-      if (playing) {
-        shardCount += (fever > 0 ? 2 : 1) * (powers.prism > 0 ? 3 : 1);
-        if (!p.launch) {                          // a small nudge on the ground, but never during an island jump
-          const sp = Math.hypot(p.vx, p.vy), k = Math.min(1, 1750 / (sp + 40));
-          p.vx += 40 * Math.cos(p.rot) * k; p.vy += 40 * Math.sin(p.rot) * k;
-        }
-        chime(comboTimer > 0 ? (shardCount % SCALE.length) : 0);
-        comboTimer = 1.2;
-      }
-      burst(s.x, s.y, 10, 140, "rgba(190,240,255,", 0.6, 4);
+    if (powers.magnet > 0 || s.pull) { const dx = p.x - s.x, dy = p.y - 30 - s.y, d = Math.hypot(dx, dy); if (d < (s.pull ? 900 : 520)) { const k = Math.min(1, dt * (s.pull ? 10 : 7)); s.x += dx * k; s.y += dy * k; } }
+    const byTwin = echo && Math.hypot(s.x - echo.x, s.y - (echo.y - 30)) < 66;
+    if (state !== "over" && (byTwin || Math.hypot(s.x - p.x, s.y - (p.y - 30)) < 52)) { shards.splice(i, 1); grabShard(s.x, s.y, playing, byTwin); }
+  }
+  // Starfall: shards streak down ahead of you; catch them falling or pick them up where they land
+  if (playing && powers.starfall > 0) {
+    starT -= dt;
+    while (starT <= 0) {
+      starT += 0.11;
+      const sp = Math.hypot(p.vx, p.vy), x = p.x + sp * 1.2 + 120 + Math.random() * 900, g = groundY(x);
+      if (g < ABYSS) meteors.push({ x: x + 330, y: g - 950 - Math.random() * 450, vx: -300 - Math.random() * 120, vy: 980 + Math.random() * 260 });
     }
   }
+  for (let i = meteors.length - 1; i >= 0; i--) {
+    const m = meteors[i]; m.x += m.vx * dt; m.y += m.vy * dt;
+    const g = groundY(m.x), byTwin = echo && Math.hypot(m.x - echo.x, m.y - (echo.y - 30)) < 70;
+    if (state !== "over" && (byTwin || Math.hypot(m.x - p.x, m.y - (p.y - 30)) < 64)) { meteors.splice(i, 1); grabShard(m.x, m.y, playing, byTwin); continue; }
+    if (m.y >= g - 55) { meteors.splice(i, 1); if (g < ABYSS) { shards.push({ x: m.x, y: g - 55, ph: Math.random() * TAU, star: true }); burst(m.x, g - 50, 8, 150, "rgba(150,175,255,", 0.5, 3); } }
+    else if (m.x < cam.x - 400) meteors.splice(i, 1);
+  }
+  // Echo: a twin rides a beat behind you, high above your line
+  if (playing && powers.echo > 0) {
+    echoHist.push({ x: p.x, y: p.y, rot: p.rot }); if (echoHist.length > 12) echoHist.shift();
+    const e = echoHist[Math.max(0, echoHist.length - 7)];
+    echo = echo ? { x: lerp(echo.x, e.x, 0.35), y: lerp(echo.y, Math.min(e.y, surf(e.x)) - 175, 0.35), rot: e.rot } : { x: e.x, y: e.y - 175, rot: e.rot };
+  } else echo = null;
+  // Comet flames and Flow ripples
+  if (playing && powers.comet > 0 && !p.grounded) particles.push({ x: p.x - p.vx * 0.02, y: p.y - 20, vx: -p.vx * 0.2 + (Math.random() - 0.5) * 90, vy: -p.vy * 0.2 - 60 * Math.random(), life: 0.45, max: 0.45, size: 5 + Math.random() * 5, color: Math.random() < 0.5 ? "rgba(255,110,50," : "rgba(255,205,90,", grav: -0.2 });
+  if (playing && powers.flow > 0) { flowT -= dt; if (flowT <= 0) { flowT = 0.45; ring(p.x, p.y - 28, "#00ffc6", 120, 0.6, 5); } }
   spawnPickups(W / (baseScale() * cam.zoom));
   for (let i = pickups.length - 1; i >= 0; i--) {
     const q = pickups[i];
@@ -1495,6 +1548,7 @@ function drawPickups(sc, t) {
 }
 
 function trailColor() {
+  if (powers.comet > 0) return "255,110,60"; if (powers.flow > 0) return "0,255,198";
   if (powers.gale > 0) return "255,170,70"; if (fever > 0) return "255,215,110"; if (powers.sky > 0) return "205,170,255";
   if (isl(islandAt(p.x)).type === "rainbow") return hsl(rainbowHue(p.x), 1, 0.72).map(v => v | 0).join(",");
   return "120,240,255";
@@ -1555,11 +1609,44 @@ function drawRider(sc, t) {
   scarf.forEach((s2, i) => { const [x, y] = toS(s2.x, s2.y, sc); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
   ctx.stroke();
   const [sx, sy] = toS(p.x, p.y, sc);
+  if (powers.comet > 0) {                                                       // Comet: a blazing aura
+    const g = ctx.createRadialGradient(sx, sy - 28 * sc, 0, sx, sy - 28 * sc, 90 * sc);
+    g.addColorStop(0, "rgba(255,190,90,.55)"); g.addColorStop(0.5, "rgba(255,90,40,.25)"); g.addColorStop(1, "rgba(255,60,20,0)");
+    ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy - 28 * sc, 90 * sc, 0, TAU); ctx.fill(); ctx.restore();
+  }
   if (powers.ward > 0) { ctx.strokeStyle = "rgba(158,240,166,.7)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sx, sy - 28 * sc, 62 * sc, 0, TAU); ctx.stroke(); ctx.fillStyle = "rgba(158,240,166,.12)"; ctx.fill(); }
   ctx.save(); ctx.translate(sx, sy); ctx.scale(sc, sc); ctx.rotate(p.rot);
   ctx.scale(1 + rig.sq * 0.55, 1 - rig.sq);                                 // squash & stretch from the feet
   drawBlade(null);
   drawRig(rig, null, t);
+  ctx.restore();
+}
+
+// Starfall: bright streaks with a head of light
+function drawMeteors(sc) {
+  if (!meteors.length) return;
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
+  for (const m of meteors) {
+    const [x, y] = toS(m.x, m.y, sc), [x0, y0] = toS(m.x - m.vx * 0.12, m.y - m.vy * 0.12, sc);
+    if (x < -80 || x > W + 80 || y < -200) continue;
+    const g = ctx.createLinearGradient(x0, y0, x, y); g.addColorStop(0, "rgba(127,155,255,0)"); g.addColorStop(1, "rgba(200,215,255,.95)");
+    ctx.strokeStyle = g; ctx.lineWidth = Math.max(2, 7 * sc); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x, y); ctx.stroke();
+    ctx.fillStyle = "rgba(235,242,255,.95)"; ctx.beginPath(); ctx.arc(x, y, Math.max(2.5, 8 * sc), 0, TAU); ctx.fill();
+    ctx.fillStyle = "rgba(127,155,255,.35)"; ctx.beginPath(); ctx.arc(x, y, Math.max(6, 22 * sc), 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+}
+// Echo: a see-through twin with a beam of light down to you
+function drawEcho(sc, t) {
+  if (!echo) return;
+  const [x, y] = toS(echo.x, echo.y, sc), [px, py] = toS(p.x, p.y - 40, sc), fade = Math.min(1, powers.echo / 0.6);
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  const beam = ctx.createLinearGradient(x, y, px, py); beam.addColorStop(0, `rgba(223,230,255,${0.35 * fade})`); beam.addColorStop(1, "rgba(223,230,255,0)");
+  ctx.strokeStyle = beam; ctx.lineWidth = 3 * sc + 1; ctx.setLineDash([6 * sc + 2, 8 * sc + 2]); ctx.lineDashOffset = -t * 60; ctx.beginPath(); ctx.moveTo(x, y - 30 * sc); ctx.lineTo(px, py); ctx.stroke(); ctx.setLineDash([]);
+  const g = ctx.createRadialGradient(x, y - 28 * sc, 0, x, y - 28 * sc, 70 * sc); g.addColorStop(0, `rgba(200,215,255,${0.3 * fade})`); g.addColorStop(1, "rgba(200,215,255,0)");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y - 28 * sc, 70 * sc, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 0.7 * fade * (0.85 + 0.15 * Math.sin(t * 9)); ctx.translate(x, y); ctx.scale(sc, sc); ctx.rotate(echo.rot);
+  drawBlade("#c8d4ff"); drawRig(rig, "#dfe6ff", t);
   ctx.restore();
 }
 
@@ -1606,6 +1693,7 @@ function drawArcPath(sc, t) {
 function predictLanding() {
   let x = p.x, y = p.y, vx = p.vx, vy = p.vy, m = hold ? HOLD_G : AIR_G;
   if (powers.sky > 0 && !hold) m *= 0.42;
+  if (powers.comet > 0 && hold) m *= 1.45;
   for (let i = 0; i < 360; i++) {
     vy += G * m / 30; x += vx / 30; y += vy / 30;
     const gy = groundY(x);
@@ -1762,7 +1850,9 @@ function render(t) {
   drawTrail(sc);
   drawGhosts(sc, t);
   drawRings(sc);
+  drawMeteors(sc);
   drawParticles(sc);
+  drawEcho(sc, t);
   drawRider(sc, t);
   drawStorm(sc, t);
   drawSpeedLines(t);
@@ -1793,7 +1883,7 @@ if (/debug/.test(location.hash)) window.__SB = {
   get p() { return p; }, get cam() { return cam; }, view: () => ({ W, H, s: baseScale() * cam.zoom }), surf: (x) => surf(x), get state() { return state; }, get islandIdx() { return islandIdx; }, get elapsed() { return elapsed; }, get storm() { return storm; }, get combo() { return combo; },
   BOUNDS: () => BOUNDS, END: () => END, groundY, start, score, setHold(v) { hold = v; }, autoHold,
   sim(sec, dt = 1 / 60, bot) { for (let i = 0; i < sec / dt && state === "play"; i++) { if (bot) hold = bot(); update(dt); } },
-  render(t = performance.now() / 1000) { render(t); },
+  render(t = performance.now() / 1000) { render(t); }, give(type) { collectPower(type); }, get powers() { return powers; }, get shardCount() { return shardCount; },
   jumpTo(k, dx = 3000) { const x = (k === 0 ? 0 : BOUNDS[k - 1]) + dx; p.x = x; p.y = groundY(x) - 2; p.vx = 900; p.vy = 0; p.grounded = false; islandIdx = k; storm.x = x - 3000; cam.x = x - 300; cam.y = groundY(x) - 400; elapsed = STORM_GRACE - 30; }
 };
 })();

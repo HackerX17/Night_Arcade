@@ -17,7 +17,7 @@ Each **island** is long and ends in a huge drop and a giant ramp that throws you
 
 The storm gives you a 2 minute head start, then speeds up. Ride hands-off and it catches you a couple of minutes later; good riding stays ahead of it for much longer. When you fly so high that the ground leaves the screen, a marker on the bottom edge shows where you'll land: green for a smooth downhill landing, red for a bad one (hold to dive and change it).
 
-Power-ups show up often, mostly Gale speed boosts and Skyward jumps. About a third sit on the sand where you ride through them; the rest float a hop above it, so jump to catch them.
+Power-ups show up often, mostly Gale speed boosts and Skyward jumps. About a third sit on the sand where you ride through them; the rest float a hop above it, so jump to catch them. Each one shows in the top-left corner with a ring that runs down as it wears off.
 
 ## Power-ups
 - **Gale**: full speed for a few seconds and pushes the storm back
@@ -27,6 +27,10 @@ Power-ups show up often, mostly Gale speed boosts and Skyward jumps. About a thi
 - **Time Warp**: throws the storm far back and freezes it for 6 seconds
 - **Prism**: shards are worth triple for 10 seconds, plus a trail of shards ahead
 - **Spring**: for 8 seconds every landing bounces you back up
+- **Comet** (new): for 6 seconds, holding in the air makes you plunge, and every landing is a smash: a shockwave pulls in the shards around you, gives you a burst of speed and adds to your combo
+- **Starfall** (new): for 6 seconds, shards rain from the sky ahead of you; catch them as they fall or pick them up where they land
+- **Flow** (new): for 8 seconds every landing counts as a perfect one, so combos and Fever chain easily
+- **Echo** (new): for 10 seconds a see-through twin rides just above you and grabs the shards you'd pass under
 
 **My music** (on the menu, pause and game-over screens) plays your own songs while you ride.
 
