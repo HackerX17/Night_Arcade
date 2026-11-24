@@ -2,7 +2,7 @@
 
 Six original browser games. They run on phones and computers with nothing to install.
 
-**Play:** https://hackerx17.github.io/night_arcade/
+**Play:** https://hackerx17.github.io/Night_Arcade/
 
 | Game | What it is | Folder |
 | --- | --- | --- |
