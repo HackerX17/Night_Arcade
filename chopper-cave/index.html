@@ -686,6 +686,10 @@ const THRUST = 1500, GRAVITY = 1150, MIN_THRUST = 0.09, CATCH = 0.35;
 let state = "title", hold = false, thrustT = 0, keyDown = false;
 const fingers = new Set();
 let heli, cols, blocks, trail, sparks, scroll, dist, speed, trailT, deadT, flash, stage, banner;
+// power-ups: a Shield that takes one crash, Wide Cave (the walls pull back and the pillars shrink, then it all eases back),
+// Slow-Mo, and the Portal to Hyperspace, a bonus world you fly until you crash, then you drop back into the cave
+let pickups, powers, wideK, slowK, grace, mode, hy, nextPick, firstPortal, notes;
+const WIDEN = 46, PICK_R = 24;
 let best = +(store.get("chopper-best") || 0), muted = store.get("chopper-muted") === "1", newBest = false;
 let gapC, gapH, nextBlock;
 
@@ -702,6 +706,8 @@ function reset() {
   cols = []; blocks = []; trail = []; sparks = [];
   scroll = 0; dist = 0; speed = 210; trailT = 0; deadT = 0; flash = 0; stage = 0; banner = null; thrustT = 0;
   gapC = VH / 2; gapH = GAP_START; nextBlock = 520;
+  pickups = []; powers = { shield: 0, wide: 0, slow: 0 }; wideK = 0; slowK = 0; grace = 0; mode = "cave"; hy = null; nextPick = 1500; firstPortal = true; notes = [];
+  if (window.ArcadeSound) window.ArcadeSound.style("techno");
   for (let i = 0; i <= VW / COL + 2; i++) cols.push({ top: 30, bot: VH - 30 });
 }
 reset();
@@ -736,6 +742,16 @@ function chime() {
   if (!actx || muted || (window.ArcadeSound && !window.ArcadeSound.sfx)) return;   // Sound effects can be switched off in Music & sound
   [784, 988, 1319].forEach((f, i) => { const t = actx.currentTime + i * 0.07, o = actx.createOscillator(), g = actx.createGain(); o.type = "triangle"; o.frequency.value = f; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.06, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5); o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.55); });
 }
+function blip(f, dur, vol, type = "triangle", delay = 0, slide = 1) {
+  if (!actx || muted || (window.ArcadeSound && !window.ArcadeSound.sfx)) return;
+  const t = actx.currentTime + delay, o = actx.createOscillator(), g = actx.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (slide !== 1) o.frequency.exponentialRampToValueAtTime(f * slide, t + dur);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.05);
+}
+function pickSound(type) { if (type === "portal") return; [660, 880, 1175].forEach((f, i) => blip(f * (type === "slow" ? 0.75 : 1), 0.25, 0.06, "triangle", i * 0.06)); }
+function shieldSound() { blip(220, 0.5, 0.12, "sawtooth", 0, 2.2); blip(880, 0.4, 0.06, "sine", 0.05, 0.5); }
+function portalSound(out) { for (let i = 0; i < 8; i++) blip(out ? 1400 - i * 140 : 300 + i * 140, 0.22, 0.05, "sine", i * 0.04); blip(out ? 90 : 60, 0.9, 0.12, "sawtooth", 0, out ? 0.5 : 2.5); }
+function orbSound(n) { const sc = [523, 587, 659, 784, 880, 1047, 1175, 1319]; blip(sc[n % sc.length] * (n % 16 >= 8 ? 2 : 1), 0.12, 0.04, "sine"); }
+function ringSound() { [784, 988, 1319, 1568].forEach((f, i) => blip(f, 0.4, 0.05, "triangle", i * 0.04)); }
 const ICON_ON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
 const ICON_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9zm12.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4z"/></svg>';
 function setMuted(m) {
@@ -772,6 +788,9 @@ addEventListener("contextmenu", e => e.preventDefault());
 document.getElementById("mute").addEventListener("click", () => { initAudio(); setMuted(!muted); });
 
 // ---------- update ----------
+// the walls and pillars as they are right now (Wide Cave pulls the walls back and shrinks the pillars)
+const wallTop = (c) => Math.max(4, c.top - wideK * WIDEN), wallBot = (c) => Math.min(VH - 4, c.bot + wideK * WIDEN);
+function blockBox(b) { const sh = 1 - 0.55 * wideK, sw = 1 - 0.3 * wideK, h = b.h * sh, w = b.w * sw; return { x: b.x + (b.w - w) / 2, y: b.y + (b.h - h) / 2, w, h }; }
 function heliHits() {
   // a few points around the helicopter body and tail
   // turned with the craft's tilt, so what touches the walls on screen is what crashes
@@ -779,8 +798,8 @@ function heliHits() {
   for (const [ox, oy] of pts) {
     const x = HELI_X + ox * cs - oy * sn, y = heli.y + ox * sn + oy * cs;
     const c = cols[Math.floor((x + scroll % COL) / COL)];
-    if (c && (y < c.top || y > c.bot)) return true;
-    for (const b of blocks) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) return true;
+    if (c && (y < wallTop(c) || y > wallBot(c))) return true;
+    for (const b0 of blocks) { const b = blockBox(b0); if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) return true; }
   }
   return heli.y < 0 || heli.y > VH;
 }
@@ -792,15 +811,94 @@ function crash() {
   newBest = d > best;                                          // only beating it is a new best, not matching it
   if (newBest) { best = d; store.set("chopper-best", String(best)); }
 }
+function note(text, color) { notes.push({ text, color, t: 0 }); if (notes.length > 3) notes.shift(); }
+function spawnPickup() {
+  // the first one is always a portal (so you find Hyperspace early); then a mix, with portals about one time in five
+  let type;
+  const first = dist < 2600, r = Math.random();
+  if (first) type = r < 0.4 ? "shield" : r < 0.7 ? "wide" : "slow";
+  else if (firstPortal) type = "portal";
+  else type = r < 0.3 ? "shield" : r < 0.56 ? "wide" : r < 0.8 ? "slow" : "portal";
+  if (type === "portal") firstPortal = false;
+  const c = cols[cols.length - 1], top = c.top + 26, bot = c.bot - 26;
+  let y = rnd(top, Math.max(top, bot));
+  for (const b of blocks) if (Math.abs(b.x - VW) < 90) { const mid = b.y + b.h / 2; y = mid > (top + bot) / 2 ? clamp(b.y - 34, top, bot) : clamp(b.y + b.h + 34, top, bot); }   // never inside a pillar
+  pickups.push({ type, x: VW + 30, y, ph: Math.random() * TAU, taken: false });
+  nextPick = first ? rnd(2000, 2800) : rnd(2600, 4200); nextBlock = Math.max(nextBlock, 80);
+}
+const PICK = { shield: { name: "SHIELD", col: [0, 229, 255] }, wide: { name: "WIDE CAVE", col: [182, 255, 0] }, slow: { name: "SLOW-MO", col: [201, 77, 255] }, portal: { name: "PORTAL", col: [255, 61, 224] } };
+function collect(q) {
+  q.taken = true; pickSound(q.type); flash = Math.max(flash, 0.25);
+  for (let i = 0; i < 18; i++) { const a = Math.random() * TAU, sp = rnd(40, 160); sparks.push({ x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rnd(0.3, 0.7), col: PICK[q.type].col }); }
+  if (q.type === "shield") { powers.shield = 1; note("SHIELD · takes one crash", css(PICK.shield.col)); }
+  if (q.type === "wide") { powers.wide = 8; note("WIDE CAVE · 8 seconds", css(PICK.wide.col)); }
+  if (q.type === "slow") { powers.slow = 6; note("SLOW-MO · 6 seconds", css(PICK.slow.col)); }
+  if (q.type === "portal") enterHyper();
+}
+function shieldSave() {
+  // the shield takes the hit: it bursts, you bounce back into the middle of the gap and blink for a moment
+  powers.shield = 0; grace = 1.4; flash = 0.6; shieldSound();
+  const c = cols[Math.floor((HELI_X + scroll % COL) / COL)] || cols[0], mid = (wallTop(c) + wallBot(c)) / 2;
+  heli.y += (mid - heli.y) * 0.6; heli.vy = 0;
+  for (let i = 0; i < 30; i++) { const a = Math.random() * TAU, sp = rnd(60, 220); sparks.push({ x: HELI_X, y: heli.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rnd(0.4, 0.9), col: PICK.shield.col }); }
+  note("SHIELD SAVED YOU", css(PICK.shield.col));
+}
+// ---------- Hyperspace: a synthwave bonus world. Fly through the weaving laser tunnel, grab orbs (+3 m) and rings (+20 m),
+// dodge the laser gates. You stay until you crash; then you drop back into the cave with a moment's shield, and the bonus is yours
+const hyCenter = (x) => VH / 2 + 62 * Math.sin(x * 0.0042) + 30 * Math.sin(x * 0.011 + 1.3);
+const hyHalf = () => clamp(120 - hy.t * 2.4, 50, 120);
+const hySpeed = () => Math.min(280 + hy.t * 8, 520);
+function enterHyper() {
+  mode = "hyper"; hy = { t: 0, x: 0, bonus: 0, orbs: [], rings: [], gates: [], nextOrb: 120, nextRing: 520, nextGate: 1100, hue: 300, intro: 1.2, streak: 0 };
+  heli.y = VH / 2; heli.vy = 0; flash = 1; portalSound(); pickups = []; notes = [];
+  if (window.ArcadeSound) window.ArcadeSound.style("electro");
+}
+function exitHyper() {
+  const m = Math.round(hy.bonus); dist += m * 10; mode = "cave"; grace = 2.2; flash = 1; portalSound(true);
+  const c = cols[Math.floor((HELI_X + scroll % COL) / COL)] || cols[0]; heli.y = (wallTop(c) + wallBot(c)) / 2; heli.vy = 0;
+  const k = Math.floor(dist / STAGE), zone = k > stage ? ` · ${THEMES[k % THEMES.length].name.toUpperCase()}` : ""; stage = Math.max(stage, k);
+  banner = { name: m > 0 ? `+${m.toLocaleString()} m` : "BACK IN THE CAVE", raw: true, sub: (m > 0 ? "HYPERSPACE BONUS" : "NO BONUS THIS TIME") + zone, m: Math.floor(dist / 10), t: 0 }; hy = null;
+  if (window.ArcadeSound) window.ArcadeSound.style("techno");
+}
+function updateHyper(dt) {
+  const up = hold || thrustT > 0; thrustT = Math.max(0, thrustT - dt);
+  heli.vy += (up ? -THRUST : GRAVITY) * dt; heli.vy = clamp(heli.vy, -340, 390); heli.y += heli.vy * dt;
+  heli.tilt += (clamp(heli.vy / 900, -0.25, 0.3) - heli.tilt) * Math.min(1, dt * 12);
+  hy.t += dt; hy.intro = Math.max(0, hy.intro - dt); hy.hue = (hy.hue + dt * 40) % 360;
+  const dx = hySpeed() * dt; hy.x += dx;
+  // orbs ride the middle of the tunnel in waves; rings and gates come along every so often
+  hy.nextOrb -= dx; while (hy.nextOrb <= 0) { const x = hy.x + VW + 20; hy.orbs.push({ x, y: hyCenter(x) + Math.sin(x * 0.02) * hyHalf() * 0.45 }); hy.nextOrb += 46; }
+  hy.nextRing -= dx; if (hy.nextRing <= 0) { const x = hy.x + VW + 40; hy.rings.push({ x, y: hyCenter(x), passed: false }); hy.nextRing = rnd(700, 1000); }
+  hy.nextGate -= dx; if (hy.nextGate <= 0 && hy.t > 3) { const x = hy.x + VW + 40, h = hyHalf(), gap = clamp(92 - hy.t * 1.2, 52, 92); hy.gates.push({ x, gy: hyCenter(x) + rnd(-(h - gap / 2 - 6), h - gap / 2 - 6), gap, hit: false }); hy.nextGate = rnd(380, 560) - Math.min(200, hy.t * 5); }
+  const px = hy.x + HELI_X;   // the helicopter's spot in Hyperspace
+  for (const o of hy.orbs) if (!o.got && Math.hypot(o.x - px, o.y - heli.y) < 20) { o.got = true; hy.bonus += 3; hy.streak++; orbSound(hy.streak); for (let i = 0; i < 6; i++) { const a = Math.random() * TAU; sparks.push({ x: HELI_X, y: o.y, vx: Math.cos(a) * 90 - 80, vy: Math.sin(a) * 90, life: 0.4, col: [255, 220, 120] }); } }
+  for (const r of hy.rings) if (!r.passed && r.x < px) { r.passed = true; if (Math.abs(heli.y - r.y) < 24) { hy.bonus += 20; ringSound(); r.good = true; flash = Math.max(flash, 0.2); } }
+  hy.orbs = hy.orbs.filter((o) => o.x > hy.x - 20 && !o.got); hy.rings = hy.rings.filter((r) => r.x > hy.x - 60); hy.gates = hy.gates.filter((g) => g.x > hy.x - 30);
+  trailT -= dt; if (trailT <= 0) { trailT = 0.03; trail.push({ x: HELI_X - 30, y: heli.y + 1, life: 1, up, hue: hy.hue }); }
+  // crashing in Hyperspace isn't the end: it drops you back into the cave
+  if (hy.intro > 0) { heli.y = clamp(heli.y, hyCenter(px) - hyHalf() + 14, hyCenter(px) + hyHalf() - 14); return; }
+  const c = hyCenter(px), h = hyHalf(), pts = [[-26, 0], [-14, -6], [14, -9], [22, 0], [14, 9], [-4, 9], [-14, 6]], cs = Math.cos(heli.tilt), sn = Math.sin(heli.tilt);
+  let hit = false;
+  for (const [ox, oy] of pts) {
+    const x = px + ox * cs - oy * sn, y = heli.y + ox * sn + oy * cs, cc = hyCenter(x);
+    if (y < cc - h || y > cc + h) hit = true;
+    for (const g of hy.gates) if (Math.abs(x - g.x) < 5 && (y < g.gy - g.gap / 2 || y > g.gy + g.gap / 2)) hit = true;
+  }
+  if (hit || heli.y < 0 || heli.y > VH) { for (let i = 0; i < 40; i++) { const a = Math.random() * TAU, s2 = rnd(60, 260); sparks.push({ x: HELI_X, y: heli.y, vx: Math.cos(a) * s2, vy: Math.sin(a) * s2, life: rnd(0.4, 1), col: [255, 61, 224] }); } exitHyper(); }
+}
 function update(dt) {
-  if (state === "play") {
+  if (state === "play" && mode === "hyper") updateHyper(dt);
+  else if (state === "play") {
     const up = hold || thrustT > 0; thrustT = Math.max(0, thrustT - dt);
     heli.vy += (up ? -THRUST : GRAVITY) * dt;
     heli.vy = clamp(heli.vy, -340, 390);
     heli.y += heli.vy * dt;
     heli.tilt += (clamp(heli.vy / 900, -0.25, 0.3) - heli.tilt) * Math.min(1, dt * 12);
     speed = Math.min(210 + dist * 0.012, 400);
-    const dx = speed * dt; scroll += dx; dist += dx;
+    powers.wide = Math.max(0, powers.wide - dt); powers.slow = Math.max(0, powers.slow - dt); grace = Math.max(0, grace - dt);
+    wideK += ((powers.wide > 0 ? 1 : 0) - wideK) * Math.min(1, dt * (powers.wide > 0 ? 2.2 : 1.1));   // opens up quickly, eases back slowly
+    slowK += ((powers.slow > 0 ? 1 : 0) - slowK) * Math.min(1, dt * 3);
+    const dx = speed * (1 - 0.42 * slowK) * dt; scroll += dx; dist += dx;
     while (scroll >= COL) { scroll -= COL; cols.shift(); cols.push(newCol()); }
     for (const b of blocks) b.x -= dx;
     blocks = blocks.filter(b => b.x + b.w > -10);
@@ -810,21 +908,28 @@ function update(dt) {
       blocks.push({ x: VW + 10, y: Math.round(rnd(c.top + 10, c.bot - h - 10)), w: 28, h: Math.round(h) });
       nextBlock = rnd(300, 460) - clamp(dist / TIGHTEN, 0, 1) * 80;
     }
+    // power-ups float in the open part of the cave
+    nextPick -= dx; if (nextPick <= 0) spawnPickup();
+    for (const q of pickups) { q.x -= dx; q.ph += dt; if (!q.taken && Math.hypot(q.x - HELI_X, q.y - heli.y) < PICK_R) collect(q); }
+    pickups = pickups.filter((q) => q.x > -30 && !q.taken);
     const k = Math.floor(dist / STAGE);
     if (k > stage) { stage = k; banner = { name: THEMES[k % THEMES.length].name, m: k * STAGE / 10, t: 0 }; chime(); }
     trailT -= dt;
     if (trailT <= 0) { trailT = 0.035; trail.push({ x: HELI_X - 30, y: heli.y + 1 + rnd(-1.5, 1.5), life: 1, up }); }
-    if (heliHits()) crash();
+    if (mode === "hyper") { /* just went through a portal */ }
+    else if (grace > 0) heli.y = clamp(heli.y, 8, VH - 8);
+    else if (heliHits()) { if (powers.shield) shieldSave(); else crash(); }
   } else if (state === "dead") {
     deadT += dt;
   } else {
     heli.y = VH / 2 + Math.sin(performance.now() / 400) * 14;     // hover on the title screen
   }
-  for (const s of trail) { s.x -= (state === "play" ? speed : 40) * dt; s.life -= dt * 1.6; }
+  for (const s of trail) { s.x -= (state === "play" ? (mode === "hyper" ? hySpeed() : speed * (1 - 0.42 * slowK)) : 40) * dt; s.life -= dt * 1.6; }
   trail = trail.filter(s => s.life > 0 && s.x > -10);
   for (const s of sparks) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 500 * dt; s.life -= dt; }
   sparks = sparks.filter(s => s.life > 0);
   if (banner) { banner.t += dt; if (banner.t > 2) banner = null; }
+  for (const n of notes) n.t += dt; notes = notes.filter((n) => n.t < 1.6);
   flash = Math.max(0, flash - dt * 3);
   if (rotorGain) rotorGain.gain.setTargetAtTime(state === "play" && !muted && !(window.ArcadeSound && !window.ArcadeSound.sfx) ? (hold ? 0.22 : 0.14) : 0, actx.currentTime, 0.05);
   if (rotorOsc) rotorOsc.frequency.setTargetAtTime(hold ? 82 : 68, actx.currentTime, 0.1);
@@ -847,16 +952,16 @@ function drawBackdrop(t) {
 }
 function edgePath(key) {
   ctx.beginPath();
-  for (let i = 0; i < cols.length; i++) { const x = i * COL - scroll, y = cols[i][key]; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); ctx.lineTo(x + COL, y); }
+  for (let i = 0; i < cols.length; i++) { const x = i * COL - scroll, y = key === "top" ? wallTop(cols[i]) : wallBot(cols[i]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); ctx.lineTo(x + COL, y); }
 }
 function drawWalls(t) {
   // the rock above and below the tunnel, filled as two shapes
   const rock = () => {
     ctx.beginPath(); ctx.moveTo(-COL, -2);
-    for (let i = 0; i < cols.length; i++) { const x = i * COL - scroll; ctx.lineTo(x, cols[i].top); ctx.lineTo(x + COL, cols[i].top); }
+    for (let i = 0; i < cols.length; i++) { const x = i * COL - scroll, y = wallTop(cols[i]); ctx.lineTo(x, y); ctx.lineTo(x + COL, y); }
     ctx.lineTo(cols.length * COL, -2); ctx.closePath();
     ctx.moveTo(-COL, VH + 2);
-    for (let i = 0; i < cols.length; i++) { const x = i * COL - scroll; ctx.lineTo(x, cols[i].bot); ctx.lineTo(x + COL, cols[i].bot); }
+    for (let i = 0; i < cols.length; i++) { const x = i * COL - scroll, y = wallBot(cols[i]); ctx.lineTo(x, y); ctx.lineTo(x + COL, y); }
     ctx.lineTo(cols.length * COL, VH + 2); ctx.closePath();
   };
   rock(); ctx.fillStyle = css(P.c0.map(v => Math.round(v * 0.55))); ctx.fill();
@@ -872,7 +977,8 @@ function drawWalls(t) {
   for (const key of ["top", "bot"]) { edgePath(key); ctx.strokeStyle = css(P.a, 0.22); ctx.lineWidth = 8; ctx.stroke(); ctx.strokeStyle = css(P.a, 0.95); ctx.lineWidth = 2; ctx.stroke(); }
   ctx.restore();
   // pillars inside the tunnel
-  for (const b of blocks) {
+  for (const b0 of blocks) {
+    const b = blockBox(b0);
     ctx.fillStyle = css(P.c0.map(v => Math.round(v * 0.55))); ctx.fillRect(b.x, b.y, b.w, b.h);
     ctx.fillStyle = css(P.s2, 0.3); for (let y = b.y + 6; y < b.y + b.h; y += 8) ctx.fillRect(b.x, y, b.w, 1);
     ctx.save(); ctx.globalCompositeOperation = "lighter";
@@ -885,7 +991,7 @@ function drawTrail() {
   ctx.save(); ctx.globalCompositeOperation = "lighter";
   for (const s of trail) {
     const r = 2 + (1 - s.life) * 6;
-    ctx.fillStyle = css(s.up ? P.a : P.s2, s.life * 0.5); ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, TAU); ctx.fill();
+    ctx.fillStyle = s.hue != null ? `hsla(${s.hue},100%,65%,${s.life * 0.6})` : css(s.up ? P.a : P.s2, s.life * 0.5); ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, TAU); ctx.fill();
   }
   ctx.restore();
 }
@@ -923,6 +1029,94 @@ function text(str, x, y, size, color, align = "left", display = true, glow = nul
   ctx.fillText(str, x, y); ctx.shadowBlur = 0;
 }
 
+function drawPickups(t) {
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  for (const q of pickups) {
+    const col = PICK[q.type].col, bob = Math.sin(q.ph * 3) * 3, x = q.x, y = q.y + bob;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, 26); g.addColorStop(0, css(col, 0.55)); g.addColorStop(1, css(col, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 26, 0, TAU); ctx.fill();
+    ctx.strokeStyle = css(col, 0.95); ctx.lineWidth = 2;
+    if (q.type === "portal") {   // a swirling vortex
+      for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(x, y, 15 - k * 4, 17 - k * 4, q.ph * (2 + k), 0.3, TAU - 0.3); ctx.strokeStyle = k === 1 ? "rgba(255,220,120,.95)" : css(col, 0.95); ctx.stroke(); }
+    } else {
+      ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + q.ph * 0.6; ctx.lineTo(x + Math.cos(a) * 15, y + Math.sin(a) * 15); } ctx.closePath(); ctx.stroke();
+      ctx.strokeStyle = "#ffffff"; ctx.fillStyle = "#ffffff"; ctx.lineWidth = 1.8; ctx.lineCap = "round"; ctx.beginPath();
+      if (q.type === "shield") { ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y - 4.5); ctx.lineTo(x + 5, y + 2); ctx.quadraticCurveTo(x + 3, y + 6, x, y + 8); ctx.quadraticCurveTo(x - 3, y + 6, x - 5, y + 2); ctx.lineTo(x - 6, y - 4.5); ctx.closePath(); }
+      else if (q.type === "wide") { ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8); ctx.moveTo(x - 4, y - 4); ctx.lineTo(x, y - 8); ctx.lineTo(x + 4, y - 4); ctx.moveTo(x - 4, y + 4); ctx.lineTo(x, y + 8); ctx.lineTo(x + 4, y + 4); }
+      else { ctx.arc(x, y, 7, 0, TAU); ctx.moveTo(x, y); ctx.lineTo(x, y - 5); ctx.moveTo(x, y); ctx.lineTo(x + 4, y + 1); }
+      ctx.stroke(); ctx.lineCap = "butt";
+    }
+  }
+  ctx.restore();
+  for (const q of pickups) text(PICK[q.type].name, q.x, q.y + Math.sin(q.ph * 3) * 3 + 30, 8, css(PICK[q.type].col), "center", false);
+}
+function drawShield(t) {
+  if (!(powers.shield || grace > 0) || state !== "play") return;
+  if (grace > 0 && !powers.shield && Math.sin(t * 30) < 0) return;   // blinking after a save
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = `rgba(0,229,255,${0.55 + 0.25 * Math.sin(t * 6)})`; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(HELI_X, heli.y, 36, 22, 0, 0, TAU); ctx.stroke(); ctx.fillStyle = "rgba(0,229,255,.08)"; ctx.fill(); ctx.restore();
+}
+function drawHyper(t) {
+  const H2 = (h, s, l, a = 1) => `hsla(${((h % 360) + 360) % 360},${s}%,${l}%,${a})`, hu = hy.hue;
+  // sky: deep violet into hot magenta, a huge striped sun, stars
+  const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, "#0a0024"); g.addColorStop(0.5, H2(hu + 280, 80, 18)); g.addColorStop(1, "#14002e");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+  for (const s of STARS) { ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.5 * Math.abs(Math.sin(t * 2 + s.ph))})`; const sx = ((s.x - hy.x * 0.05) % VW + VW) % VW; ctx.fillRect(sx, s.y * 0.5, s.r, s.r); }
+  const sx = VW * 0.62, sy = VH * 0.5, sr = 74, sg = ctx.createLinearGradient(0, sy - sr, 0, sy + sr); sg.addColorStop(0, "#ffe66a"); sg.addColorStop(0.55, "#ff5fa2"); sg.addColorStop(1, "#b02bff");
+  ctx.save(); ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.clip(); ctx.fillStyle = sg; ctx.fillRect(sx - sr, sy - sr, sr * 2, sr * 2);
+  ctx.fillStyle = "#14002e"; for (let k = 0; k < 7; k++) { const yy = sy + 6 + k * 10 + ((hy.x * 0.04) % 10); ctx.fillRect(sx - sr, yy, sr * 2, 2 + k * 0.7); } ctx.restore();
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; const sh = ctx.createRadialGradient(sx, sy, sr * 0.8, sx, sy, sr * 1.8); sh.addColorStop(0, "rgba(255,95,162,.35)"); sh.addColorStop(1, "rgba(255,95,162,0)"); ctx.fillStyle = sh; ctx.fillRect(0, 0, VW, VH); ctx.restore();
+  // a perspective grid floor and ceiling rushing at you
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineWidth = 1;
+  for (const flip of [1, -1]) {
+    const hz = VH / 2 + flip * 16, edge = flip > 0 ? VH : 0;
+    for (let k = 0; k < 14; k++) { const u = ((k + (hy.x * 0.012) % 1) / 14), yy = hz + (edge - hz) * u * u; ctx.strokeStyle = H2(hu + 180, 100, 60, 0.12 + 0.5 * u); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(VW, yy); ctx.stroke(); }
+    for (let k = -10; k <= 10; k++) { ctx.strokeStyle = H2(hu + 180, 100, 60, 0.25); ctx.beginPath(); ctx.moveTo(VW / 2 + k * 12, hz); ctx.lineTo(VW / 2 + k * 120, edge); ctx.stroke(); }
+  }
+  ctx.restore();
+  // the laser tunnel: rainbow walls that weave and slowly close in; outside it the world is dimmed
+  const h = hyHalf();
+  ctx.fillStyle = "rgba(6,0,22,.66)";
+  for (const side of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(0, side < 0 ? 0 : VH);
+    for (let x = 0; x <= VW; x += 8) ctx.lineTo(x, hyCenter(hy.x + x) + side * h);
+    ctx.lineTo(VW, side < 0 ? 0 : VH); ctx.closePath(); ctx.fill();
+  }
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineJoin = "round";
+  for (const side of [-1, 1]) {
+    for (const [w, a] of [[10, 0.18], [4, 0.45], [1.6, 1]]) {
+      ctx.lineWidth = w; ctx.beginPath();
+      for (let x = 0; x <= VW; x += 8) { const wx = hy.x + x, y = hyCenter(wx) + side * h; if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      const lg = ctx.createLinearGradient(0, 0, VW, 0); for (let k = 0; k <= 4; k++) lg.addColorStop(k / 4, H2(hu + k * 70, 100, 62, a)); ctx.strokeStyle = lg; ctx.stroke();
+    }
+  }
+  // orbs, rings and laser gates
+  for (const o of hy.orbs) { const x = o.x - hy.x; if (x < -10 || x > VW + 10) continue; const r = 6 + Math.sin(t * 8 + o.x) * 1.2; const og = ctx.createRadialGradient(x, o.y, 0, x, o.y, r * 2.6); og.addColorStop(0, "rgba(255,240,170,.95)"); og.addColorStop(1, "rgba(255,180,60,0)"); ctx.fillStyle = og; ctx.beginPath(); ctx.arc(x, o.y, r * 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = "#fff8d0"; ctx.beginPath(); ctx.moveTo(x, o.y - r); ctx.lineTo(x + r * 0.7, o.y); ctx.lineTo(x, o.y + r); ctx.lineTo(x - r * 0.7, o.y); ctx.closePath(); ctx.fill(); }
+  for (const r of hy.rings) { const x = r.x - hy.x; if (x < -40 || x > VW + 40) continue; ctx.lineWidth = 4; ctx.strokeStyle = r.good ? "rgba(125,255,58,.95)" : H2(hu + 120, 100, 65, 0.95); ctx.beginPath(); ctx.ellipse(x, r.y, 9, 28, 0, 0, TAU); ctx.stroke(); ctx.lineWidth = 10; ctx.strokeStyle = H2(hu + 120, 100, 65, 0.2); ctx.stroke(); }
+  for (const gt of hy.gates) {
+    const x = gt.x - hy.x; if (x < -20 || x > VW + 20) continue; const cc = hyCenter(gt.x), top = cc - h - 6, bot = cc + h + 6, g0 = gt.gy - gt.gap / 2, g1 = gt.gy + gt.gap / 2;
+    for (const [w, a] of [[9, 0.25], [3, 1]]) { ctx.lineWidth = w; ctx.strokeStyle = `rgba(255,${a > 0.5 ? 235 : 46},${a > 0.5 ? 245 : 77},${a})`; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, g0); ctx.moveTo(x, g1); ctx.lineTo(x, bot); ctx.stroke(); }
+    ctx.fillStyle = "rgba(255,46,77,.9)"; ctx.fillRect(x - 4, g0 - 3, 8, 3); ctx.fillRect(x - 4, g1, 8, 3);
+  }
+  // speed streaks
+  ctx.strokeStyle = "rgba(255,255,255,.18)"; ctx.lineWidth = 1;
+  for (let k = 0; k < 16; k++) { const y = (k * 37.3) % VH, x = VW - ((hy.x * 1.6 + k * 97) % (VW + 120)); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 60, y); ctx.stroke(); }
+  ctx.restore();
+}
+function drawHUD(t, d) {
+  // distance and best top left; active power-ups underneath; short notes in the middle
+  text(`${d.toLocaleString()} m`, 12, 26, 18, "#ffffff", "left", true, mode === "hyper" ? "#ff3de0" : css(P.a)); text(`BEST ${best.toLocaleString()} m`, 12, 42, 10, "rgba(243,240,255,.85)", "left", false);
+  let y = 60; const chip = (label, col) => {
+    ctx.font = "600 10px Jost, system-ui, sans-serif"; const w = ctx.measureText(label).width;
+    ctx.fillStyle = "rgba(6,0,26,.72)"; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(8, y - 10, w + 10, 14, 7) : ctx.rect(8, y - 10, w + 10, 14); ctx.fill();
+    ctx.strokeStyle = css(col, 0.55); ctx.lineWidth = 1; ctx.stroke();
+    text(label, 13, y, 10, css(col), "left", false); y += 17; };
+  if (mode === "hyper") chip(`HYPERSPACE +${Math.round(hy.bonus).toLocaleString()} m`, PICK.portal.col);
+  if (powers.shield) chip("SHIELD", PICK.shield.col);
+  if (powers.wide > 0 && mode !== "hyper") chip(`WIDE CAVE ${Math.ceil(powers.wide)}s`, PICK.wide.col);
+  if (powers.slow > 0 && mode !== "hyper") chip(`SLOW-MO ${Math.ceil(powers.slow)}s`, PICK.slow.col);
+  notes.forEach((n, i) => { const a = n.t < 0.2 ? n.t / 0.2 : clamp((1.6 - n.t) / 0.5, 0, 1); ctx.globalAlpha = a; text(n.text, VW / 2, VH * 0.62 + i * 18 - n.t * 8, 13, "#ffffff", "center", true, n.color); ctx.globalAlpha = 1; });
+  if (mode === "hyper" && hy.intro > 0) { ctx.globalAlpha = clamp(hy.intro / 0.4, 0, 1); ctx.fillStyle = "rgba(10,0,36,.62)"; ctx.fillRect(0, VH * 0.42 - 36, VW, 70); text("HYPERSPACE", VW / 2, VH * 0.42, 34, "#ffffff", "center", true, "#ff3de0"); text("Orbs +3 m · rings +20 m · crash and you drop back", VW / 2, VH * 0.42 + 24, 11, "rgba(255,230,250,.95)", "center", false); ctx.globalAlpha = 1; }
+}
 function render(t) {
   if (state === "play" || state === "dead") P = palette(dist); else P = palette(0);
   S = Math.min(W / VW, H / VH); OX = (W - VW * S) / 2; OY = (H - VH * S) / 2;
@@ -930,23 +1124,24 @@ function render(t) {
   ctx.fillStyle = css(P.s0); ctx.fillRect(0, 0, W, H);
   ctx.save(); ctx.translate(OX, OY); ctx.scale(S, S);
   ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.clip();
-  drawBackdrop(t);
-  drawWalls(t);
+  if (mode === "hyper" && state === "play") drawHyper(t);
+  else { drawBackdrop(t); drawWalls(t); drawPickups(t); }
   drawTrail();
-  if (state !== "dead" || deadT < 0.05) drawHeli(t);
+  if (state !== "dead" || deadT < 0.05) { if (!(grace > 0 && !powers.shield && Math.sin(t * 30) < -0.6)) drawHeli(t); drawShield(t); }
   ctx.save(); ctx.globalCompositeOperation = "lighter";
-  for (const s of sparks) { ctx.fillStyle = s.life > 0.7 ? "rgba(255,255,255,.95)" : s.life > 0.35 ? css(P.a, 0.9) : css(P.s2, 0.8); ctx.fillRect(s.x - 2, s.y - 2, 4, 4); }
+  for (const s of sparks) { ctx.fillStyle = s.col ? css(s.col, Math.min(1, s.life * 1.6)) : s.life > 0.7 ? "rgba(255,255,255,.95)" : s.life > 0.35 ? css(P.a, 0.9) : css(P.s2, 0.8); ctx.fillRect(s.x - 2, s.y - 2, 4, 4); }
   ctx.restore();
   // distance and best, top left over the cave ceiling
   const d = Math.floor(dist / 10);
-  if (state !== "title") { text(`${d.toLocaleString()} m`, 12, 26, 18, "#ffffff", "left", true, css(P.a)); text(`BEST ${best.toLocaleString()} m`, 12, 42, 10, "rgba(243,240,255,.85)", "left", false); }
+  if (state !== "title") drawHUD(t, mode === "hyper" && hy ? d + Math.round(hy.bonus) : d);
   if (banner && state === "play") {
     const a = banner.t < 0.25 ? banner.t / 0.25 : clamp((2 - banner.t) / 0.6, 0, 1);
-    ctx.globalAlpha = a; text(banner.name.toUpperCase(), VW / 2, VH * 0.3, 20, "#ffffff", "center", true, css(P.a)); text(`${banner.m.toLocaleString()} m`, VW / 2, VH * 0.3 + 20, 11, css(P.a), "center", false); ctx.globalAlpha = 1;
+    ctx.globalAlpha = a; text(banner.raw ? banner.name : banner.name.toUpperCase(), VW / 2, VH * 0.3, 20, "#ffffff", "center", true, banner.raw ? "#ff3de0" : css(P.a)); text(banner.sub || `${banner.m.toLocaleString()} m`, VW / 2, VH * 0.3 + 20, 11, banner.raw ? "#ffb0f0" : css(P.a), "center", false); ctx.globalAlpha = 1;
   }
   if (state === "title") {
     text("CHOPPER CAVE", VW / 2, 118, 34, "#eafcff", "center", true, css(P.a));
     text("Hold to fly up, let go to drop", VW / 2, 158, 14, "rgba(243,240,255,.92)", "center", false);
+    text("Power-ups: Shield · Wide Cave · Slow-Mo · Portals to HYPERSPACE", VW / 2, 224, 11, "rgba(255,180,240,.95)", "center", false);
     if (Math.sin(t * 5) > -0.3) text("TAP AND HOLD TO START", VW / 2, 252, 12, css(P.a), "center", true, css(P.a));
     if (best > 0) text(`BEST ${best.toLocaleString()} m`, VW / 2, 278, 11, "rgba(243,240,255,.8)", "center", false);
   }
@@ -989,7 +1184,7 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 // test hook (add #debug to the address)
-if (/debug/.test(location.hash)) window.__CC = {
+if (/debug/.test(location.hash)) window.__CC = { give(type) { collect({ type, x: HELI_X, y: heli.y }); }, get mode() { return mode; }, get hy() { return hy; }, get powers() { return powers; }, get pickups() { return pickups; }, get wideK() { return wideK; }, get grace() { return grace; }, get slowK() { return slowK; }, get speed() { return speed; }, get banner() { return banner; }, hyC: (x) => hyCenter(x), hyH: () => hyHalf(), wallTop, wallBot, blockBox, hits: () => heliHits(),
   get state() { return state; }, get heli() { return heli; }, get dist() { return dist; }, get hold() { return hold; }, cols: () => cols, blocks: () => blocks, scrollOff: () => scroll,
   start() { reset(); state = "play"; }, press, release, setHold(v) { hold = v; },
   sim(sec, dt = 1 / 60, bot) { for (let i = 0; i < sec / dt && state === "play"; i++) { if (bot) bot(); update(dt); } }, render(t = performance.now() / 1000) { render(t); }
