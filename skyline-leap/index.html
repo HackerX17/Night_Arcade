@@ -65,10 +65,10 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   background: linear-gradient(90deg, #ff2bd6, #8a2bff 55%, #00c2ff); box-shadow: 0 0 18px rgba(255,43,214,.7), 0 0 36px rgba(0,194,255,.45), inset 0 1px 0 rgba(255,255,255,.35); }
 .sub { font-size: 13px; letter-spacing: .16em; text-transform: uppercase; opacity: .9; font-variant-numeric: tabular-nums; }
 .over h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(28px, 8vw, 46px); color: #ff7bf0; text-shadow: 0 0 14px #ff2bd6; }
-.statsgrid { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 26px; font-variant-numeric: tabular-nums; }
+.statsgrid { display: grid; grid-template-columns: repeat(3, auto); gap: 6px clamp(14px, 5vw, 26px); font-variant-numeric: tabular-nums; }
 .statsgrid div { display: flex; flex-direction: column; gap: 2px; }
 .statsgrid span { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; opacity: .85; }
-.statsgrid strong { font-family: var(--display); font-weight: 400; font-size: 26px; color: #b9fbff; }
+.statsgrid strong { font-family: var(--display); font-weight: 400; font-size: clamp(20px, 6.4vw, 26px); color: #b9fbff; white-space: nowrap; }
 .newbest { color: var(--lime); letter-spacing: .2em; text-transform: uppercase; font-size: 13px; font-weight: 700; }
 .cta.ghost { background: rgba(20,10,40,.6); box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); font-size: 14px; padding: 12px 32px; }
 .cta.music { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; padding: 10px 22px; }
@@ -738,8 +738,8 @@ body.xmas { --bg: #04081f; }
 "use strict";
 const cvs = document.getElementById("c"), ctx = cvs.getContext("2d");
 const $ = id => document.getElementById(id);
-let W = 0, H = 0, DPR = 1;
-function resize() { DPR = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR); wallCache.clear(); }
+let W = 0, H = 0, DPR = 1, hudBot = 0, hudBotDirty = true;   // hudBot: where the HUD ends, so popups start below it
+function resize() { DPR = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR); wallCache.clear(); hudBotDirty = true; }
 addEventListener("resize", () => resize());
 
 // ---------- helpers ----------
@@ -848,12 +848,13 @@ function tryJump() {
 function start() {
   initAudio(); reset(); state = "play"; paused = false; $("pauseMenu").hidden = true;
   if (window.ArcadeSound) { window.ArcadeSound.pause(false); window.ArcadeSound.play(); }
-  $("menu").hidden = true; $("over").hidden = true; $("logo").hidden = true; $("hud").hidden = false;
+  $("menu").hidden = true; $("over").hidden = true; $("logo").hidden = true; $("hud").hidden = false; hudBotDirty = true;
   popup(`${district(0).name}`, true); if (XMAS) sfx.jingle();
 }
 function die(reason) {
   if (p.dead) return;
   p.dead = true; p.deathY = p.y; deadT = 0; slowmo = 0.7; shake = 0.5; flash = 0.5;
+  $("height").textContent = meters().toLocaleString() + " m"; $("scoreLbl").textContent = `Score ${score().toLocaleString()}`; $("coinCount").textContent = coinCount;   // the HUD shows the final numbers while you fall, the same as the result screen
   p.deadX = p.jump ? lerp(p.jump.x0, p.jump.x1, easeInOut(p.jump.t / p.jump.T)) : (p.side ? WR - BODY / 2 : WL + BODY / 2);
   p.deadVx = p.side ? -160 : 160; p.vy = 380; p.jump = null;
   sfx.die(); try { navigator.vibrate && navigator.vibrate([40, 50, 90]); } catch (e) {}
@@ -865,7 +866,7 @@ function gameOver() {
   state = "over";
   const s = score(), isBest = s > best;
   if (isBest) { best = s; store.set("skyline-best", String(best)); }
-  $("oHeight").textContent = meters() + " m"; $("oCoins").textContent = coinCount; $("oScore").textContent = s.toLocaleString();
+  $("oHeight").textContent = meters().toLocaleString() + " m"; $("oCoins").textContent = coinCount; $("oScore").textContent = s.toLocaleString();
   $("newBest").hidden = !isBest; showBest();
   $("hud").hidden = true; $("over").hidden = false;
 }
@@ -1031,7 +1032,7 @@ function update(dt) {
   const lead = p.rocket > 0 ? 180 : 0;
   camY = lerp(camY, p.y + lead, 1 - Math.exp(-(p.dead ? 2 : 9) * dt));
   if (playing && !p.dead) {
-    $("height").textContent = meters() + " m";
+    $("height").textContent = meters().toLocaleString() + " m";
     $("scoreLbl").textContent = `Score ${score().toLocaleString()}`;
     $("coinCount").textContent = coinCount;
     renderPowers();
@@ -1054,7 +1055,7 @@ function renderPowers() {
   if (powers.magnet > 0) html += chip(PCOL.magnet, PGLYPH.magnet, "Magnet", powers.magnet / 8);
   if (p.rocket > 0) html += chip(PCOL.rocket, PGLYPH.rocket, "Rocket", p.rocket / 3.2);
   for (const k of ["fury", "freeze", "gold", "slow"]) if (powers[k] > 0) html += chip(PCOL[k], PGLYPH[k], PNAME[k], powers[k] / PDUR[k]);
-  const el = $("powers"); if (el._last !== html) { el.innerHTML = html; el._last = html; }
+  const el = $("powers"); if (el._last !== html) { el.innerHTML = html; el._last = html; hudBotDirty = true; }
 }
 
 // ---------- view ----------
@@ -1433,12 +1434,16 @@ function drawTint() {                                                         //
   const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
   g.addColorStop(0, `rgba(${tint},0)`); g.addColorStop(1, `rgba(${tint},${a})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 }
+// popups start below the HUD (it grows a row when several power-ups run) and shrink to fit narrow phones
+function hudBottom() { if (hudBotDirty) { const el = $("hud"); hudBot = el.hidden ? 0 : el.getBoundingClientRect().bottom; hudBotDirty = false; } return hudBot; }
 function drawPopups() {
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  const top = Math.max(H * 0.3, hudBottom() + 26);
   popups.forEach((pp, i) => {
     const a = pp.t < 0.12 ? pp.t / 0.12 : clamp(1 - (pp.t - 1.1) / 0.5, 0, 1), pop = 0.6 + 0.4 * easeOutBack(pp.t / 0.3);
-    const y = H * 0.3 + i * 34 - pp.t * 14;
-    ctx.font = `${Math.round((pp.big ? 22 : 17) * pop)}px Audiowide, system-ui, sans-serif`;
+    const y = top + i * 34 - pp.t * 14;
+    let fs = (pp.big ? 22 : 17) * pop; ctx.font = `${Math.round(fs)}px Audiowide, system-ui, sans-serif`;
+    const tw = ctx.measureText(pp.text).width; if (tw > W - 28) { fs *= (W - 28) / tw; ctx.font = `${Math.round(fs)}px Audiowide, system-ui, sans-serif`; }
     ctx.fillStyle = `rgba(255,43,214,${a * 0.55})`; ctx.fillText(pp.text, W / 2 + 1.5, y + 2);
     ctx.fillStyle = `rgba(255,250,238,${a})`; ctx.fillText(pp.text, W / 2, y);
   });
@@ -1495,7 +1500,7 @@ document.getElementById("resume").addEventListener("click", () => setPaused(fals
 document.getElementById("restart").addEventListener("click", () => { setPaused(false); start(); });
 // back to the title screen (where you can switch between Regular and Christmas); a run you leave from pause isn't scored
 function toMenu() {
-  paused = false; reset(); state = "menu";
+  paused = false; reset(); state = "menu"; if (window.ArcadeSound) window.ArcadeSound.pause(false);   // the music carries on in the menu, as it does after a game over
   for (const id of ["pauseMenu", "over", "hud"]) $(id).hidden = true;
   $("menu").hidden = false; $("logo").hidden = false; showBest();
 }
