@@ -13,7 +13,7 @@ SNIPPET = (ROOT / "shared" / "arcade-music.html").read_text(encoding="utf-8").st
 PAGES = ["index.html", "sandblade/index.html", "skyline-leap/index.html", "sandblade-legion/index.html",
          "sandblade-siege/index.html", "chopper-cave/index.html", "iron-sector/index.html",
          "prism-breaker/index.html", "redline-nights/index.html",
-         "void-eater/index.html"]
+         "void-eater/index.html", "nova-strike/index.html"]
 BLOCK = re.compile(r"<!-- arcade-music:start.*?<!-- arcade-music:end -->\n?", re.S)
 
 for rel in PAGES:
