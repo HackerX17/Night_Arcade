@@ -553,7 +553,13 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
     battle:  { label: "Battle techno", bpm: 128, swing: 0.5, drums: "battle", bass: "rolling", stab: "dub", lead: "acid",
       prog: [[40, [55, 59, 64, 67]], [36, [55, 60, 64, 67]], [45, [57, 60, 64, 69]], [47, [54, 59, 63, 66]]] },
     xmas:    { label: "Christmas house", bpm: 124, swing: 0.54, drums: "xmas", bass: "offbeat", stab: "chicago", lead: "jingle",
-      prog: [[36, [60, 64, 67, 72]], [45, [57, 60, 64, 69]], [41, [57, 60, 65, 69]], [43, [55, 59, 62, 67]]] }
+      prog: [[36, [60, 64, 67, 72]], [45, [57, 60, 64, 69]], [41, [57, 60, 65, 69]], [43, [55, 59, 62, 67]]] },
+    outrun:  { label: "Outrun", bpm: 108, swing: 0.5, drums: "electro", bass: "rolling", stab: "pump", lead: "arp",
+      prog: [[45, [57, 60, 64, 69]], [41, [57, 60, 65, 69]], [36, [55, 60, 64, 67]], [43, [55, 59, 62, 67]]] },
+    trance:  { label: "Trance", bpm: 138, swing: 0.5, drums: "techno", bass: "offbeat", stab: "pump", lead: "arp",
+      prog: [[38, [57, 62, 65, 69]], [46, [58, 62, 65, 70]], [41, [57, 60, 65, 69]], [36, [55, 60, 64, 67]]] },
+    chill:   { label: "Chill house", bpm: 102, swing: 0.58, drums: "deep", bass: "deep", stab: "deep", lead: "pluck",
+      prog: [[41, [53, 57, 60, 64]], [40, [52, 55, 59, 62]], [38, [53, 57, 60, 62]], [36, [52, 55, 59, 60]]] }
   };
   let mctx = null, mout, mbus, mduck, mdelay, mverb, mnoise, mstyle = null, mnextStyle = null;
   let mwant = false, mpaused = false, mmuted = false, mrunning = false, mtimer = 0, mnext = 0, mstep = 0, mbar = 0;
