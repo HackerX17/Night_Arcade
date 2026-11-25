@@ -59,7 +59,7 @@ body {
 .iconbtn[aria-pressed="true"] { color: #ff8fa8; border-color: rgba(255,143,168,.6); }
 .row .bar { flex: 1; }
 /* wide screens: the balance bar sits under "Your army" so the arena and the horde stay clear */
-@media (min-aspect-ratio: 1/1) { .row .bar { flex: 0 1 300px; margin-right: auto; } .side strong { font-size: 30px; } }
+@media (min-aspect-ratio: 1/1) { .row .bar { flex: 0 1 300px; margin-right: auto; } .side strong { font-size: 30px; } #hint { bottom: calc(env(safe-area-inset-bottom, 0px) + 15vh); } }   /* wide: the hint sits above the cannon, not on it */
 .iconbtn:focus-visible, .cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .overlay {
   position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
@@ -143,7 +143,7 @@ body {
 <div class="logo" id="logo"><h1>Sandblade</h1><p>Siege</p></div>
 
 <div class="overlay" id="menu">
-  <div class="how"><b>Drag</b> to aim the cannon. Riders who run through a gate multiply, and every rider takes one of the horde down with him. Riders from the <b>big gates</b> plow through several. The horde charges your gate: crush it before it gets inside the walls.</div>
+  <div class="how"><b>Drag</b> to aim the cannon. Riders who run through a gate multiply, and every rider takes one of the horde down: it's one for one. Riders from the <b>big gates</b> plow through several. The horde charges your gate: crush it before it gets inside the walls.</div>
   <button class="cta" id="play">Fire</button>
   <button class="cta ghost music" data-am-open><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z" fill="currentColor"/></svg>Music &amp; sound</button>
   <div class="sub" id="menuLvl"></div>
@@ -773,10 +773,16 @@ const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { ret
 function fmt(n) {
   n = Math.max(0, Math.round(n));
   if (n < 100000) return n.toLocaleString('en-US');
-  for (const [v, s] of [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']]) if (n >= v) { const x = n / v; return (x >= 100 ? x.toFixed(0) : x >= 10 ? x.toFixed(1) : x.toFixed(2)).replace(/\.?0+$/, '') + s; }
+  const U = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+  for (let i = 0; i < U.length; i++) {
+    const [v, s] = U[i]; if (n < v) continue;
+    const x = n / v;
+    if (x >= 999.5 && i > 0) return '1' + U[i - 1][1];   // 999,600 reads "1M", not "1000K"
+    return (x >= 100 ? x.toFixed(0) : (x >= 10 ? x.toFixed(1) : x.toFixed(2)).replace(/\.?0+$/, '')) + s;   // trim "2.50" to "2.5", never "400" to "4"
+  }
   return String(n);
 }
-const short = (v) => (v < 10000 ? String(v) : fmt(v));
+const short = (v) => fmt(v);   // gate signs read like every other number: ×999, ×7,400, ×14,800, ×148K
 
 // =====================================================================================
 // world constants (metres). x runs left to right, d runs forward from the cannon (d = 0) to the horde.
@@ -822,11 +828,12 @@ const TEMPLATES = [
   })
 ];
 const NAMES = ['First Blood', 'Moving Target', 'The Trap', 'Storm Front', 'Iron Tide', 'No Mercy', 'Red Sea', 'Endless Horde'];
-const levelName = (n) => NAMES[(n - 1) % NAMES.length];
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+const levelName = (n) => { const lap = Math.floor((n - 1) / NAMES.length) + 1; return NAMES[(n - 1) % NAMES.length] + (lap > 1 ? ' ' + (ROMAN[lap] || lap) : ''); };
 function makeLevel(n) {
   const t = (n - 1) % TEMPLATES.length;
-  const horde = n === 1 ? 1e6 : Math.round(1e6 * Math.pow(2.3, n - 1));
-  const base = [1e6, 2.3e6, 5.29e6][t], k = Math.max(1, Math.round(horde / base));
+  const horde = Math.round(4e5 * Math.pow(2.3, n - 1));          // 400K on level 1, growing 2.3x a level
+  const base = [4e5, 9.2e5, 2.116e6][t], k = Math.max(1, Math.round(horde / base));   // the gates grow with the horde, so each layout stays as winnable
   const L = TEMPLATES[t](k);
   const mirror = n > 3 && Math.random() < 0.5, mx = (x0, x1) => (mirror ? [-x1, -x0] : [x0, x1]);
   L.walls = L.walls.map(([x0, x1, d0, d1]) => [...mx(x0, x1), d0, d1]);
@@ -836,7 +843,6 @@ function makeLevel(n) {
   L.horde = horde; L.rate = Math.min(10 + (n - 1) * 0.5, 15); L.rateMax = 24 + Math.min(n, 8); L.par = 24; L.name = levelName(n);
   L.march = n === 1 ? 0.7 : Math.min(0.78 + (n - 1) * 0.09, 1.45);   // how fast the horde walks at you (m/s); the first level is gentler
   L.gate = horde * (n === 1 ? 0.14 : 0.08);                        // how much of the horde your gate can take before it falls
-  L.str = 1.5;                                                     // each of your riders fights like this many of theirs
   return L;
 }
 
@@ -880,8 +886,8 @@ const moon = new THREE.DirectionalLight(0xdfe4ff, 1.5);   // a cool moon high ov
 moon.position.set(-16, 34, 4); moon.target.position.set(0, 0, -36); moon.castShadow = true;
 Object.assign(moon.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 140 }); moon.shadow.mapSize.set(2048, 2048); moon.shadow.bias = -0.0006; moon.shadow.normalBias = 0.03;
 scene.add(moon, moon.target);
-let W = 1, H = 1;
-function resize() { W = innerWidth; H = innerHeight; renderer.setSize(W, H); camera.aspect = W / H; camera.fov = W / H < 0.75 ? 52 : 50; camera.updateProjectionMatrix(); }
+let W = 1, H = 1, hudBottom = 0;   // hudBottom: where the HUD ends, so the army tags stay below it (measured while it is on screen)
+function resize() { W = innerWidth; H = innerHeight; hudBottom = 0; renderer.setSize(W, H); camera.aspect = W / H; camera.fov = W / H < 0.75 ? 52 : 50; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
 // ---------- procedural textures (white light on black: the materials tint them with the level's neon) ----------
@@ -1378,11 +1384,11 @@ function applyGate(u, g) {
   const before = u.w;
   if (g.op === '÷') { u.w /= g.v; g.added -= before - u.w; spark(u.x, 0.8, g.d, 0, 1.5, 0, 0.4, 0.22, 1, 0.2, 0.32); sfx.bad(); return; }
   const total = g.op === '×' ? u.w * g.v : u.w + g.v;
-  const want = g.op === '×' ? (g.v <= 4 ? g.v - 1 : g.v < 50 ? 5 : 7) : 3;
+  const want = g.op === '×' ? (g.v <= 6 ? g.v - 1 : g.v < 50 ? 5 : 7) : 3;   // a x5 gate makes five riders, never more figures than its number
   // fewer, heavier clones as the field fills up, keeping room for fresh cannon shots
   const fill = blue.length / BLUE_CAP, scale = fill < 0.45 ? 1 : Math.max(0, 1 - (fill - 0.45) / 0.35);
-  // past the wall, split only as far as every rider can still take a soldier of the horde down with him
-  const carry = g.d >= RAMP_D ? Math.max(0, Math.floor((total * L.str) / redFig) - 1) : Infinity;
+  // past the wall, split only as far as every figure still carries at least two of the horde's, so riders plow through them
+  const carry = g.d >= RAMP_D ? Math.max(0, Math.floor(total / (redFig * 2)) - 1) : Infinity;
   const clones = Math.max(0, Math.min(Math.round(want * scale), carry, Math.floor(BLUE_CAP * 0.85) - blue.length)), each = total / (clones + 1);
   u.w = each;
   for (let k = 0; k < clones; k++) blue.push({ x: rnd(Math.max(g.x0 + 0.2, u.x - 1.6), Math.min(g.x1 - 0.2, u.x + 1.6)), d: g.d + rnd(0.05, 0.7), vx: u.vx, vd: u.vd, w: each, passed: u.passed, arena: u.arena, air: 0, ph: Math.random() * TAU, tgt: null, id: nextId++ });
@@ -1449,13 +1455,14 @@ function step(dt) {
         for (let n = redGrid.head[cell]; n !== -1; n = redGrid.next[n]) {
           const o = red[n]; if (o.w <= 0) continue;
           const ex = u.x - o.x, ed = u.d - o.d;
-          if (ex * ex + ed * ed < (u.w * L.str > o.w * 3 ? CH2 : C2)) {
-            // every rider takes the soldier he hits down with him; a rider worth more than that soldier keeps going
-            const cost = o.w / L.str; slain += o.w; o.w = 0; killRed(o);
-            const lives = u.w > cost + 1e-9;
+          if (ex * ex + ed * ed < (u.w > o.w * 3 ? CH2 : C2)) {
+            // one for one, so "Your army" and "Horde" always drop by the same amount: every rider takes one of the horde down.
+            // A figure worth more than the one it hits plows on into the next; one worth less leaves it wounded (smaller)
+            const m = Math.min(u.w, o.w); u.w -= m; o.w -= m; slain += m;
             if (!charged) { charged = true; banner('CHARGE!', ''); shake = 0.3; }
             sfx.clash();
-            if (lives) u.w -= cost; else { u.w = 0; killBlue(u); dead = true; break; }
+            if (o.w <= redFig * 1e-6) { o.w = 0; killRed(o); }
+            if (u.w <= 1e-6) { u.w = 0; killBlue(u); dead = true; break; }
           }
         }
       }
@@ -1465,7 +1472,7 @@ function step(dt) {
     u.x += u.vx * dt; u.d += u.vd * dt;
     if (!u.arena) { collideWalls(u); u.x = clamp(u.x, -7.83, 7.83); }
     else { u.x = clamp(u.x, -ARENA_X, ARENA_X); u.d = clamp(u.d, RAMP_D + 1.2, ARENA_D1 - 0.3); }
-    for (const g of gates) if (!(u.passed & g.bit) && pd < g.d && u.d >= g.d && u.x >= g.x0 && u.x <= g.x1) applyGate(u, g);
+    if (phase === 'play') for (const g of gates) if (!(u.passed & g.bit) && pd < g.d && u.d >= g.d && u.x >= g.x0 && u.x <= g.x1) applyGate(u, g);   // after the battle the count stays put
     if (!u.arena && u.d > RAMP_D + 1.15) { u.arena = true; u.fan = rnd(-1, 1) * 7 * Math.min(1, blue.length / 300); }
   }
   // ---- the horde: marches on your gate along the flow field, queues behind its own front line, and charges riders near it ----
@@ -1564,7 +1571,7 @@ function draw() {
   for (const u of blue) {
     if (nb >= BLUE_MAX) break;
     // champions: a rider worth several of the horde stands taller
-    const pw = (u.w * L.str) / redFig, sc = pw > 1.6 ? Math.min(1.4, 1 + 0.17 * Math.log2(pw)) : 1;
+    const pw = u.w / redFig, sc = pw > 1.6 ? Math.min(1.4, 1 + 0.17 * Math.log2(pw)) : 1;
     const air = u.air > 0 ? Math.sin(Math.PI * (1 - u.air / 0.3)) * 0.9 : 0;
     const hop = phase === 'won' && u.arena ? Math.abs(Math.sin(t * 7 + u.ph)) * 0.32 : Math.abs(Math.sin(t * 14 + u.ph)) * 0.06;
     put(mArr.b, nb, u.x, air + hop, -u.d, sc); put(mArr.bg, nb, u.x, 0.03, -u.d, sc); nb++;
@@ -1572,7 +1579,8 @@ function draw() {
   for (const o of red) {
     if (nr >= RED_MAX) break;
     const bob = o.eng || o.mv ? Math.abs(Math.sin(t * 13 + o.ph)) * 0.07 : Math.sin(t * 3 + o.ph) * 0.012;
-    put(mArr.r, nr, o.x, bob, -o.d, 1); put(mArr.rg, nr, o.x, 0.025, -o.d, 0.9); nr++;
+    const hp = o.w < redFig ? 0.55 + 0.45 * Math.sqrt(o.w / redFig) : 1;   // wounded: a rider took part of this one down
+    put(mArr.r, nr, o.x, bob, -o.d, hp); put(mArr.rg, nr, o.x, 0.025, -o.d, 0.9 * hp); nr++;
   }
   blueGlow.count = nb; redGlow.count = nr;
   for (const q of dying) {
@@ -1593,7 +1601,7 @@ function draw() {
 }
 
 // floating numbers over the gates, and army tags over each side
-const labelLayer = $('labels'), pops = [];
+const labelLayer = $('labels'), pops = []; let labelDt = 1 / 60;
 function popup(text, x, y, d, cls) {
   let p = pops.find((q) => q.t >= q.max);
   if (!p) { if (pops.length > 24) return; p = { el: document.createElement('div') }; labelLayer.appendChild(p.el); pops.push(p); }
@@ -1605,13 +1613,20 @@ function toScreen(x, y, d) { _v.set(x, y, -d).project(camera); return [(_v.x * 0
 function placeLabels() {
   for (const p of pops) {
     if (p.t >= p.max) { if (p.el.style.opacity !== '0') p.el.style.opacity = 0; continue; }
-    p.t += 1 / 60; const [sx, sy] = toScreen(p.x, p.y + p.t * 1.4, p.d), a = p.t < 0.15 ? p.t / 0.15 : 1 - Math.max(0, (p.t - 0.6) / 0.4), s = 1 + Math.max(0, 0.2 - p.t) * 2;
+    p.t += labelDt; const [sx, sy] = toScreen(p.x, p.y + p.t * 1.4, p.d), a = p.t < 0.15 ? p.t / 0.15 : 1 - Math.max(0, (p.t - 0.6) / 0.4), s = 1 + Math.max(0, 0.2 - p.t) * 2;
     p.el.style.opacity = a; p.el.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-50%) scale(${s})`;
   }
   const playing = phase === 'play' || phase === 'won' || phase === 'lost';
+  if (playing && !hudBottom && !$('hud').hidden) hudBottom = $('hud').getBoundingClientRect().bottom;
+  const top = Math.max(hudBottom, 60) + 6;
   let bx = 0, bd = -1e9, n = 0; for (const u of blue) if (u.arena) { bx += u.x; if (u.d > bd) bd = u.d; n++; }
-  if (playing && n > 6) { const [sx, sy] = toScreen(bx / n, 1.5, bd); tagBlue.style.opacity = 1; tagBlue.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-100%)`; tagBlue.textContent = fmt(shownBlue); } else tagBlue.style.opacity = 0;
-  if (playing && red.length) { const [sx, sy0] = toScreen(0, 1.2, clamp((Math.max(hordeFront, RAMP_D + 2) + hordeBack) / 2, RAMP_D + 4, HORDE_D1 - 6)), sy = Math.max(sy0, 128); tagRed.style.opacity = 1; tagRed.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-50%)`; tagRed.textContent = fmt(shownRed); } else tagRed.style.opacity = 0;
+  let rx = 0, ry = -1e9;
+  if (playing && red.length) { const [sx, sy0] = toScreen(0, 1.2, clamp((Math.max(hordeFront, RAMP_D + 2) + hordeBack) / 2, RAMP_D + 4, HORDE_D1 - 6)), sy = Math.max(sy0, top + 14); rx = sx; ry = sy; tagRed.style.opacity = 1; tagRed.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-50%)`; tagRed.textContent = fmt(shownRed); } else tagRed.style.opacity = 0;
+  if (playing && n > 6) {
+    const [sx, sy0] = toScreen(bx / n, 1.5, bd); let sy = Math.max(sy0, top + 28);
+    if (Math.abs(sx - rx) < 100 && Math.abs(sy - 14 - ry) < 30) sy = ry + 46;   // never on top of the horde's tag: drop just below it
+    tagBlue.style.opacity = 1; tagBlue.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-100%)`; tagBlue.textContent = fmt(shownBlue);
+  } else tagBlue.style.opacity = 0;
 }
 
 // =====================================================================================
@@ -1690,14 +1705,15 @@ function start() {
 }
 function win() {
   phase = 'won';
-  const gateLeft = clamp(gateHP / L.gate, 0, 1);
-  const stars = Math.max(1, (elapsed <= L.par ? 3 : elapsed <= L.par * 1.6 ? 2 : 1) - (gateLeft < 0.5 ? 1 : 0));   // a battered gate costs a star
+  const secs = Math.round(elapsed * 10) / 10, gatePct = Math.floor(clamp(gateHP / L.gate, 0, 1) * 100);   // judge on the numbers the screen shows
+  const stars = Math.max(1, (secs <= L.par ? 3 : secs <= L.par * 1.6 ? 2 : 1) - (gatePct < 50 ? 1 : 0));   // a battered gate costs a star
   $('stars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < stars ? '' : 'off'}">★</span>`).join('');
   $('winTitle').textContent = stars === 3 ? 'Total domination' : stars === 2 ? 'Victory' : 'They fell at last';
   $('winCount').textContent = fmt(blueTotal);
-  $('winSub').textContent = `${fmt(redStart)} defeated in ${elapsed.toFixed(1)}s · gate ${Math.round(gateLeft * 100)}%` + (stars < 3 ? ` · ★★★ under ${L.par}s, gate above half` : '');
+  $('winSub').textContent = `${fmt(redStart)} defeated in ${secs.toFixed(1)}s · gate ${gatePct}%` + (stars < 3 ? ` · ★★★: win within ${L.par}s with half the gate or more` : '');
   sfx.win(); flash(0.5); banner('VICTORY', `${fmt(redStart)} defeated`, 'gold');
   const best = +(store.get('siege-stars-' + level) || 0); if (stars > best) store.set('siege-stars-' + level, String(stars));
+  if (+(store.get('siege-level') || 1) <= level) store.set('siege-level', String(level + 1));   // the next level is yours even if you close the game now
   setTimeout(() => { if (phase === 'won') { $('hud').hidden = true; $('hint').hidden = true; $('gate').hidden = true; $('win').hidden = false; labelLayer.hidden = true; } }, 1600);
 }
 function lose() {
@@ -1725,6 +1741,7 @@ function hud() {
 // =====================================================================================
 let last = performance.now();
 function tick(dt) {
+  labelDt = paused ? 0 : dt;
   if ((phase === 'play' || phase === 'won' || phase === 'lost') && !paused) step(dt);
   else if (phase === 'menu') { t += dt; moveGates(); }
   updateCamera(dt);

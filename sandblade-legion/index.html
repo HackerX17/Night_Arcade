@@ -101,7 +101,7 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
 <div class="logo" id="logo"><h1>Sandblade</h1><p>Legion</p></div>
 
 <div class="overlay" id="menu">
-  <div class="how"><b>Tap a lane</b> or drag to steer. Blue gates grow your legion, <em>red gates</em> shrink it. Your riders fire on their own: shoot gates to raise them, and break the wall to reach the big bonus. Then crush the storm horde.</div>
+  <div class="how"><b>Tap a lane</b> or drag to steer. Blue gates grow your legion, <em>red gates</em> shrink it. Squads and walls cost as many riders as their number shows, so let your riders shoot them down first (shots raise + gates too). Break the wall to reach the big bonus, then crush the horde.</div>
   <button class="cta" id="play">March</button>
   <button class="cta ghost music" data-am-open><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z" fill="currentColor"/></svg>Music &amp; sound</button>
   <div class="sub" id="menuLvl"></div>
@@ -781,6 +781,7 @@ let level = Math.max(1, +(store.get("legion-level-v2") || 1));
 let muted = store.get("legion-muted") === "1";
 let clashStart = 1, shownArmy = 0, armyPop = 0;
 let phase = "menu", army, lane, laneX, objs, bolts, parts, floats, fireT, clashT, shake, travelled, levelLen, scroll, boss, flash;
+let lostTo = null, armyAtClash = 0;   // what wiped the legion out (for the message), and the legion's size when the horde reached it
 
 function applyGate(op, v, n) {
   if (op === "+") return n + v;
@@ -808,21 +809,25 @@ function makeBoss(d, n) {
 }
 
 // Level 1: scripted showcase. Best route goes 50 -> 550 -> 6,050 -> 72,600 -> 726,000 -> 8,712,000.
+// Everything costs exactly what it shows, so the horde is sized for a first run, not for the best route.
 function genMega() {
   objs = []; let d = 1200;
   const row = gs => { gs.forEach((q, i) => pushGate(i, d, { op: q[0], v: q[1] })); d += 560; };
   row([["×", 5], ["+", 500], ["×", 2]]);
   row([["×", 3], ["+", 100], ["×", 11]]);
   wallRow(d, 2, 1500, { op: "×", v: 12 }, [{ op: "+", v: 500 }, { op: "×", v: 2 }]); d += 640;
-  [0, 2].forEach(l => objs.push({ type: "enemy", lane: l, d, n: 15000, ph: Math.random() * TAU })); d += 560;
+  [0, 2].forEach(l => objs.push({ type: "enemy", lane: l, d, n: 5000, ph: Math.random() * TAU })); d += 560;
   row([["+", 5000], ["×", 10], ["×", 3]]);
-  wallRow(d, 1, 150000, { op: "×", v: 12 }, [{ op: "+", v: 500 }, { op: "+", v: 50000 }]); d += 640;
-  makeBoss(d + 600, 1000000);
+  wallRow(d, 1, 10000, { op: "×", v: 12 }, [{ op: "+", v: 500 }, { op: "+", v: 50000 }]); d += 640;
+  makeBoss(d + 600, 200000);
 }
 
 function genLevel(L) {
   if (L === 1) return genMega();
+  // est follows a typical run: the middle choice of every row. Squads, walls and the horde are sized from it,
+  // so a good run crushes them and a careless one can fall (the perfect run grew too big to size anything by)
   objs = []; let est = START, d = 1300;
+  const mid = (a) => a.slice().sort((x, y) => x - y)[1];
   const rows = 8 + L;
   for (let r = 0; r < rows; r++) {
     const roll = Math.random();
@@ -830,23 +835,23 @@ function genLevel(L) {
     if (type === "gates") {
       const g = shuffle([goodGate(L), goodGate(L), Math.random() < 0.3 ? badGate(L) : goodGate(L)]);
       g.forEach((q, i) => pushGate(i, d, q));
-      est = Math.min(CAP, Math.max(...g.map(q => applyGate(q.op, q.v, est))));
+      est = Math.min(CAP, mid(g.map(q => applyGate(q.op, q.v, est))));
     } else if (type === "enemy") {
       const lanes = shuffle([0, 1, 2]).slice(0, Math.random() < 0.5 ? 2 : 1);
       for (const ln of lanes) objs.push({ type: "enemy", lane: ln, d: d + rnd(-60, 60), n: Math.max(10, Math.round(est * rnd(0.1, 0.25))), ph: Math.random() * TAU });
     } else {
-      const prize = Math.random() < 0.6 ? { op: "×", v: ri(8, 12) } : { op: "+", v: 500 * L * ri(1, 4) };
-      wallRow(d, ri(0, 2), Math.max(30, Math.round(est * 0.3)), prize, [goodGate(L), Math.random() < 0.5 ? badGate(L) : goodGate(L)]);
-      est = Math.min(CAP, applyGate(prize.op, prize.v, est));
+      const prize = Math.random() < 0.6 ? { op: "×", v: ri(8, 12) } : { op: "+", v: 500 * L * ri(1, 4) }, others = [goodGate(L), Math.random() < 0.5 ? badGate(L) : goodGate(L)];
+      wallRow(d, ri(0, 2), Math.max(30, Math.round(est * 0.3)), prize, others);
+      est = Math.min(CAP, mid([prize, ...others].map(q => applyGate(q.op, q.v, est))));
       d += 90;
     }
     d += 560;
   }
-  makeBoss(d + 500, Math.max(50, Math.round(est * 0.25)));
+  makeBoss(d + 500, Math.min(CAP, Math.max(50, Math.round(est))));
 }
 
 function reset() {
-  layout(); applyTheme(themeOf(level)); army = START; shownArmy = START; armyPop = 0; lane = 1; laneX = 1; bolts = []; parts = []; floats = []; fireT = 0; clashT = 0; shake = 0; travelled = 0; scroll = 0; flash = 0;
+  layout(); applyTheme(themeOf(level)); lostTo = null; armyAtClash = 0; army = START; shownArmy = START; armyPop = 0; lane = 1; laneX = 1; bolts = []; parts = []; floats = []; fireT = 0; clashT = 0; shake = 0; travelled = 0; scroll = 0; flash = 0;
   genLevel(level);
 }
 
@@ -932,12 +937,19 @@ function endLevel(won) {
   phase = won ? "win" : "lose";
   $("hud").hidden = true;
   if (won) {
-    $("winTitle").textContent = ["Total domination", "Flawless victory", "Crushed them", "Unstoppable"][(level - 1) % 4];
+    const kept = armyAtClash ? army / armyAtClash : 1;   // shot down before it reached you, or how much of the legion the clash left
+    $("winTitle").textContent = !armyAtClash ? "Total domination" : kept >= 0.75 ? "Crushed them" : kept >= 0.4 ? "Victory" : "Just made it";
     $("winCount").textContent = army.toLocaleString();
+    if (+(store.get("legion-level-v2") || 1) <= level) store.set("legion-level-v2", String(level + 1));   // the next level is yours even if you close the game now
     $("winSub").textContent = `Level ${level} · horde of ${boss.max.toLocaleString()} wiped out`;
     $("win").hidden = false; sfx.win();
   } else {
-    $("loseText").textContent = boss && boss.d < 200 ? `The horde still had ${boss.n} riders.` : "Watch for red gates and enemy squads.";
+    const n = lostTo ? lostTo.n.toLocaleString() : "";
+    $("loseText").textContent = !lostTo ? "Watch for red gates, walls and enemy squads."
+      : lostTo.type === "boss" ? (lostTo.n > 0 ? `The horde still had ${n} riders. Grow your legion bigger before the end.` : "Your legion and the horde wiped each other out. One more rider would have won it.")
+      : lostTo.type === "squad" ? `A squad of ${n} wiped out your legion. Shoot squads down or steer around them.`
+      : lostTo.type === "wall" ? (lostTo.n > 0 ? `That wall still needed ${n} riders to break.` : "Breaking that wall took your whole legion.") + " Shoot walls down or steer around them."
+      : "A red gate wiped out your legion.";
     $("lose").hidden = false; sfx.lose();
     try { navigator.vibrate && navigator.vibrate([40, 60, 80]); } catch (e) {}
   }
@@ -1003,7 +1015,7 @@ function update(dt) {
     for (const o of objs) {
       if (o.done || o.dead) continue;
       if (o.type === "boss") { if (!o.warned && o.d < 2600) { o.warned = true; floatText(`HORDE OF ${o.n.toLocaleString()} INCOMING`, "#ff9aae", W / 2, H * 0.3, true); sfx.bad(); shake = 0.3; }
-      if (o.d <= 70) { o.d = 70; phase = "clash"; clashT = 0; o.n = Math.min(o.n, Math.max(1, Math.round(army * 0.2))); clashStart = o.n; } continue; }
+      if (o.d <= 70) { o.d = 70; phase = "clash"; clashT = 0; armyAtClash = army; clashStart = Math.max(1, Math.min(o.n, army)); bolts = []; } continue; }   // hand to hand now: no more shots   // the horde keeps its real size: one for one until one side is gone
       if (o.d > -RESOLVE_GRACE) continue;
       o.done = true;
       if (o.lane !== lane) continue;
@@ -1017,15 +1029,19 @@ function update(dt) {
         if (big && diff > 0) floatText(gateLabel(o) + "!", "#ffe39a", W / 2, H * 0.3, true, 1.6);
         if (diff >= 0) { big ? sfx.bonus() : sfx.good(); flash = big ? 0.55 : 0.15; shake = big ? 0.3 : 0; armyPop = big ? 1 : 0.4; burst(p.x, p.y - 20, big ? 70 : 14, big ? "rgba(255,226,140," : "rgba(190,240,255,", big ? 320 : 200, big ? 6 : 4); }
         else { sfx.bad(); shake = 0.2; }
-        if (army <= 0) endLevel(false);
+        if (army <= 0) { lostTo = { type: "gate", n: 0 }; endLevel(false); }
       } else if (o.type === "wall") {
-        floatText("−" + Math.min(o.hp, Math.floor(army * 0.3)).toLocaleString(), "#ff9aae", p.x, p.y - 60);
+        // running into a wall costs exactly the riders it still needs to break (what it shows); not enough riders and the legion is gone
+        const cost = Math.min(o.hp, army); floatText("−" + cost.toLocaleString(), "#ff9aae", p.x, p.y - 60);
         sfx.brk(); burst(p.x, p.y - 30, 30, hexA(T.a, "").slice(0, -1), 260, 6);
-        loseArmy(Math.min(o.hp, Math.floor(army * 0.3))); o.dead = true;
+        if (cost >= army) lostTo = { type: "wall", n: o.hp - cost };
+        o.dead = true; loseArmy(cost);
       } else if (o.type === "enemy") {
-        floatText("−" + Math.min(o.n, Math.floor(army * 0.3)).toLocaleString(), "#ff9aae", p.x, p.y - 60);
+        // a squad trades one for one: it costs exactly as many riders as it shows
+        const cost = Math.min(o.n, army); floatText("−" + cost.toLocaleString(), "#ff9aae", p.x, p.y - 60);
         burst(p.x, p.y - 15, 26, "rgba(255,60,90,", 220, 4); sfx.bad();
-        loseArmy(Math.min(o.n, Math.floor(army * 0.3))); o.dead = true;
+        if (cost >= army) lostTo = { type: "squad", n: o.n };
+        o.dead = true; loseArmy(cost);
       }
     }
     objs = objs.filter(o => o.d > -260 && !(o.dead && o.type !== "boss"));
@@ -1035,13 +1051,13 @@ function update(dt) {
     clashT -= dt;
     while (clashT <= 0 && phase === "clash") {
       clashT += 0.045;
-      const k = Math.max(1, Math.ceil(clashStart / 40));
-      army = Math.max(0, army - k); boss.n = Math.max(0, boss.n - k);
+      const k = Math.min(Math.max(1, Math.ceil(clashStart / 40)), army, boss.n);   // one for one, never more than either side has left
+      army -= k; boss.n -= k;
       const p = proj(laneX, 35);
       burst(p.x + rnd(-40, 40) * p.s, p.y - 15 * p.s, 4, Math.random() < 0.5 ? "rgba(255,60,90," : "rgba(60,170,255,", 180, 3);
       sfx.clash(); shake = 0.12;
+      if (army <= 0) { lostTo = { type: "boss", n: boss.n }; endLevel(false); break; }   // checked first: if both sides run out together it's a draw, and a draw doesn't clear the level
       if (boss.n <= 0) { endLevel(true); break; }
-      if (army <= 0) { endLevel(false); break; }
     }
   }
 
@@ -1205,6 +1221,8 @@ function fitFont(text, size, maxW, display) {
   if (w > maxW && w > 0) ctx.font = fam.replace("SIZE", Math.max(8, size * maxW / w));
 }
 function badge(x, y, text, team, s) {
+  const fade = clamp((s - 0.16) / 0.12, 0, 1); if (fade <= 0) return;   // far away the lanes converge: badges fade in as they come closer instead of piling up on the horizon
+  ctx.save(); ctx.globalAlpha = fade;
   s = Math.min(s, 1.25);                                     // badges close to the camera stay readable, not huge
   ctx.font = `400 ${Math.max(11, 19 * s)}px Audiowide, system-ui, sans-serif`;
   const w = ctx.measureText(text).width + 20 * Math.max(0.6, s), h = Math.max(18, 30 * s), c = team ? "255,46,77" : "43,140,255";
@@ -1212,6 +1230,7 @@ function badge(x, y, text, team, s) {
   ctx.fillStyle = team ? "rgba(96,8,30,.9)" : "rgba(8,32,96,.9)"; ctx.fill();
   ctx.save(); ctx.shadowColor = `rgb(${c})`; ctx.shadowBlur = 12; ctx.strokeStyle = `rgb(${c})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
   ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(text, x, y - h / 2 + 1);
+  ctx.restore();
 }
 
 function gateLabel(o) {
