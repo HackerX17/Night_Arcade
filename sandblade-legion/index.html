@@ -101,7 +101,7 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
 <div class="logo" id="logo"><h1>Sandblade</h1><p>Legion</p></div>
 
 <div class="overlay" id="menu">
-  <div class="how"><b>Tap a lane</b> or drag to steer. Blue gates grow your legion, <em>red gates</em> shrink it. Squads and walls cost as many riders as their number shows, so let your riders shoot them down first (shots raise + gates too). Break the wall to reach the big bonus, then crush the horde.</div>
+  <div class="how"><b>Tap a lane</b> or drag to steer. Blue gates grow your legion, <em>red gates</em> shrink it. Squads and the horde fight one for one, so steer around any squad bigger than your legion. Your riders shoot walls down and raise + gates on their own. Break the wall to reach the big bonus, then outnumber the horde.</div>
   <button class="cta" id="play">March</button>
   <button class="cta ghost music" data-am-open><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z" fill="currentColor"/></svg>Music &amp; sound</button>
   <div class="sub" id="menuLvl"></div>
@@ -819,7 +819,7 @@ function genMega() {
   [0, 2].forEach(l => objs.push({ type: "enemy", lane: l, d, n: 5000, ph: Math.random() * TAU })); d += 560;
   row([["+", 5000], ["×", 10], ["×", 3]]);
   wallRow(d, 1, 10000, { op: "×", v: 12 }, [{ op: "+", v: 500 }, { op: "+", v: 50000 }]); d += 640;
-  makeBoss(d + 600, 200000);
+  makeBoss(d + 600, 150000);
 }
 
 function genLevel(L) {
@@ -847,7 +847,7 @@ function genLevel(L) {
     }
     d += 560;
   }
-  makeBoss(d + 500, Math.min(CAP, Math.max(50, Math.round(est))));
+  makeBoss(d + 500, Math.min(Math.round(CAP * 0.6), Math.max(50, Math.round(est * 0.6))));   // a typical run beats it with riders to spare; a capped legion always can
 }
 
 function reset() {
@@ -947,7 +947,7 @@ function endLevel(won) {
     const n = lostTo ? lostTo.n.toLocaleString() : "";
     $("loseText").textContent = !lostTo ? "Watch for red gates, walls and enemy squads."
       : lostTo.type === "boss" ? (lostTo.n > 0 ? `The horde still had ${n} riders. Grow your legion bigger before the end.` : "Your legion and the horde wiped each other out. One more rider would have won it.")
-      : lostTo.type === "squad" ? `A squad of ${n} wiped out your legion. Shoot squads down or steer around them.`
+      : lostTo.type === "squad" ? `A squad of ${n} wiped out your legion. Steer around squads bigger than your legion.`
       : lostTo.type === "wall" ? (lostTo.n > 0 ? `That wall still needed ${n} riders to break.` : "Breaking that wall took your whole legion.") + " Shoot walls down or steer around them."
       : "A red gate wiped out your legion.";
     $("lose").hidden = false; sfx.lose();
@@ -973,8 +973,8 @@ function fireRate() { return Math.min(3 + army * 0.14, 22); }
 function targetFor(b) {
   let best = null;
   for (const o of objs) {
-    if (o.dead || o.done) continue;
-    if (o.type !== "boss" && o.lane !== b.lane) continue;
+    if (o.dead || o.done || o.type === "enemy" || o.type === "boss") continue;   // shots fly past soldiers
+    if (o.lane !== b.lane) continue;
     if (o.type === "gate" && (o.op === "×" || o.op === "÷")) continue;
     if (o.d < b.prev - 5 || o.d > b.d + 5 || o.d < 0) continue;
     if (!best || o.d < best.d) best = o;
@@ -1007,9 +1007,11 @@ function update(dt) {
     travelled += SCROLL * dt;
     for (const o of objs) o.d -= (SCROLL + (o.type === "enemy" || (o.type === "boss" && o.d < 900) ? RUSH : 0)) * dt;
 
-    // firing
+    // firing: riders shoot walls down and shots raise + gates. They never shoot squads or the horde: soldiers only ever trade one for one
     fireT -= dt;
-    while (fireT <= 0) { fireT += 1 / fireRate(); bolts.push({ lane, x: laneX + rnd(-0.12, 0.12), d: 15, prev: 15 }); }
+    const aim = objs.some(o => !o.dead && !o.done && o.lane === lane && o.d > 0 && o.d < 2600 && (o.type === "wall" || (o.type === "gate" && o.op === "+")));
+    if (!aim) fireT = Math.max(fireT, 0);
+    else while (fireT <= 0) { fireT += 1 / fireRate(); bolts.push({ lane, x: laneX + rnd(-0.12, 0.12), d: 15, prev: 15 }); }
 
     // resolve objects reaching the legion
     for (const o of objs) {
