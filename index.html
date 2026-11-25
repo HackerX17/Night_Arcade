@@ -244,6 +244,7 @@ addEventListener("arcademusic", (e) => { const b = document.getElementById("musi
   const SKEY = "arcade-sound";
   const scfg = Object.assign({ source: st.playing ? "my" : "game", sfx: true, vol: 0.7 }, (() => { try { return JSON.parse(localStorage.getItem(SKEY)) || {}; } catch (e) { return {}; } })());
   const ssave = () => { try { localStorage.setItem(SKEY, JSON.stringify(scfg)); } catch (e) { /* storage blocked */ } };
+  if (!["game", "my", "off"].includes(scfg.source)) { scfg.source = st.id ? "my" : "game"; ssave(); }   // repair a setting an older version could save wrongly
   let db = null, tracks = [], cur = -1, opener = null, msgT = 0;
   // ---------- storage ----------
   const idb = (mode, fn) => dbReady.then(() => new Promise((res) => {
@@ -335,9 +336,10 @@ addEventListener("arcademusic", (e) => { const b = document.getElementById("musi
     try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.name, artist: "My music", album: document.title }); } catch (e) { /* not supported */ }
   }
   // ---------- playback ----------
-  function setSource(t) { if (out === el) el.src = urlOf(t); else wa.load(t.blob); }
+  function loadTrack(t) { if (out === el) el.src = urlOf(t); else wa.load(t.blob); }
   function start() {
     quiet = false; wantPlay = true; session("playback");
+    if (cur >= 0 && out === el && (!el.getAttribute("src") || el.src === SILENCE)) loadTrack(tracks[cur]);   // never "play" an empty player
     const p = out.play();
     if (p && p.catch) p.catch((err) => {
       if (err && err.name === "NotAllowedError") { playBtn.classList.add("am-pulse"); say("Tap ▶ to start the music.", 15000); }
@@ -347,7 +349,7 @@ addEventListener("arcademusic", (e) => { const b = document.getElementById("musi
   function playIndex(i, at = 0) {
     if (!tracks.length) return;
     cur = ((i % tracks.length) + tracks.length) % tracks.length; const t = tracks[cur];
-    quiet = false; setSource(t); out.volume = st.volume; st.id = t.id; st.time = at; save();
+    quiet = false; loadTrack(t); out.volume = st.volume; st.id = t.id; st.time = at; save();
     if (at > 0) out.addEventListener("loadedmetadata", () => { try { out.currentTime = Math.min(at, (out.duration || at) - 1); } catch (e) { /* not seekable */ } }, { once: true });
     start(); media(t); render();
   }
