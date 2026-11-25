@@ -1015,7 +1015,7 @@ function update(dt) {
     for (const o of objs) {
       if (o.done || o.dead) continue;
       if (o.type === "boss") { if (!o.warned && o.d < 2600) { o.warned = true; floatText(`HORDE OF ${o.n.toLocaleString()} INCOMING`, "#ff9aae", W / 2, H * 0.3, true); sfx.bad(); shake = 0.3; }
-      if (o.d <= 70) { o.d = 70; phase = "clash"; clashT = 0; armyAtClash = army; clashStart = Math.max(1, Math.min(o.n, army)); bolts = []; } continue; }   // hand to hand now: no more shots   // the horde keeps its real size: one for one until one side is gone
+      if (o.d <= 70) { o.d = 70; phase = "clash"; clashT = 0; armyAtClash = army; clashStart = Math.max(1, Math.min(o.n, army)); bolts = []; } continue; }   // the horde keeps its real size; hand to hand now (no more shots), one for one until one side is gone
       if (o.d > -RESOLVE_GRACE) continue;
       o.done = true;
       if (o.lane !== lane) continue;
