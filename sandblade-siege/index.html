@@ -95,6 +95,7 @@ body {
 #labels div { position: absolute; left: 0; top: 0; font: 800 15px var(--body); color: #fff; white-space: nowrap; -webkit-text-stroke: 3px rgba(2,8,40,.85); paint-order: stroke fill; text-shadow: 0 0 10px #00d5ff; will-change: transform, opacity; }
 #labels div.gold { color: var(--gold); -webkit-text-stroke-color: rgba(60,30,0,.9); text-shadow: 0 0 12px #ff9f1a; font-size: 19px; }
 #labels div.tag { font-family: var(--display); font-weight: 400; font-size: 14px; padding: 3px 10px; border-radius: 99px; background: rgba(16,60,190,.88); -webkit-text-stroke: 0; color: #fff; text-shadow: none; box-shadow: 0 0 12px rgba(43,140,255,.85), inset 0 0 0 1px rgba(160,210,255,.6); }
+#labels div.tag.giant { font-size: 16px; padding: 4px 12px; background: rgba(110,0,28,.94); box-shadow: 0 0 18px rgba(255,46,77,.95), inset 0 0 0 1px rgba(255,170,180,.75); }
 #labels div.tag.red { background: rgba(176,16,44,.9); box-shadow: 0 0 12px rgba(255,46,77,.85), inset 0 0 0 1px rgba(255,170,180,.6); }
 #hint { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + max(5vh, 58px)); z-index: 6; pointer-events: none; text-align: center;
   font: 700 14px var(--body); letter-spacing: .24em; text-transform: uppercase; color: #fff; text-shadow: 0 0 8px var(--accent), 0 1px 6px rgba(4,0,24,.9); transition: opacity .6s; }
@@ -143,7 +144,7 @@ body {
 <div class="logo" id="logo"><h1>Sandblade</h1><p>Siege</p></div>
 
 <div class="overlay" id="menu">
-  <div class="how"><b>Drag</b> to aim the cannon. Riders who run through a gate multiply, and every rider takes one of the horde down: it's one for one. Riders from the <b>big gates</b> plow through several. The horde charges your gate: crush it before it gets inside the walls.</div>
+  <div class="how"><b>Drag</b> to aim the cannon. Riders who run through a gate multiply, and every rider takes one of the horde down: it's one for one. Riders from the <b>big gates</b> plow through several. The horde pours in through its portals and charges your gate, and now and then a <b>giant</b> stomps in that takes a flood of riders to bring down. Crush them before they get inside the walls.</div>
   <button class="cta" id="play">Fire</button>
   <button class="cta ghost music" data-am-open><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z" fill="currentColor"/></svg>Music &amp; sound</button>
   <div class="sub" id="menuLvl"></div>
@@ -791,6 +792,11 @@ const UNIT_R = 0.17, CONTACT = 0.37, CONTACT_HEAVY = 0.68, LANE_SPEED = 5.2, ARE
 const BLUE_CAP = 2200, RED_SPACING = 0.4, WALL_H = 1.25, RAMP_H = 1.9;
 const RAMP_D = 30, ARENA_D0 = 31, ARENA_D1 = 71, ARENA_X = 11.6, HORDE_D0 = 41, HORDE_D1 = 69;
 const GOAL_D = 1.6, MARCH_DELAY = 1.4, LANE_RUSH = 2.1, YARD_ENGAGE = 1.2, YARD_HUNT = 2.4;   // the horde reaches your gate at GOAL_D; it starts marching after MARCH_DELAY and runs faster once inside the walls
+// the horde pours in: part of it waits on the field, the rest streams in through portals at the back and breaches in the side fences
+const ENTRIES = [[-8.4, 69.6], [-2.9, 69.9], [2.9, 69.9], [8.4, 69.6], [-11.1, 59], [11.1, 59], [-11.1, 48], [11.1, 48]];
+const FIELD_SHARE = 0.45, STREAM_T = 11, GIANT_SHARE = 0.07, GIANT_R = 0.85, GC2 = (GIANT_R + UNIT_R) ** 2;
+// giants: one on level 3, two on every fifth level (boss levels), one on levels 8, 13, 18...
+const giantsFor = (n) => (n === 3 ? 1 : n >= 5 && n % 5 === 0 ? 2 : n >= 8 && n % 5 === 3 ? 1 : 0);
 
 // =====================================================================================
 // levels: walls are [x0, x1, d0, d1]; gates are { x0, x1, d, op, v, move }
@@ -840,7 +846,7 @@ function makeLevel(n) {
   L.open = L.open.map(([a, b]) => mx(a, b)).sort((a, b) => a[0] - b[0]);
   L.gates = L.gates.map((g) => { const [x0, x1] = mx(g.x0, g.x1); return { ...g, x0, x1, move: g.move ? { ...g.move } : null }; });
   L.walls = [...OUTER(), ...L.walls, ...RAMPART(L.open)];
-  L.horde = horde; L.rate = Math.min(10 + (n - 1) * 0.5, 15); L.rateMax = 24 + Math.min(n, 8); L.par = 24; L.name = levelName(n);
+  L.horde = horde; L.rate = Math.min(10 + (n - 1) * 0.5, 15); L.rateMax = 24 + Math.min(n, 8); L.par = 30; L.name = levelName(n); L.giants = giantsFor(n);
   L.march = n === 1 ? 0.7 : Math.min(0.78 + (n - 1) * 0.09, 1.45);   // how fast the horde walks at you (m/s); the first level is gentler
   L.gate = horde * (n === 1 ? 0.14 : 0.08);                        // how much of the horde your gate can take before it falls
   return L;
@@ -1060,8 +1066,11 @@ const curtainMat = (color) => new THREE.ShaderMaterial({
     void main(){ float s = 0.5 + 0.5 * sin((vUv.y * 7.0 - uTime * 2.6) * 3.14159); float edge = smoothstep(0.0, 0.08, vUv.x) * smoothstep(1.0, 0.92, vUv.x);
       float a = (0.16 + 0.2 * s) * (0.35 + 0.65 * vUv.y) * edge + uPulse * 0.45 * edge; gl_FragColor = vec4(uColor * (0.8 + uPulse), a); }`
 });
+const portalRing = new THREE.TorusGeometry(1.0, 0.08, 8, 40), portalDisc = new THREE.CircleGeometry(0.96, 32);
+const portalMat = new THREE.MeshBasicMaterial({ color: 0xff2e4d, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false });
+let portals = [];
 const pillarGeo = new THREE.BoxGeometry(0.34, 2.0, 0.34).translate(0, 1.0, 0), capGeo = new THREE.BoxGeometry(0.46, 0.12, 0.46).translate(0, 2.06, 0), stripGeo = new THREE.BoxGeometry(0.06, 1.84, 0.06).translate(0, 1.0, 0);
-const SHARED = new Set([pillarGeo, capGeo, stripGeo]);
+const SHARED = new Set([pillarGeo, capGeo, stripGeo, portalRing, portalDisc]);
 let L, walls = [], gates = [], gateMeshes = [], theme = THEMES[0];
 // ---------- colouring a level: the scene, the materials and the page's accent colours follow the level's palette ----------
 const WHITE = new THREE.Color(0xffffff), moteA = [0, 1, 1], moteG = [1, 0.2, 0.8];
@@ -1155,7 +1164,13 @@ function buildLevel(n) {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 4, 6).translate(0, 2, 0), M.dark); pole.position.set(x, 0, -(ARENA_D1 + 1.2)); levelGroup.add(pole);
     const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9).translate(0.7, 3.4, 0), M.flag); fl.position.copy(pole.position); levelGroup.add(fl);
   }
-  buildFlow();
+  buildFlow(); buildFlow(gflowX, gflowD, GIANT_R + 0.1);
+  // the horde's portals: red rings at the back fence and breaches in the side fences that light up as soldiers pour through
+  portals = ENTRIES.map(([x, d], i) => {
+    const side = i >= 4, grp = new THREE.Group(), ring = new THREE.Mesh(portalRing, M.enemy), disc = new THREE.Mesh(portalDisc, portalMat);
+    grp.add(ring, disc); grp.position.set(side ? Math.sign(x) * (ARENA_X + 0.45) : x, 1.15, -(side ? d : ARENA_D1 + 0.45)); if (side) grp.rotation.y = Math.PI / 2;
+    levelGroup.add(grp); return { grp, disc, pulse: 0 };
+  });
   // gates: dark pillars with neon strips, a glowing curtain and a neon sign
   gates = L.gates.map((g, i) => ({ ...g, id: i, bit: 1 << i, mega: g.op === '×' && g.v >= 100, pulse: 0, added: 0, popT: 0, announced: false, half: (g.x1 - g.x0) / 2, c0: (g.x0 + g.x1) / 2 }));
   gateMeshes = gates.map((g) => {
@@ -1179,15 +1194,15 @@ function buildLevel(n) {
 
 // ---- the horde's map to your gate: the walking distance from every spot on the field to the gate, around the walls ----
 const FS = 0.4, FX0 = -12.4, FD0 = -1.2, FNX = Math.ceil(24.8 / FS), FND = Math.ceil((ARENA_D1 + 2 - FD0) / FS);
-const flowX = new Float32Array(FNX * FND), flowD = new Float32Array(FNX * FND);
+const flowX = new Float32Array(FNX * FND), flowD = new Float32Array(FNX * FND), gflowX = new Float32Array(FNX * FND), gflowD = new Float32Array(FNX * FND);   // giants keep a wider berth from the walls
 const flowAt = (x, d) => { const i = Math.floor((x - FX0) / FS), j = Math.floor((d - FD0) / FS); return i < 0 || j < 0 || i >= FNX || j >= FND ? -1 : j * FNX + i; };
 let flowDbg = null;
-function buildFlow() {
-  const N = FNX * FND, open = new Uint8Array(N), dist = new Float64Array(N).fill(1e9); flowDbg = { open, dist };   // 64-bit: the queue compares exact distances
+function buildFlow(FX = flowX, FD = flowD, margin = 0.25) {
+  const N = FNX * FND, open = new Uint8Array(N), dist = new Float64Array(N).fill(1e9); if (FX === flowX) flowDbg = { open, dist };   // 64-bit: the queue compares exact distances
   for (let j = 0; j < FND; j++) for (let i = 0; i < FNX; i++) {
-    const x = FX0 + (i + 0.5) * FS, d = FD0 + (j + 0.5) * FS, lim = d > RAMP_D + 1.1 ? ARENA_X - 0.1 : 7.85;
+    const x = FX0 + (i + 0.5) * FS, d = FD0 + (j + 0.5) * FS, lim = (d > RAMP_D + 1.1 ? ARENA_X - 0.1 : 7.85) - (margin - 0.25);
     if (Math.abs(x) > lim || d > ARENA_D1) continue;
-    if (walls.some((w) => x > w.x0 - 0.25 && x < w.x1 + 0.25 && d > w.d0 - 0.25 && d < w.d1 + 0.25)) continue;
+    if (walls.some((w) => x > w.x0 - margin && x < w.x1 + margin && d > w.d0 - margin && d < w.d1 + margin)) continue;
     open[j * FNX + i] = 1;
   }
   const heap = [];
@@ -1207,15 +1222,15 @@ function buildFlow() {
   // every open spot points downhill; spots inside a wall's margin point at the best open neighbour, so nobody sticks to a wall
   const ok = (ii, jj) => ii >= 0 && jj >= 0 && ii < FNX && jj < FND && open[jj * FNX + ii] && dist[jj * FNX + ii] < 1e9;
   for (let j = 0; j < FND; j++) for (let i = 0; i < FNX; i++) {
-    const c = j * FNX + i; flowX[c] = 0; flowD[c] = -1;
+    const c = j * FNX + i; FX[c] = 0; FD[c] = -1;
     if (ok(i, j)) {
       const at = (ii, jj) => (ok(ii, jj) ? dist[jj * FNX + ii] : dist[c] + FS);
       const gx = at(i + 1, j) - at(i - 1, j), gd = at(i, j + 1) - at(i, j - 1), l = Math.hypot(gx, gd);
-      if (l > 1e-6) { flowX[c] = -gx / l; flowD[c] = -gd / l; }
+      if (l > 1e-6) { FX[c] = -gx / l; FD[c] = -gd / l; }
     } else {
       let best = 1e9, bx = 0, bd = -1;
       for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) if ((di || dj) && ok(i + di, j + dj) && dist[(j + dj) * FNX + i + di] < best) { best = dist[(j + dj) * FNX + i + di]; const l = Math.hypot(di, dj); bx = di / l; bd = dj / l; }
-      flowX[c] = bx; flowD[c] = bd;
+      FX[c] = bx; FD[c] = bd;
     }
   }
 }
@@ -1348,10 +1363,10 @@ function slideSide(w, x) {
   if (!w.openL) return 1; if (!w.openR) return -1;
   return x - (w.x0 - UNIT_R) <= w.x1 + UNIT_R - x ? -1 : 1;
 }
-function collideWalls(u) {
+function collideWalls(u, R = UNIT_R) {
   for (const w of walls) {
-    if (u.x <= w.x0 - UNIT_R || u.x >= w.x1 + UNIT_R || u.d <= w.d0 - UNIT_R || u.d >= w.d1 + UNIT_R) continue;
-    const l = u.x - (w.x0 - UNIT_R), r = w.x1 + UNIT_R - u.x, b = u.d - (w.d0 - UNIT_R), t2 = w.d1 + UNIT_R - u.d, m = Math.min(l, r, b, t2);
+    if (u.x <= w.x0 - R || u.x >= w.x1 + R || u.d <= w.d0 - R || u.d >= w.d1 + R) continue;
+    const l = u.x - (w.x0 - R), r = w.x1 + R - u.x, b = u.d - (w.d0 - R), t2 = w.d1 + R - u.d, m = Math.min(l, r, b, t2);
     if (m === b) { u.d -= b; if (u.vd > 0) u.vd = 0; } else if (m === l) { u.x -= l; if (u.vx > 0) u.vx = 0; } else if (m === r) { u.x += r; if (u.vx < 0) u.vx = 0; } else { u.d += t2; if (u.vd < 0) u.vd = 0; }
   }
 }
@@ -1360,6 +1375,7 @@ let level = Math.max(1, +(store.get('siege-level') || 1));
 let phase = 'menu', paused = false, blue = [], red = [], dying = [], t = 0, fireAcc = 0, frameNo = 0, blueTotal = 0, redTotal = 0, redStart = 1, elapsed = 0;
 let shownBlue = 0, shownRed = 0, charged = false, shake = 0, hordeFront = HORDE_D0, hordeBack = HORDE_D1, nextId = 1, aimed = false;
 let gateHP = 1, marching = false, breached = false, hurtT = 0, slain = 0, redFig = 1, breachN = 0;
+let reserveFigs = 0, streamRate = 0, emitAcc = 0, giantQ = [], entries = [], giantW = 0, giants = [];   // the part of the horde still to pour in, and the giants
 const cannon = { x: 0, tx: 0, recoil: 0 };
 
 function reset() {
@@ -1367,9 +1383,17 @@ function reset() {
   blue = []; red = []; dying = []; parts = []; t = 0; fireAcc = 0; elapsed = 0; charged = false; shake = 0; nextId = 1;
   cannon.x = cannon.tx = 0; cannon.recoil = 0;
   redStart = L.horde;
-  const cols = Math.floor((ARENA_X * 2 - 0.6) / RED_SPACING), rows = Math.floor((HORDE_D1 - HORDE_D0) / RED_SPACING), w = redStart / (cols * rows);
-  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++)
+  // the giants' share comes out of the regular soldiers, so the whole horde still adds up to exactly redStart
+  giantW = redStart * GIANT_SHARE;
+  const cols = Math.floor((ARENA_X * 2 - 0.6) / RED_SPACING), rows = Math.floor((HORDE_D1 - HORDE_D0) / RED_SPACING), figs = cols * rows, w = (redStart - giantW * L.giants) / figs;
+  const field = Math.round(figs * FIELD_SHARE); let placed = 0;
+  for (let j = 0; j < rows && placed < field; j++) for (let i = 0; i < cols && placed < field; i++, placed++)
     red.push({ x: -ARENA_X + 0.3 + i * RED_SPACING + (j % 2) * RED_SPACING * 0.5 + rnd(-0.09, 0.09), d: HORDE_D0 + j * RED_SPACING + rnd(-0.09, 0.09), w, ph: Math.random() * TAU, spd: rnd(0.8, 1.25), st: 0, tg: null, eng: false, mv: false, vx: 0, vd: 0 });   // each runs at its own pace, so the front breaks up as they charge
+  reserveFigs = figs - placed; streamRate = reserveFigs / STREAM_T; emitAcc = 0;
+  // the back portals open first; the side breaches open later on later levels
+  entries = ENTRIES.map(([x, d], i) => ({ x, d, i, t0: i < 4 ? 0 : i < 6 ? (level >= 2 ? 3.5 : -1) : (level >= 4 ? 7 : -1) })).filter((e) => e.t0 >= 0);
+  giantQ = Array.from({ length: L.giants }, (_, k) => ({ t: STREAM_T * (L.giants > 1 ? 0.25 + 0.45 * k : 0.4), side: (k + level) % 2 ? 1 : -1, done: false }));   // giants burst in through the side breaches
+  clearGiants();
   redTotal = shownRed = redStart; blueTotal = shownBlue = 0; hordeFront = HORDE_D0; hordeBack = HORDE_D1; redFig = w;
   gateHP = L.gate; marching = false; breached = false; hurtT = 0; slain = 0; breachN = 0;
 }
@@ -1397,17 +1421,87 @@ function applyGate(u, g) {
   sfx.gate(g.mega);
   if (g.mega && !g.announced) { g.announced = true; banner(`×${short(g.v)}!`, 'Mega gate', 'gold'); sfx.mega(); flash(0.45); shake = 0.45; }
 }
-function killRed(o) { dying.push({ x: o.x, d: o.d, t: 0, red: true }); if (Math.random() < 0.1) spark(o.x, 0.4, o.d, rnd(-1, 1), rnd(1, 2.5), rnd(-1, 1), 0.5, 0.26, 1, 0.22, 0.38, 0.7, 3); }
+function killRed(o) { if (o.giant) return giantDown(o); dying.push({ x: o.x, d: o.d, t: 0, red: true }); if (Math.random() < 0.1) spark(o.x, 0.4, o.d, rnd(-1, 1), rnd(1, 2.5), rnd(-1, 1), 0.5, 0.26, 1, 0.22, 0.38, 0.7, 3); }
 function killBlue(u) { dying.push({ x: u.x, d: u.d, t: 0, red: false }); }
 function hitGate(o) {
-  const dmg = o.w; o.w = 0; killRed(o);
+  const dmg = o.w; o.w = 0; if (o.giant) removeGiant(o, true); else killRed(o);
   for (let k = 0; k < 2; k++) spark(o.x, 0.6, o.d, rnd(-1, 1), rnd(1.5, 3), rnd(-2, -0.5), 0.5, 0.3, 1, 0.2, 0.3, 1, 6);
   if (phase !== 'play') return;
-  gateHP -= dmg; hurtT = 0.35; shake = Math.max(shake, 0.18); sfx.hurt();
+  gateHP -= dmg; hurtT = 0.35; shake = Math.max(shake, o.giant ? 0.7 : 0.18); sfx.hurt();
+  if (o.giant) { banner('THE GIANT HIT YOUR GATE', `−${fmt(dmg)}`, 'red'); flash(0.3); }
   if (!breached) { breached = true; banner('AT THE GATE!', 'Hold them at the wall', 'red'); }
   if (gateHP <= 0) { gateHP = 0; lose(); }
 }
 
+// ---- the horde pouring in, and the giants ----
+const pendingW = () => reserveFigs * redFig + giantQ.reduce((a, g) => a + (g.done ? 0 : giantW), 0);
+function emitHorde(dt) {
+  const ts = elapsed - MARCH_DELAY;
+  for (const g of giantQ) if (!g.done && ts >= g.t) { g.done = true; spawnGiant(g); }
+  if (reserveFigs <= 0) return;
+  const open = entries.filter((e) => ts >= e.t0); if (!open.length) return;
+  emitAcc += dt * streamRate;
+  while (emitAcc >= 1 && reserveFigs > 0 && red.length < RED_MAX - 8) {
+    emitAcc -= 1; reserveFigs--;
+    const e = open[(Math.random() * open.length) | 0], side = e.i >= 4, x = side ? e.x : e.x + rnd(-0.7, 0.7), d = side ? e.d + rnd(-0.7, 0.7) : e.d - rnd(0, 0.5);
+    red.push({ x, d, w: redFig, ph: Math.random() * TAU, spd: rnd(0.9, 1.3), st: 0, tg: null, eng: false, mv: true, vx: side ? -Math.sign(e.x) * 2 : 0, vd: side ? 0 : -2 });
+    portals[e.i].pulse = 1;
+  }
+}
+const giantProto = (() => {   // a hulking armoured brute in the horde's red, with a glowing visor and a spiked club
+  const g = new THREE.Group(), body = new THREE.MeshLambertMaterial({ color: 0x8a1428, emissive: 0xd0153a, emissiveIntensity: 0.55 }), plate = new THREE.MeshLambertMaterial({ color: 0x24070f, emissive: 0x3a0612 });
+  const add = (geo, mat, x, y, z, name) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); if (name) m.name = name; g.add(m); return m; };
+  const leg = new THREE.CylinderGeometry(0.17, 0.13, 0.85, 8).translate(0, -0.42, 0);
+  const legL = add(leg, plate, -0.24, 0.9, 0, 'legL'), legR = add(leg, plate, 0.24, 0.9, 0, 'legR');
+  add(new THREE.CylinderGeometry(0.46, 0.34, 0.9, 10), body, 0, 1.35, 0);                    // torso
+  add(new THREE.BoxGeometry(0.98, 0.26, 0.5), plate, 0, 1.78, 0);                             // shoulder plate
+  add(new THREE.SphereGeometry(0.2, 10, 8), plate, -0.55, 1.78, 0); add(new THREE.SphereGeometry(0.2, 10, 8), plate, 0.55, 1.78, 0);
+  add(new THREE.BoxGeometry(0.36, 0.34, 0.36), plate, 0, 2.06, 0);                            // helmet
+  const gold = new THREE.MeshBasicMaterial({ color: 0xffc23a, toneMapped: false });
+  add(new THREE.BoxGeometry(0.3, 0.06, 0.04), gold, 0, 2.08, 0.19);                          // glowing visor
+  for (const sx of [-1, 1]) add(new THREE.ConeGeometry(0.06, 0.22, 6), gold, sx * 0.16, 2.3, 0);   // horns
+  const arm = new THREE.CylinderGeometry(0.11, 0.09, 0.78, 8).translate(0, -0.39, 0);
+  add(arm, body, -0.62, 1.72, 0, 'armL');
+  const armR = add(arm, body, 0.62, 1.72, 0, 'armR');
+  const club = new THREE.Group(); club.position.set(0, -0.78, 0); armR.add(club);
+  const h = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 6).rotateX(Math.PI / 2).translate(0, 0, 0.2), plate), head = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.36, 8).rotateX(Math.PI / 2).translate(0, 0, 0.55), body);
+  club.add(h, head); for (let k = 0; k < 4; k++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.12, 4), M.enemy); const a = (k / 4) * TAU; sp.position.set(Math.cos(a) * 0.15, Math.sin(a) * 0.15, 0.55); sp.rotation.z = a - Math.PI / 2; club.add(sp); }
+  const glowDisc = new THREE.Mesh(new THREE.CircleGeometry(1.3, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: glowTex, color: 0xffa21a, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+  glowDisc.position.y = 0.03; glowDisc.name = 'glow'; g.add(glowDisc);
+  // a neon outline: a slightly bigger glowing shell behind every part, so a giant stands out from the crowd
+  const outline = new THREE.MeshBasicMaterial({ color: 0xffa21a, side: THREE.BackSide, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });   // gold: a giant stands out from the red horde
+  g.traverse((m) => { if (m.isMesh && m.name !== 'glow' && m.material !== outline) { const o = new THREE.Mesh(m.geometry, outline); o.scale.setScalar(1.12); m.add(o); } });
+  return g;
+})();
+function spawnGiant(q) {
+  const x = q.side * (ARENA_X - 1.2), o = { giant: true, x, d: 59 + rnd(-0.5, 0.5), w: giantW, w0: giantW, ph: Math.random() * TAU, spd: 1, st: 0, tg: null, eng: false, mv: true, vx: 0, vd: -0.5, anim: 0, hitT: 0, dieT: 0 };
+  o.mesh = giantProto.clone(); scene.add(o.mesh); o.tag = document.createElement('div'); o.tag.className = 'tag red giant'; labelLayer.appendChild(o.tag);
+  red.push(o); giants.push(o);
+  const p = portals[q.side < 0 ? 4 : 5]; if (p) p.pulse = 1;
+  banner('GIANT!', `${fmt(giantW)} strong · stop it before your gate`, 'red'); sfx.giant(); shake = Math.max(shake, 0.5); flash(0.2);
+}
+function giantDown(o) {
+  o.w = 0; o.dieT = 0; banner('GIANT DOWN', '', 'gold'); sfx.giantDown(); shake = Math.max(shake, 0.55); flash(0.35);
+  for (let k = 0; k < 40; k++) spark(o.x, rnd(0.4, 2.2), o.d, rnd(-3, 3), rnd(2, 6), rnd(-3, 3), rnd(0.5, 1), rnd(0.2, 0.4), 1, rnd(0.2, 0.5), 0.3, 1, 8);
+}
+function removeGiantMesh(o) { if (o.mesh) { scene.remove(o.mesh); o.mesh = null; } if (o.tag) { o.tag.remove(); o.tag = null; } return false; }
+function removeGiant(o) { o.w = 0; o.dieT = 1; removeGiantMesh(o); }
+function clearGiants() { for (const o of giants) removeGiantMesh(o); giants = []; }
+function stepGiant(o, dt) {
+  // lumbers along its own path to your gate (keeping clear of the walls), shouldering its own soldiers aside
+  let tx = 0, td = -1; const c = flowAt(o.x, o.d); if (c >= 0) { tx = gflowX[c]; td = gflowD[c]; }
+  const sp = marching ? L.march * 0.8 * (o.d < RAMP_D + 0.5 ? 1.4 : 1) : 0, k = 1 - Math.exp(-4 * dt);
+  o.vx += (tx * sp - o.vx) * k; o.vd += (td * sp - o.vd) * k; o.x += o.vx * dt; o.d += o.vd * dt; o.mv = sp > 0.1; o.anim += dt * (o.mv ? 4.2 : 1.2);
+  const ci = Math.floor((o.x - GX0) / GCS), cj = Math.floor((o.d - GD0) / GCS), RR = GIANT_R + 0.2, R2 = RR * RR;
+  for (let j = cj - 2; j <= cj + 2; j++) for (let i = ci - 2; i <= ci + 2; i++) {
+    if (i < 0 || j < 0 || i >= GNX || j >= GND) continue;
+    for (let n = redGrid.head[j * GNX + i]; n !== -1; n = redGrid.next[n]) { const p = red[n]; if (p === o || p.w <= 0 || p.giant) continue; const ex = p.x - o.x, ed = p.d - o.d, q = ex * ex + ed * ed; if (q < R2 && q > 1e-6) { const dq = Math.sqrt(q), push = (RR - dq) / dq; p.x += ex * push * 0.5; p.d += ed * push * 0.5; } }
+  }
+  if (o.d < RAMP_D + 1.7) collideWalls(o, GIANT_R);
+  const lim = (o.d > RAMP_D + 1.1 ? ARENA_X : 7.83) - (GIANT_R - UNIT_R); o.x = clamp(o.x, -lim, lim); o.d = Math.min(o.d, ARENA_D1 - 0.3);
+  if (o.d < GOAL_D + 0.5) { hitGate(o); return true; }
+  return false;
+}
 function moveGates() { for (const g of gates) if (g.move) { const c = g.c0 + Math.sin(t * g.move.w + g.move.p) * g.move.a; g.x0 = c - g.half; g.x1 = c + g.half; } }
 function step(dt) {
   t += dt; frameNo++;
@@ -1442,6 +1536,18 @@ function step(dt) {
     u.vx += (tx * sp - u.vx) * kV; u.vd += (td * sp - u.vd) * kV;
     const ci = Math.floor((u.x - GX0) / GCS), cj = Math.floor((u.d - GD0) / GCS);
     let dead = false;
+    for (const gnt of giants) {
+      if (gnt.w <= 0 || dead) continue;
+      const ex = u.x - gnt.x, ed = u.d - gnt.d;
+      if (ex * ex + ed * ed < GC2) {
+        const m = Math.min(u.w, gnt.w); u.w -= m; gnt.w -= m; slain += m; gnt.hitT = 0.12;
+        if (!charged) { charged = true; banner('CHARGE!', ''); shake = 0.3; }
+        sfx.clash(); if (Math.random() < 0.3) spark(u.x, 0.9, u.d, rnd(-1, 1), rnd(1, 2.5), rnd(-1, 1), 0.4, 0.2, 1, 0.3, 0.4, 0.8, 4);
+        if (gnt.w <= redFig * 1e-6) { gnt.w = 0; giantDown(gnt); }
+        if (u.w <= 1e-6) { u.w = 0; killBlue(u); dead = true; }
+      }
+    }
+    if (dead) continue;
     for (let j = cj - 1; j <= cj + 1 && !dead; j++) {
       if (j < 0 || j >= GND) continue;
       for (let i = ci - 1; i <= ci + 1 && !dead; i++) {
@@ -1453,7 +1559,7 @@ function step(dt) {
           if (q < S2 && q > 1e-6) { const dq = Math.sqrt(q), push = ((0.34 - dq) / dq) * 0.25; u.x += ex * push; u.d += ed * push * (u.arena ? 1 : 0.3); }
         }
         for (let n = redGrid.head[cell]; n !== -1; n = redGrid.next[n]) {
-          const o = red[n]; if (o.w <= 0) continue;
+          const o = red[n]; if (o.w <= 0 || o.giant) continue;   // giants are checked on their own, below
           const ex = u.x - o.x, ed = u.d - o.d;
           if (ex * ex + ed * ed < (u.w > o.w * 3 ? CH2 : C2)) {
             // one for one, so "Your army" and "Horde" always drop by the same amount: every rider takes one of the horde down.
@@ -1477,10 +1583,13 @@ function step(dt) {
   }
   // ---- the horde: marches on your gate along the flow field, queues behind its own front line, and charges riders near it ----
   if (phase === 'play' && !marching && elapsed > MARCH_DELAY) { marching = true; banner('HERE THEY COME', '', 'red'); sfx.horn(); shake = 0.3; }
+  if (phase === 'play' && marching) emitHorde(dt);
+  for (const p of portals) { p.pulse = Math.max(0, p.pulse - dt * 2.5); }
   let front = 1e9, back = -1e9, inYard = 0;
   const Q2 = 0.44 * 0.44;
   for (let k = 0; k < red.length; k++) {
     const o = red[k]; if (o.w <= 0) continue;
+    if (o.giant) { if (!stepGiant(o, dt)) { if (o.d < front) front = o.d; if (o.d > back) back = o.d; if (o.d < RAMP_D) inYard++; } continue; }
     if ((frameNo + k) % 6 === 0) { const ci = Math.floor((o.x - GX0) / GCS), cj = Math.floor((o.d - GD0) / GCS); o.tg = ci >= 0 && cj >= 0 && ci < GNX && cj < GND && hot[cj * GNX + ci] === hotGen ? nearestIn(blueGrid, blue, o.x, o.d, o.d < RAMP_D ? YARD_ENGAGE : ENGAGE_R) : null; }   // inside your walls they run for the gate
     let tx = 0, td = 0, sp = 0;
     if (o.tg && o.tg.w > 0) { const dx = o.tg.x - o.x, dd = o.tg.d - o.d, l = Math.hypot(dx, dd) || 1; tx = dx / l; td = dd / l; sp = RED_SPEED; o.eng = true; }
@@ -1519,8 +1628,10 @@ function step(dt) {
   n = 0; for (let k = 0; k < red.length; k++) if (red[k].w > 0) red[n++] = red[k]; red.length = n;
   for (const q of dying) q.t += dt; dying = dying.filter((q) => q.t < 0.32); if (dying.length > 900) dying.splice(0, dying.length - 900);
   blueTotal = 0; for (const u of blue) blueTotal += u.w;
-  redTotal = 0; for (const o of red) redTotal += o.w;
-  if (phase === 'play' && red.length === 0) win();
+  redTotal = pendingW(); for (const o of red) redTotal += o.w;   // the horde's count includes everyone still to pour in
+  if (phase === 'play' && red.length === 0 && reserveFigs === 0 && giantQ.every((g) => g.done)) win();
+  for (const g of giants) { g.hitT = Math.max(0, (g.hitT || 0) - dt); if (g.w <= 0) g.dieT += dt; }
+  giants = giants.filter((g) => g.w > 0 || g.dieT < 0.7 || (g.mesh && removeGiantMesh(g)));
   if (phase === 'play') for (const g of gates) { g.popT -= dt; if (g.added !== 0 && g.popT <= 0) { popup((g.added > 0 ? '+' : '−') + fmt(Math.abs(g.added)), (g.x0 + g.x1) / 2, g.d >= RAMP_D ? 5.4 : 4.7, g.d, g.mega ? 'gold' : ''); g.added = 0; g.popT = 0.55; } }
   for (const p of parts) { p.life -= dt; p.vy -= p.grav * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.d += p.vd * dt; if (p.y < 0.02 && p.grav > 0) { p.y = 0.02; p.vy *= -0.3; p.vx *= 0.6; p.vd *= 0.6; } }
   parts = parts.filter((p) => p.life > 0);
@@ -1539,10 +1650,10 @@ function ndc(dist, td, x, d) {
   const yc = vy * cp + vz * -sp, zc = vy * -sp + vz * -cp, th = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
   return [x / (zc * th * camera.aspect), yc / (zc * th)];
 }
-function solveRig(nearD, farD, nearW, farW) {
+function solveRig(nearD, farD, nearW, farW, topK = 1) {
   for (let dist = 14; dist < 220; dist += 0.75) {
     let lo = nearD - 40, hi = farD + 60;
-    const wide = camera.aspect > 1, bottom = wide ? -0.97 : -0.84, top = wide ? 0.62 : 0.66;
+    const wide = camera.aspect > 1, bottom = wide ? -0.97 : -0.84, top = (wide ? 0.62 : 0.66) * topK;
     for (let it = 0; it < 30; it++) { const mid = (lo + hi) / 2; if (ndc(dist, mid, 0, nearD)[1] < bottom) hi = mid; else lo = mid; }
     const td = (lo + hi) / 2, far = ndc(dist, td, farW, farD), near = ndc(dist, td, nearW, nearD + 5);
     if (far[1] <= top && Math.abs(near[0]) <= 1.0) return { dist, td };
@@ -1552,8 +1663,9 @@ function solveRig(nearD, farD, nearW, farW) {
 function updateCamera(dt, instant = false) {
   PITCH = THREE.MathUtils.degToRad(camera.aspect > 1 ? 47 : 55);
   const intro = phase === 'menu' || (phase === 'play' && elapsed < 1.6);
-  const farD = intro ? HORDE_D0 + 10 : clamp(Math.max(HORDE_D0 + 10, hordeFront + 8), RAMP_D + 6, HORDE_D1 - 2);   // hold the whole field while they charge, so you see them come; follow them back if you push them
-  const want = solveRig(-1.2, farD, 8.1, 0), k = instant ? 1 : 1 - Math.exp(-1.6 * dt);
+  const pouring = phase === 'play' && (reserveFigs > 0 || giantQ.some((g) => !g.done) || giants.some((g) => g.w > 0 && g.d > 52));
+  const farD = intro ? HORDE_D0 + 10 : pouring ? ARENA_D1 + 1 : clamp(Math.max(HORDE_D0 + 10, hordeFront + 8), RAMP_D + 6, HORDE_D1 - 2);   // while they pour in, show the portals   // hold the whole field while they charge, so you see them come; follow them back if you push them
+  const want = solveRig(-1.2, farD, 8.1, 0, pouring ? (camera.aspect > 1 ? 0.72 : 0.84) : 1), k = instant ? 1 : 1 - Math.exp(-1.6 * dt);   // while they pour in, the far end sits lower, clear of the HUD
   rig.dist = lerp(rig.dist, want.dist, k); rig.td = lerp(rig.td, want.td, k);
   const sp = Math.sin(PITCH), cp = Math.cos(PITCH), s = shake * shake * 0.5;
   camera.position.set(rnd(-s, s), rig.dist * sp + rnd(-s, s), -rig.td + rig.dist * cp);
@@ -1578,11 +1690,15 @@ function draw() {
   }
   for (const o of red) {
     if (nr >= RED_MAX) break;
+    if (o.giant) continue;   // giants are drawn as their own models
     const bob = o.eng || o.mv ? Math.abs(Math.sin(t * 13 + o.ph)) * 0.07 : Math.sin(t * 3 + o.ph) * 0.012;
     const hp = o.w < redFig ? 0.55 + 0.45 * Math.sqrt(o.w / redFig) : 1;   // wounded: a rider took part of this one down
     put(mArr.r, nr, o.x, bob, -o.d, hp); put(mArr.rg, nr, o.x, 0.025, -o.d, 0.9 * hp); nr++;
   }
   blueGlow.count = nb; redGlow.count = nr;
+  drawGiants();
+  for (const p of portals) { const k = 0.22 + 0.5 * p.pulse + 0.06 * Math.sin(t * 6 + p.grp.position.x); p.disc.material = portalMat; p.grp.scale.setScalar(1 + 0.08 * p.pulse); p.disc.scale.setScalar(0.9 + 0.1 * Math.sin(t * 3)); }
+  portalMat.opacity = 0.2 + 0.35 * Math.max(0, ...portals.map((p) => p.pulse), 0);
   for (const q of dying) {
     const k = 1 - q.t / 0.32;
     if (q.red) { if (nr < RED_MAX) put(mArr.r, nr++, q.x, -0.25 * (1 - k), -q.d, k, k * 0.7); }
@@ -1600,6 +1716,19 @@ function draw() {
   placeLabels();
 }
 
+function drawGiants() {
+  for (const o of giants) {
+    if (!o.mesh) continue;
+    const m = o.mesh, frac = o.w0 ? clamp(o.w / o.w0, 0, 1) : 0, dying = o.w <= 0 ? clamp(o.dieT / 0.7, 0, 1) : 0;
+    const sc = (1.5 + 0.55 * Math.sqrt(frac)) * (1 - 0.85 * dying), step = Math.sin(o.anim * 2);   // towers over the horde, shrinking as riders wear it down
+    const gd = m.getObjectByName('glow'); if (gd) gd.material.opacity = 0.45 + 0.25 * Math.sin(t * 5 + o.ph);
+    m.position.set(o.x, Math.abs(step) * 0.06 - dying * 0.6, -o.d); m.scale.setScalar(Math.max(0.01, sc));
+    m.rotation.y = Math.atan2(-o.vx, -o.vd || -1e-6) + Math.PI; m.rotation.z = dying * 1.2;
+    const by = (n) => m.getObjectByName(n);
+    by('legL').rotation.x = step * 0.5; by('legR').rotation.x = -step * 0.5; by('armL').rotation.x = -step * 0.4;
+    by('armR').rotation.x = o.hitT > 0 ? -1.6 : -0.6 + Math.sin(o.anim * 1.3) * 0.5;   // swings the club when riders hit it
+  }
+}
 // floating numbers over the gates, and army tags over each side
 const labelLayer = $('labels'), pops = []; let labelDt = 1 / 60;
 function popup(text, x, y, d, cls) {
@@ -1618,6 +1747,12 @@ function placeLabels() {
   }
   const playing = phase === 'play' || phase === 'won' || phase === 'lost';
   if (playing && !hudBottom && !$('hud').hidden) hudBottom = $('hud').getBoundingClientRect().bottom;
+  for (const o of giants) {
+    if (!o.tag) continue;
+    if (o.w <= 0 || !playing) { o.tag.style.opacity = 0; continue; }
+    const [sx, sy] = toScreen(o.x, 5.4, o.d); o.tag.style.opacity = 1; o.tag.textContent = `GIANT ${fmt(o.w)}`;
+    o.tag.style.transform = `translate(${sx}px,${Math.max(sy, (hudBottom || 60) + 20)}px) translate(-50%,-100%)`;
+  }
   const top = Math.max(hudBottom, 60) + 6;
   let bx = 0, bd = -1e9, n = 0; for (const u of blue) if (u.arena) { bx += u.x; if (u.d > bd) bd = u.d; n++; }
   let rx = 0, ry = -1e9;
@@ -1654,6 +1789,8 @@ const sfx = {
   horn() { tone(147, 0.9, 0.12, 'sawtooth', 0, 1.01); tone(220, 0.9, 0.08, 'sawtooth', 0.05, 1.01); },
   win() { [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => tone(f, 0.8, 0.08, 'triangle', i * 0.08)); },
   hurt() { const now = performance.now(); if (now - lastHurt < 140) return; lastHurt = now; tone(72, 0.26, 0.14, 'sawtooth', 0, 0.5); tone(50, 0.3, 0.12, 'square'); },
+  giant() { tone(55, 1.3, 0.24, 'sawtooth', 0, 0.9); tone(82, 1.1, 0.16, 'square', 0.05, 0.92); tone(41, 1.5, 0.2, 'sine'); },
+  giantDown() { tone(60, 1.0, 0.24, 'sawtooth', 0, 0.5); [523, 784, 1047, 1568].forEach((f, i) => tone(f, 0.6, 0.07, 'triangle', 0.1 + i * 0.07)); },
   lose() { [392, 330, 262, 196].forEach((f, i) => tone(f, 0.7, 0.09, 'sawtooth', i * 0.16, 0.98)); tone(55, 1.2, 0.2, 'sine'); }
 };
 function setMuted(m) { muted = m; if (window.ArcadeSound) window.ArcadeSound.mute(m); store.set('siege-muted', m ? '1' : '0'); $('mute').innerHTML = m ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9zm12.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4z"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>'; $('mute').setAttribute('aria-pressed', String(m)); if (master) master.gain.value = m ? 0 : 0.6; }
@@ -1688,7 +1825,7 @@ function banner(text, sub, cls = '') {
   bannerAnim = bannerEl.animate([{ opacity: 0, transform: 'scale(1.6)' }, { opacity: 1, transform: 'scale(1)', offset: 0.12 }, { opacity: 1, offset: 0.75 }, { opacity: 0, transform: 'scale(.96)' }], { duration: 1500, easing: 'ease-out' });
 }
 function flash(a) { $('flash').animate([{ opacity: a }, { opacity: 0 }], { duration: 450, easing: 'ease-out' }); }
-function updateMenu() { const s = +(store.get('siege-stars-' + level) || 0); $('menuLvl').innerHTML = `Level ${level} · ${levelName(level)}${s ? ' · ' + '★'.repeat(s) : ''}<span class="pal">${themeOf(level).name}</span>`; }
+function updateMenu() { const s = +(store.get('siege-stars-' + level) || 0), gN = giantsFor(level); $('menuLvl').innerHTML = `Level ${level} · ${levelName(level)}${gN ? ` · ${gN === 1 ? 'Giant' : 'Boss level'}` : ''}${s ? ' · ' + '★'.repeat(s) : ''}<span class="pal">${themeOf(level).name}</span>`; }
 $('mute').addEventListener('click', () => { initAudio(); setMuted(!muted); });
 $('play').addEventListener('click', start);
 $('next').addEventListener('click', () => { level++; store.set('siege-level', String(level)); start(); });
@@ -1701,7 +1838,7 @@ function start() {
   for (const id of ['menu', 'win', 'lose', 'logo']) $(id).hidden = true;
   $('hud').hidden = false; $('gate').hidden = false; $('lvl').innerHTML = `Level ${level}<small>${L.name}</small>`;
   const hint = $('hint'); hint.hidden = false; hint.style.opacity = 1;
-  banner(`HORDE OF ${fmt(redStart)}`, `${L.name} · ${theme.name}`, 'red'); sfx.horn();
+  banner(`HORDE OF ${fmt(redStart)}`, `${L.name} · ${theme.name}${L.giants ? ` · ${L.giants === 1 ? 'a giant' : L.giants + ' giants'}` : ''}`, 'red'); sfx.horn();
 }
 function win() {
   phase = 'won';
@@ -1754,5 +1891,5 @@ function frame(now) {
 }
 const fontsReady = document.fonts && document.fonts.load ? Promise.race([Promise.all([document.fonts.load('400 100px Audiowide'), document.fonts.load('800 100px Jost')]), new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve();
 fontsReady.then(() => { reset(); updateMenu(); updateCamera(0, true); requestAnimationFrame(frame); });
-if (DEBUG) window.__S = { get state() { return { phase, level, blue: blue.length, red: red.length, blueTotal, redTotal, elapsed, hordeFront, hordeBack, gateHP, gateMax: L.gate, marching, cannon: cannon.x }; }, sim(sec, stp = 1 / 60, render = true) { for (let i = 0; i < sec / stp; i++) { if (phase === 'play' || phase === 'won' || phase === 'lost') step(stp); updateCamera(stp); } if (render) { draw(); hud(); } }, aim(x) { cannon.tx = x; }, start, setLevel(n) { level = n; }, reset() { reset(); updateMenu(); updateCamera(0, true); }, menu() { phase = 'menu'; for (const id of ['menu', 'logo']) $(id).hidden = false; for (const id of ['win', 'lose', 'hud', 'gate', 'hint']) $(id).hidden = true; }, blues: () => blue, reds: () => red, walls: () => walls, level: () => L, tune(o) { Object.assign(L, o); }, flow: (x, d) => { const c = flowAt(x, d); return c < 0 ? null : [+flowX[c].toFixed(2), +flowD[c].toFixed(2), flowDbg.open[c], Math.round(flowDbg.dist[c] * 10) / 10]; } };
+if (DEBUG) window.__S = { get giants() { return giants; }, get reserve() { return reserveFigs; }, get giantQ() { return giantQ; }, get state() { return { phase, level, blue: blue.length, red: red.length, blueTotal, redTotal, elapsed, hordeFront, hordeBack, gateHP, gateMax: L.gate, marching, cannon: cannon.x }; }, sim(sec, stp = 1 / 60, render = true) { for (let i = 0; i < sec / stp; i++) { if (phase === 'play' || phase === 'won' || phase === 'lost') step(stp); updateCamera(stp); } if (render) { draw(); hud(); } }, aim(x) { cannon.tx = x; }, start, setLevel(n) { level = n; }, reset() { reset(); updateMenu(); updateCamera(0, true); }, menu() { phase = 'menu'; for (const id of ['menu', 'logo']) $(id).hidden = false; for (const id of ['win', 'lose', 'hud', 'gate', 'hint']) $(id).hidden = true; }, blues: () => blue, reds: () => red, walls: () => walls, level: () => L, tune(o) { Object.assign(L, o); }, flow: (x, d) => { const c = flowAt(x, d); return c < 0 ? null : [+flowX[c].toFixed(2), +flowD[c].toFixed(2), flowDbg.open[c], Math.round(flowDbg.dist[c] * 10) / 10]; } };
 </script>
