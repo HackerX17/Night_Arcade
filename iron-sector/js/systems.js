@@ -280,7 +280,7 @@ export const SUPPORT = {
   drone: { name: 'Recon Drone', short: 'UAV', desc: 'Every hostile shows on your minimap for 30 seconds.', price: 1500, streak: 3 },
   airstrike: { name: 'Precision Airstrike', short: 'AIR', desc: 'Two jets carpet the spot you are aiming at.', price: 3000, streak: 5 },
   heli: { name: 'Attack Helicopter', short: 'HELI', desc: 'A gunship circles the district for 45 seconds.', price: 5000, streak: 8 },
-  sentry: { name: 'Sentry Gun', short: 'SNTY', desc: 'An automated turret guards a spot for 90 seconds.', price: 2500 }
+  sentry: { name: 'Sentry Gun', short: 'SNTY', desc: 'An automated turret guards a spot for 90 seconds or 400 rounds.', price: 2500 }
 };
 export class Support {
   constructor(scene) { this.scene = scene; this.inv = []; this.active = []; this.radarT = 0; this._models(); }
@@ -464,7 +464,7 @@ export class Game {
       if (this.queue.length && alive < this.maxAlive && this.spawnT <= 0) { const type = this.queue.shift(); if (!G.enemies.spawn(type)) this.queue.unshift(type); this.spawnT = rand(0.6, 1.6); }
       if (!this.queue.length && alive === 0) this.waveDone();
     }
-    if (G.player.health < 35) this.streak = 0;
+    if (G.player.health < 35 && this.streak > 0) { this.streak = 0; if (G.ui) G.ui.sub('Streak lost · you fell below 35 health', 2.5); }   // getting badly hurt ends a kill streak
   }
   composition(n) {
     const total = Math.min(6 + 3 * n, 42);
@@ -505,9 +505,9 @@ export class Game {
   addXP(v, label) { this.xp += v; this.profile.xp += v; if (G.ui && label) G.ui.xp(`+${v} ${label}`); }
   onKill(s, part, kind) {
     if (!this.running) return;
-    G.stats.kills++; if (part === 'head') G.stats.heads++;
     const D = DIFF[settings.difficulty] || DIFF.regular, T = s.def;
-    if (kind === 'enemyNade') { G.ui.killfeed(null, T.name, kind, false); return; }
+    if (kind === 'enemyNade') { G.ui.killfeed(null, T.name, kind, false); return; }   // killed by their own side's grenade: not your kill
+    G.stats.kills++; if (part === 'head') G.stats.heads++;
     let cash = T.cash, label = '', xp = T.xp;
     if (part === 'head' && kind === 'bullet') { cash += T.cash; xp += 25; label = 'Headshot'; }
     if (kind === 'melee') { cash += 50; xp += 25; label = 'Melee'; }
@@ -533,7 +533,7 @@ export class Game {
         for (const k of ['suppressor', 'extmag', 'grip']) if (attachOK(d, k)) add({ name: ATTACH[k].name, desc: k === 'suppressor' ? 'Quieter shots; you stay off the enemy radar.' : k === 'extmag' ? '50% more rounds per magazine.' : 'Less recoil and tighter spread.', price: ATTACH[k].price, own: w.att[k], buy: () => { w.att[k] = true; if (k === 'extmag') { w.mag = magSize(w); } } });
         if (!items.length) add({ name: 'No attachments', desc: `The ${d.name} takes no attachments.`, price: 0, own: true, buy: () => {} });
       } else {
-        add({ name: 'Ammo', desc: 'Refill both weapons.', price: 300, own: ar.slots.every((w) => w.reserve >= Math.floor(w.def.reserve * (w.att.extmag ? 1.5 : 1)) && w.mag >= magSize(w)), buy: () => { for (const w of ar.slots) { w.reserve = Math.floor(w.def.reserve * (w.att.extmag ? 1.5 : 1)); } } });
+        add({ name: 'Ammo', desc: 'Refill both weapons.', price: 300, own: ar.slots.every((w) => w.reserve >= Math.floor(w.def.reserve * (w.att.extmag ? 1.5 : 1)) && w.mag >= magSize(w)), buy: () => { for (const w of ar.slots) { w.reserve = Math.floor(w.def.reserve * (w.att.extmag ? 1.5 : 1)); w.mag = Math.max(w.mag, magSize(w)); } } });   // magazines too: it only counts as full when they are
         for (const id of WEAPON_SHOP) {
           const d = WEAPONS[id], owned = ar.slots.some((w) => w.id === id);
           add({ name: d.name, desc: `${CLASS_NAME[d.cls]}${d.secondary ? ' · sidearm slot' : ''}. ${d.mag}-round ${d.cls === 'shotgun' ? 'tube' : 'magazine'}.`, price: PRICE[id], own: owned, buy: () => { ar.give(id); } });

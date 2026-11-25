@@ -122,7 +122,7 @@ function toMenu() {
   G.enemies.clear(); G.throwables.clear(); G.pickups.clear(); G.support.reset(); G.props.reset(); G.fx.clear();
   G.renderer.vmPass.enabled = false;
   const prof = G.game.profile; G.ui.showRank('m', prof.xp);
-  $('bestLine').textContent = prof.bestWave ? `Best: wave ${prof.bestWave} · ${fmt(prof.bestScore)} points` : 'No missions flown yet.';
+  $('bestLine').textContent = prof.bestWave ? `Best: ${prof.bestWave} wave${prof.bestWave === 1 ? '' : 's'} survived · ${fmt(prof.bestScore)} points` : prof.games ? `Best: ${fmt(prof.bestScore)} points` : 'No missions flown yet.';
   if (loops.music) loops.music.set(musicLevel(0.5));
   show('menu');
   const first = document.querySelector('#menu .item'); if (first && !isTouch) first.focus({ preventScroll: true });
