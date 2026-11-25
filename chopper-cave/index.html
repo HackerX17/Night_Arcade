@@ -686,7 +686,7 @@ const THRUST = 1500, GRAVITY = 1150, MIN_THRUST = 0.09, CATCH = 0.35;
 let state = "title", hold = false, thrustT = 0, keyDown = false;
 const fingers = new Set();
 let heli, cols, blocks, trail, sparks, scroll, dist, speed, trailT, deadT, flash, stage, banner;
-let best = +(store.get("chopper-best") || 0), muted = store.get("chopper-muted") === "1";
+let best = +(store.get("chopper-best") || 0), muted = store.get("chopper-muted") === "1", newBest = false;
 let gapC, gapH, nextBlock;
 
 function newCol() {
@@ -774,9 +774,10 @@ document.getElementById("mute").addEventListener("click", () => { initAudio(); s
 // ---------- update ----------
 function heliHits() {
   // a few points around the helicopter body and tail
-  const pts = [[-26, 0], [-14, -6], [14, -9], [22, 0], [14, 9], [-4, 9], [-14, 6]];
+  // turned with the craft's tilt, so what touches the walls on screen is what crashes
+  const pts = [[-26, 0], [-14, -6], [14, -9], [22, 0], [14, 9], [-4, 9], [-14, 6]], cs = Math.cos(heli.tilt), sn = Math.sin(heli.tilt);
   for (const [ox, oy] of pts) {
-    const x = HELI_X + ox, y = heli.y + oy;
+    const x = HELI_X + ox * cs - oy * sn, y = heli.y + ox * sn + oy * cs;
     const c = cols[Math.floor((x + scroll % COL) / COL)];
     if (c && (y < c.top || y > c.bot)) return true;
     for (const b of blocks) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) return true;
@@ -788,7 +789,8 @@ function crash() {
   try { navigator.vibrate && navigator.vibrate(120); } catch (e) {}
   for (let i = 0; i < 46; i++) { const a = Math.random() * TAU, s = rnd(40, 280); sparks.push({ x: HELI_X, y: heli.y, vx: Math.cos(a) * s - 60, vy: Math.sin(a) * s, life: rnd(0.5, 1.1) }); }
   const d = Math.floor(dist / 10);
-  if (d > best) { best = d; store.set("chopper-best", String(best)); }
+  newBest = d > best;                                          // only beating it is a new best, not matching it
+  if (newBest) { best = d; store.set("chopper-best", String(best)); }
 }
 function update(dt) {
   if (state === "play") {
@@ -937,22 +939,22 @@ function render(t) {
   ctx.restore();
   // distance and best, top left over the cave ceiling
   const d = Math.floor(dist / 10);
-  if (state !== "title") { text(`${d} m`, 12, 26, 18, "#ffffff", "left", true, css(P.a)); text(`BEST ${best} m`, 12, 42, 10, "rgba(243,240,255,.85)", "left", false); }
+  if (state !== "title") { text(`${d.toLocaleString()} m`, 12, 26, 18, "#ffffff", "left", true, css(P.a)); text(`BEST ${best.toLocaleString()} m`, 12, 42, 10, "rgba(243,240,255,.85)", "left", false); }
   if (banner && state === "play") {
     const a = banner.t < 0.25 ? banner.t / 0.25 : clamp((2 - banner.t) / 0.6, 0, 1);
-    ctx.globalAlpha = a; text(banner.name.toUpperCase(), VW / 2, VH * 0.3, 20, "#ffffff", "center", true, css(P.a)); text(`${banner.m} m`, VW / 2, VH * 0.3 + 20, 11, css(P.a), "center", false); ctx.globalAlpha = 1;
+    ctx.globalAlpha = a; text(banner.name.toUpperCase(), VW / 2, VH * 0.3, 20, "#ffffff", "center", true, css(P.a)); text(`${banner.m.toLocaleString()} m`, VW / 2, VH * 0.3 + 20, 11, css(P.a), "center", false); ctx.globalAlpha = 1;
   }
   if (state === "title") {
     text("CHOPPER CAVE", VW / 2, 118, 34, "#eafcff", "center", true, css(P.a));
     text("Hold to fly up, let go to drop", VW / 2, 158, 14, "rgba(243,240,255,.92)", "center", false);
     if (Math.sin(t * 5) > -0.3) text("TAP AND HOLD TO START", VW / 2, 252, 12, css(P.a), "center", true, css(P.a));
-    if (best > 0) text(`BEST ${best} m`, VW / 2, 278, 11, "rgba(243,240,255,.8)", "center", false);
+    if (best > 0) text(`BEST ${best.toLocaleString()} m`, VW / 2, 278, 11, "rgba(243,240,255,.8)", "center", false);
   }
   if (state === "dead" && deadT > 0.5) {
     ctx.fillStyle = "rgba(5,0,30,.45)"; ctx.fillRect(0, 0, VW, VH);
     text("CRASHED", VW / 2, 136, 32, "#ffffff", "center", true, "#ff2e4d");
-    text(`${d} m`, VW / 2, 176, 18, "#ffffff", "center", true, css(P.a));
-    if (d >= best && d > 0) text("NEW BEST!", VW / 2, 204, 13, "#ffd23f", "center", true, "#ffd23f");
+    text(`${d.toLocaleString()} m`, VW / 2, 176, 18, "#ffffff", "center", true, css(P.a));
+    if (newBest) text("NEW BEST!", VW / 2, 204, 13, "#ffd23f", "center", true, "#ffd23f");
     if (deadT > 0.7 && Math.sin(t * 5) > -0.3) text("TAP TO FLY AGAIN", VW / 2, 250, 12, css(P.a), "center", true, css(P.a));
   }
   if (flash > 0) { ctx.fillStyle = `rgba(235,248,255,${flash * 0.55})`; ctx.fillRect(0, 0, VW, VH); }
