@@ -23,7 +23,8 @@ export function createUI(G, A) {
     if (G.mode === "roam" || G.mode === "race") G.paused = true;
     if (window.ArcadeSound && G.mode !== "title") window.ArcadeSound.pause(true);
     render[name](opts); panelBody.scrollTop = 0; syncChrome();
-    const f = panelBody.querySelector("[data-focus]") || panelBody.querySelector("button"); if (f) try { f.focus({ preventScroll: true }); } catch (e) {}
+    // focus the main button a moment later, so the key that opened this screen can't also press it
+    const f = panelBody.querySelector("[data-focus]") || panelBody.querySelector("button"); if (f) setTimeout(() => { if (!panel.hidden && panelBody.contains(f)) try { f.focus({ preventScroll: true }); } catch (e) {} }, 180);
   }
   let current = null;
   function back() {

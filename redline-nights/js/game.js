@@ -101,7 +101,7 @@ addEventListener("keydown", (e) => {
   if (e.code === "KeyC" && !e.repeat) { const order = ["chase", "far", "hood"]; G.settings.cam = order[(order.indexOf(G.settings.cam) + 1) % 3]; saveSettings(); ui.toast(`Camera: ${G.settings.cam}`); }
   if (e.code === "KeyM" && !e.repeat && (G.mode === "roam" || G.mode === "race")) ui.open("map");
   if (e.code === "KeyR" && !e.repeat && (G.mode === "roam")) resetToRoad();
-  if ((e.code === "Enter" || e.code === "KeyE") && !e.repeat && G.mode === "roam" && G.nearEvent) openEvent(G.nearEvent);
+  if ((e.code === "Enter" || e.code === "KeyE") && !e.repeat && G.mode === "roam" && G.nearEvent && !G.paused) { e.preventDefault(); openEvent(G.nearEvent); }
 });
 addEventListener("keyup", (e) => keys.delete(e.code));
 addEventListener("blur", () => { keys.clear(); for (const k in touch) if (typeof touch[k] === "boolean") touch[k] = false; touch.steerId = null; touch.steer = 0; });
@@ -162,7 +162,7 @@ function readInput(dt) {
     if (p.buttons[2] && p.buttons[2].pressed) hand = true;
     if (p.buttons[9] && p.buttons[9].pressed && !G.padStart) { G.padStart = true; ui.togglePause(); } else if (!(p.buttons[9] && p.buttons[9].pressed)) G.padStart = false;
   }
-  inp.steer = steer; inp.throttle = th; inp.brake = br; inp.hand = hand; inp.nitro = nitro;
+  inp.steer = steer; inp.throttle = th; inp.brake = br; inp.hand = hand; inp.nitro = nitro; inp.park = false;
   if (G.bot) Object.assign(inp, G.bot);                        // tests drive the car directly
 }
 
@@ -320,7 +320,8 @@ function updatePolice(dt) {
     const dx = px - s.x, dz = pz - s.z, along = dx * Math.sin(s.h) + dz * Math.cos(s.h), lat = -dx * Math.cos(s.h) + dz * Math.sin(s.h);
     if (Math.abs(along) < 1.2 && Math.abs(lat) < s.len / 2) { s.hit = true; G.blown = 14; player.topMul = 0.62; player.gripMul = 0.75; ui.toast("TYRES BLOWN!", "cop"); sound.spikes(); G.shake = 0.6; }
   }
-  police.updateHeli(p.heat >= 4 && p.phase === "chase" ? true : p.heat >= 4, px, pz, dt, G.t);
+  // from heat 4 the helicopter joins: it follows you in a chase, and sweeps around your last sighting in a cooldown
+  police.updateHeli(p.heat >= 4, px, pz, dt, G.t, p.phase === "cooldown" ? { x: p.lastX, z: p.lastZ } : null);
   // crash spots: drive through the ring at speed and the tower comes down behind you
   for (const c of crashSpots) {
     if (!c.armed || G.mode !== "roam") continue;
@@ -791,7 +792,8 @@ function botDrive(path, st) {
   let k = st.idx, acc = 0; const look = 7 + spd * 0.42;
   while (k < path.length - 1 && acc < look) { acc += Math.hypot(path[k + 1].x - path[k].x, path[k + 1].z - path[k].z); k++; }
   const ang = aimAt(b, path[k].x, path[k].z); let vT = 999; acc = 0;
-  for (let j = st.idx; j < Math.min(path.length, st.idx + 90); j++) { if (j > st.idx) acc += 2; vT = Math.min(vT, Math.sqrt(path[j].v * path[j].v * (st.skill || 1) + 2 * 15 * acc)); }
+  const reach = Math.min(260, 20 + Math.ceil((spd * spd) / 30 / 2));
+  for (let j = st.idx; j < Math.min(path.length, st.idx + reach); j++) { if (j > st.idx) acc += 2; vT = Math.min(vT, Math.sqrt(path[j].v * path[j].v * (st.skill || 1) + 2 * 15 * acc)); }
   if (st.revT > 0) { st.revT -= 1 / 60; G.bot = { steer: -st.last, throttle: 0, brake: 1, hand: false, nitro: false }; return; }
   const racing = !(G.race && G.race.t < 0);
   if (spd < 2 && racing) { st.stuck = (st.stuck || 0) + 1 / 60; if (st.stuck > 1.4) { st.stuck = 0; st.revT = 1; st.backs = (st.backs || 0) + 1; } } else st.stuck = 0;
@@ -807,7 +809,7 @@ function botDrive(path, st) {
   }
 }
 if (/debug/.test(location.hash)) window.__RN = {
-  botDrive, locateOnPath, addInfamy, wreckCop, updateRace,
+  botDrive, locateOnPath, addInfamy, wreckCop, updateRace, rivalEvent,
   G, get player() { return player; }, police, traffic, crashSpots, obstacles, inp, keys, touch, tilt, camera, renderer, scene,
   startCareer, toTitle, setupRace, openEvent, leaveRace, startPursuit, endPursuit, placeRoadblock, triggerCrashSpot, setGps, routeTo, changeCar, resetToRoad,
   step(dt) { step(dt); }, draw() { draw(); }, sim(sec, dt = 1 / 60, ctl) { for (let i = 0; i < sec / dt; i++) { if (ctl) ctl(); step(dt); } }, speedOf, aimAt, events: G.events, RIVALS, CARS, ui,

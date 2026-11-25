@@ -85,6 +85,8 @@ export class Traffic {
       }
       const gap = this.blocked(c, others);
       let target = c.cruise; if (gap < 22) target = Math.min(target, Math.max(0, (gap - 7) * 0.9));
+      // stuck behind something for a while: pull into the other lane if it's clear
+      if (c.mode === "lane" && c.speed < 0.5 && gap < 12) { c.stuck = (c.stuck || 0) + dt; if (c.stuck > 3) { const other = 1 - c.lane, sp = laneSpot(c.i, c.j, c.d, other, c.s); if (!this.cars.some((o) => o !== c && Math.hypot(o.body.x - sp.x, o.body.z - sp.z) < 9) && !others.some((o) => Math.hypot(o.x - sp.x, o.z - sp.z) < 9)) { c.lane = other; c.stuck = 0; } } } else c.stuck = 0;
       if (c.mode === "lane") {
         const stop = P - HALF - 1.5;
         if (c.s >= stop - 0.5) {
@@ -98,7 +100,13 @@ export class Traffic {
           }
         }
         c.speed += clamp(target - c.speed, -9 * dt, 3.5 * dt);
-        if (c.mode === "lane") { c.s = Math.min(stop, c.s + c.speed * dt); const sp = laneSpot(c.i, c.j, c.d, c.lane, c.s); b.x = sp.x; b.z = sp.z; b.h = sp.h; }
+        if (c.mode === "lane") {
+          c.s = Math.min(stop, c.s + c.speed * dt);
+          // ease sideways into the lane (after a lane change)
+          const want = LANES[c.lane]; c.off = c.off == null ? want : c.off + clamp(want - c.off, -4 * dt, 4 * dt);
+          const [nx, nz] = nodeXZ(c.i, c.j), [dx, dz] = DIRS[c.d];
+          b.x = nx + dx * c.s - dz * c.off; b.z = nz + dz * c.s + dx * c.off; b.h = headingOf(dx, dz);
+        }
       }
       if (c.mode === "turn") {
         const tr = c.turn, turning = tr.nd !== c.d;
@@ -106,7 +114,7 @@ export class Traffic {
         tr.t = Math.min(1, tr.t + (c.speed * dt) / tr.len);
         const [x, z] = bez(tr.p0, tr.p1, tr.p2, tr.t), [ddx, ddz] = bezD(tr.p0, tr.p1, tr.p2, tr.t);
         b.x = x; b.z = z; if (ddx * ddx + ddz * ddz > 1e-6) b.h = headingOf(ddx, ddz);
-        if (tr.t >= 1) { this.release(c); c.i = c.ni; c.j = c.nj; c.d = tr.nd; c.s = HALF; c.mode = "lane"; c.turn = null; }
+        if (tr.t >= 1) { this.release(c); c.i = c.ni; c.j = c.nj; c.d = tr.nd; c.s = HALF; c.mode = "lane"; c.turn = null; c.off = LANES[c.lane]; }
       }
       b.vx = Math.sin(b.h) * c.speed; b.vz = Math.cos(b.h) * c.speed; b.w = 0; b.wheelSpin += c.speed * dt / 0.34;
     }
@@ -223,10 +231,12 @@ export class Police {
     const over = spd - vT;
     stepCar(b, { steer, throttle: over < 0 ? 1 : 0, brake: over > 3 ? clamp(over / 10, 0.2, 1) : 0, hand, nitro: false }, dt);
   }
-  updateHeli(on, px, pz, dt, t) {
+  updateHeli(on, px, pz, dt, t, search = null) {
     const H = this.heliState;
     if (on && !H.on) { H.on = true; H.x = px + 140; H.z = pz + 140; H.sx = px; H.sz = pz; }
     if (!on) { H.on = false; this.heli.visible = this.cone.visible = false; return; }
+    // in a chase it follows the car; in a cooldown it sweeps circles around where you were last seen
+    if (search) { const a = t * 0.35; px = search.x + Math.cos(a) * 90; pz = search.z + Math.sin(a * 1.3) * 90; }
     // it chases at a fixed top speed; its spotlight lags behind the car
     const dx = px - H.x, dz = pz - H.z, d = Math.hypot(dx, dz), sp = Math.min(d * 1.4, 54);
     if (d > 0.01) { H.x += (dx / d) * sp * dt; H.z += (dz / d) * sp * dt; }
@@ -310,8 +320,8 @@ export class Racer {
     while (k < p.length - 1 && acc < look) { acc += Math.hypot(p[k + 1].x - p[k].x, p[k + 1].z - p[k].z); k++; }
     const ang = aimAt(b, p[k].x, p[k].z);
     // the slowest point coming up within braking distance
-    let vT = 999; const brakeA = 15 * this.skill;
-    acc = 0; for (let j = i; j < Math.min(p.length, i + 90); j++) { if (j > i) acc += 2; const v = Math.sqrt(p[j].v * p[j].v * this.skill * this.band + 2 * brakeA * acc); if (v < vT) vT = v; }
+    let vT = 999; const brakeA = 15 * this.skill, reach = Math.min(260, 20 + Math.ceil((spd * spd) / (2 * brakeA) / 2));   // look as far ahead as it takes to stop
+    acc = 0; for (let j = i; j < Math.min(p.length, i + reach); j++) { if (j > i) acc += 2; const v = Math.sqrt(p[j].v * p[j].v * this.skill * this.band + 2 * brakeA * acc); if (v < vT) vT = v; }
     vT = Math.min(vT, b.stats.top * this.band);
     if (this.revT > 0) { this.revT -= dt; stepCar(b, { steer: -this.lastSteer, throttle: 0, brake: 1, hand: false }, dt); return; }
     if (spd < 2) { this.stuckT += dt; if (this.stuckT > 1.4) { this.stuckT = 0; this.revT = 1; } } else this.stuckT = 0;

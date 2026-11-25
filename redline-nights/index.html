@@ -46,7 +46,7 @@ button { font-family: inherit; }
 @keyframes heatpulse { to { background: #2b8cff; box-shadow: 0 0 10px #2b8cff; } }
 #mini { width: 140px; height: 140px; border-radius: 50%; }
 #hudTC { position: absolute; top: calc(var(--st) + 10px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(420px, 56vw); }
-#pursuit { width: 100%; text-align: center; }
+#pursuit { width: 100%; text-align: center; padding: 6px 14px 7px; border-radius: 14px; background: rgba(6,2,26,.62); border: 1px solid rgba(255,255,255,.12); box-sizing: border-box; }
 .plabel { font: 400 15px var(--display); letter-spacing: .08em; color: #fff; text-shadow: 0 0 10px var(--ember), 0 0 20px #2b8cff; }
 .pbar { position: relative; height: 10px; margin: 5px 0 3px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
 .pbar i { position: absolute; top: 0; bottom: 0; width: 0; }
@@ -56,11 +56,11 @@ button { font-family: inherit; }
 #pursuit.cool .plabel { text-shadow: 0 0 10px #2b8cff, 0 0 20px #00e5ff; }
 .psub { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: rgba(243,240,255,.9); text-shadow: 0 1px 4px #000; }
 #pursuit.bust .psub { color: #ff8a8a; }
-#raceInfo { display: flex; gap: 16px; align-items: baseline; font-size: 14px; font-weight: 700; letter-spacing: .08em; text-shadow: 0 1px 6px #000; }
+#raceInfo { display: flex; gap: 16px; align-items: baseline; font-size: 14px; font-weight: 700; letter-spacing: .08em; text-shadow: 0 1px 6px #000; padding: 4px 16px; border-radius: 14px; background: rgba(6,2,26,.55); border: 1px solid rgba(255,255,255,.1); }
 #raceInfo b { font: 400 26px var(--display); color: #fff; text-shadow: 0 0 10px var(--accent); }
 #raceInfo .hot { color: var(--ember); }
-#toasts { position: absolute; top: calc(var(--st) + 84px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.toast { font-weight: 800; font-size: 14px; letter-spacing: .1em; padding: 6px 14px; border-radius: 999px; background: rgba(6,2,26,.7); border: 1px solid rgba(255,255,255,.2); text-shadow: 0 0 8px currentColor; white-space: nowrap; animation: tin .25s ease-out; transition: opacity .4s, transform .4s; }
+#toasts { position: absolute; top: calc(var(--st) + 96px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.toast { font-weight: 800; font-size: 14px; letter-spacing: .1em; padding: 6px 14px; border-radius: 999px; background: rgba(6,2,26,.82); border: 1px solid rgba(255,255,255,.2); text-shadow: 0 0 8px currentColor; white-space: nowrap; animation: tin .25s ease-out; transition: opacity .4s, transform .4s; }
 .toast.out { opacity: 0; transform: translateY(-8px); }
 .toast.cop { color: #ff8a9a; border-color: rgba(255,46,77,.5); } .toast.bounty { color: var(--gold); border-color: rgba(255,210,63,.45); } .toast.heat { color: #fff; background: rgba(255,46,77,.5); }
 .toast.cool { color: #8ae6ff; border-color: rgba(43,140,255,.5); } .toast.drift { color: var(--lime); border-color: rgba(182,255,0,.4); } .toast.info { color: #fff; }
