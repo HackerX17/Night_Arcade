@@ -43,13 +43,17 @@ On phones and tablets, the left thumb moves (push far forward to sprint) and the
   - Every enemy navigates with A* path-finding and falls as a physics ragdoll.
 - **Survival loop:** escalating waves, intermissions, a cash economy, three armory stations, perks, and four difficulty levels.
 - **Air support:** recon drone (radar), precision airstrike, attack helicopter and sentry gun. You earn them with 3-, 5- and 8-kill streaks or buy them at the armory.
+- **Two looks** (Settings → Graphics → Style):
+  - **Neon** (the default): the Old Quarter at night under a synthwave sky with a big moon and stars. Neon tubes outline the rooftops, the shop signs become glowing tube signs, four billboards light the street ends, windows glow across the skyline, and the lane lines and curbs shine. Street lamps, signs, fires and the armories cast coloured light on everything around them. Hostiles wear glowing red visors so you can pick them out in the dark. Your tracers burn cyan and theirs burn hot pink.
+  - **Classic**: the original golden-hour look, exactly as it was.
+  - Switching style reloads the game. If you switch during a mission, the new look arrives when you go back to the main menu.
 - **Presentation:**
-  - Rendering: physically based materials, a sky and sun with soft shadows, ambient occlusion, bloom, SMAA, colour grading, and damage and flashbang effects.
+  - Rendering: physically based materials, a sky and sun (or night sky and moon) with soft shadows, ambient occlusion, bloom, SMAA, colour grading, and damage and flashbang effects.
   - Audio: positional 3D sound with reverb and distance filtering.
   - HUD: minimap, killfeed, hit markers, and damage and grenade indicators.
   - Progression: rank XP that persists between sessions.
 - **Settings:**
-  - Graphics: quality presets (low to ultra), adaptive quality that sheds detail when the frame rate drops, and field of view.
+  - Graphics: style (Neon or Classic), quality presets (low to ultra), adaptive quality that sheds detail when the frame rate drops, and field of view.
   - Controls: separate mouse, aim and controller sensitivity, invert look, and controller aim assist.
   - Audio: volume mixer.
 - **Music & sound:** from the main menu or the pause menu, pick the game's own ambient score, your own songs or music app, or no music, and switch sound effects on or off. The score steps aside while your songs play.
@@ -60,7 +64,8 @@ On phones and tablets, the left thumb moves (push far forward to sprint) and the
 | --- | --- |
 | `js/main.js` | Boot, loading, screens, pointer lock, frame loop, adaptive quality |
 | `js/core.js` | Shared state, maths helpers, settings, keyboard/mouse, controller and touch input |
-| `js/render.js` | Renderer, sky and lighting, post-processing chain |
+| `js/render.js` | Renderer, sky and lighting (golden hour or night), post-processing chain |
+| `js/neon.js` | Neon style: night sky, light pools from lamps, signs and fires, neon materials, sign and billboard art |
 | `js/textures.js` | Procedural PBR textures (albedo, normal and roughness maps) |
 | `js/world.js` | Collision, ray casts, static geometry batching, navigation grid with A* and cover points |
 | `js/map.js` | The Old Quarter map |

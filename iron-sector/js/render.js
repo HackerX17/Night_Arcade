@@ -8,7 +8,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { Sky } from 'three/addons/objects/Sky.js';
-import { settings, clamp } from './core.js';
+import { settings, clamp, STYLE } from './core.js';
+import { nightSky, MOON_DIR, NIGHT, neonTick } from './neon.js';
 
 // low golden-hour sun
 export const SUN_DIR = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - 13), THREE.MathUtils.degToRad(222)).normalize();
@@ -37,10 +38,15 @@ const GradeShader = {
     gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
   }`
 };
+const NeonGrade = { ...GradeShader, uniforms: THREE.UniformsUtils.clone(GradeShader.uniforms),
+  fragmentShader: GradeShader.fragmentShader
+    .replace('col *= mix(vec3(1.0), vec3(1.035, 1.0, 0.95), 0.6);                       // warm highlights', 'col *= vec3(1.02, 0.985, 1.035);                                          // a little magenta in the highlights')
+    .replace('col = mix(col, col * vec3(0.92, 0.97, 1.06), smoothstep(0.35, 0.0, l));   // cool shadows', 'col = mix(col, col * vec3(0.88, 0.94, 1.14), smoothstep(0.35, 0.0, l));   // blue-violet shadows') };
+NeonGrade.uniforms.uSat.value = 1.12; NeonGrade.uniforms.uVignette.value = 0.62;
 
 export class Renderer {
   constructor(container) {
-    this.dynScale = 1; this.aoShed = false;
+    this.dynScale = 1; this.aoShed = false; this.tickers = []; this.lightDir = SUN_DIR;
     const r = (this.r = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false }));
     r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -55,16 +61,21 @@ export class Renderer {
     this.gtao = new GTAOPass(this.scene, this.camera, 2, 2, undefined, { radius: 0.55, distanceExponent: 1.2, thickness: 1.2, scale: 1.25, samples: 12, distanceFallOff: 1 }, { lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 5, rings: 2, samples: 12 });
     this.gtao.output = GTAOPass.OUTPUT.Default; this.gtao.blendIntensity = 1;
     this.vmPass = new RenderPass(this.vmScene, this.vmCam); this.vmPass.clear = false; this.vmPass.clearDepth = true;
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.32, 0.55, 0.88);
+    this.bloom = STYLE.neon ? new UnrealBloomPass(new THREE.Vector2(256, 256), 0.95, 0.62, 0.82) : new UnrealBloomPass(new THREE.Vector2(256, 256), 0.32, 0.55, 0.88);
     this.output = new OutputPass();
-    this.grade = new ShaderPass(GradeShader);
+    this.grade = new ShaderPass(STYLE.neon ? NeonGrade : GradeShader);
     this.smaa = new SMAAPass(2, 2);
     for (const p of [this.worldPass, this.gtao, this.vmPass, this.bloom, this.output, this.grade, this.smaa]) this.composer.addPass(p);
+    if (STYLE.neon) { // keep glow halos, light cones and sprites out of the ambient-occlusion depth pass
+      const ov = this.gtao.overrideVisibility.bind(this.gtao);
+      this.gtao.overrideVisibility = () => { ov(); this.scene.traverse((o) => { if (o.userData.noAO) o.visible = false; }); };
+    }
     this.applyQuality();
     addEventListener('resize', () => this.resize());
   }
 
   _lights() {
+    if (STYLE.neon) return this._night();
     const s = this.scene;
     const sky = (this.sky = new Sky()); sky.scale.setScalar(1200);
     const u = sky.material.uniforms; u.turbidity.value = 7.5; u.rayleigh.value = 2.1; u.mieCoefficient.value = 0.0065; u.mieDirectionalG.value = 0.86; u.sunPosition.value.copy(SUN_DIR);
@@ -85,6 +96,29 @@ export class Renderer {
     this.vmSun = new THREE.DirectionalLight(0xffd6a8, 2.2); this.vmScene.add(this.vmSun); this.vmScene.add(this.vmSun.target);
   }
 
+  // Neon style: a synthwave night. Moonlight casts the shadows; lamps, signs and fires light the streets through light pools.
+  _night() {
+    const s = this.scene; this.lightDir = MOON_DIR;
+    const sky = (this.sky = nightSky()); sky.scale.setScalar(1200); s.add(sky);
+    s.fog = new THREE.FogExp2(NIGHT.fog, NIGHT.fogDensity);
+    this.hemi = new THREE.HemisphereLight(NIGHT.hemiSky, NIGHT.hemiGround, NIGHT.hemiI); s.add(this.hemi);
+    const sun = (this.sun = new THREE.DirectionalLight(NIGHT.moon, NIGHT.moonI));
+    sun.castShadow = true; const c = sun.shadow.camera; c.left = c.bottom = -48; c.right = c.top = 48; c.near = 1; c.far = 320;
+    sun.shadow.bias = -0.00025; sun.shadow.normalBias = 0.035; sun.position.copy(MOON_DIR).multiplyScalar(160);
+    s.add(sun); s.add(sun.target);
+    // image-based lighting from the same night sky: violet ambience, pink horizon in reflections
+    const pm = new THREE.PMREMGenerator(this.r), es = new THREE.Scene(), sk2 = nightSky(); sk2.scale.setScalar(500); es.add(sk2);
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: NIGHT.envGround })); ground.position.y = -2; es.add(ground);
+    this.env = pm.fromScene(es, 0.03).texture; pm.dispose();
+    s.environment = this.env; this.vmScene.environment = this.env;
+    // the gun: moonlight plus cyan and magenta rim lights from the city
+    this.vmScene.add(new THREE.HemisphereLight(0x9aa6f0, 0x3a2244, 0.85));
+    this.vmSun = new THREE.DirectionalLight(NIGHT.moon, 1.5); this.vmScene.add(this.vmSun); this.vmScene.add(this.vmSun.target);
+    const rimC = new THREE.DirectionalLight(0x00e5ff, 1.6); rimC.position.set(-2.5, 0.8, -2.2); this.vmScene.add(rimC);
+    const rimP = new THREE.DirectionalLight(0xff3de0, 1.2); rimP.position.set(2.6, -0.4, -1.6); this.vmScene.add(rimP);
+    this.tickers.push((dt) => { sky.material.uniforms.uTime.value += dt; neonTick(dt, this.camera); });
+  }
+
   applyQuality() {
     this.pr = clamp(Math.min(devicePixelRatio || 1, 2) * settings.renderScale * (this.dynScale || 1), 0.4, 2.5);
     this.r.setPixelRatio(this.pr); this.composer.setPixelRatio(this.pr);
@@ -101,10 +135,10 @@ export class Renderer {
   // keep the sun's shadow box centred on the player, snapped to texels so shadows don't shimmer
   follow(p) {
     const texel = 96 / settings.shadowRes, x = Math.round(p.x / texel) * texel, z = Math.round(p.z / texel) * texel;
-    this.sun.target.position.set(x, 0, z); this.sun.position.copy(SUN_DIR).multiplyScalar(160).add(this.sun.target.position);
+    this.sun.target.position.set(x, 0, z); this.sun.position.copy(this.lightDir).multiplyScalar(160).add(this.sun.target.position);
     this.sun.target.updateMatrixWorld();
     // light the first-person gun from the same direction as the world sun
-    const q = this.camera.quaternion.clone().invert(); this.vmSun.position.copy(SUN_DIR).applyQuaternion(q).multiplyScalar(5);
+    const q = this.camera.quaternion.clone().invert(); this.vmSun.position.copy(this.lightDir).applyQuaternion(q).multiplyScalar(5);
   }
-  render(dt) { this.grade.uniforms.uTime.value += dt; this.composer.render(dt); }
+  render(dt) { this.grade.uniforms.uTime.value += dt; for (const f of this.tickers) f(dt); this.composer.render(dt); }
 }

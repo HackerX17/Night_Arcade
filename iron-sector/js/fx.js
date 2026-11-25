@@ -1,6 +1,7 @@
 // Effects: GPU point particles (atlas), decals, travelling tracers, physical shell casings, pooled flash lights.
 import * as THREE from 'three';
-import { G, rand, clamp } from './core.js';
+import { G, rand, clamp, STYLE } from './core.js';
+import { poolPatch } from './neon.js';
 import { MAT } from './textures.js';
 
 function atlas() {
@@ -102,6 +103,7 @@ export class FX {
     this.dec = {}; const quad = new THREE.PlaneGeometry(1, 1);
     for (const [k, max, rough] of [['hole', 220, 0.95], ['holeMetal', 80, 0.5], ['blood', 90, 0.35], ['scorch', 30, 1]]) {
       const m = new THREE.MeshStandardMaterial({ map: decalTex(k), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3, roughness: rough });
+      if (STYLE.neon) poolPatch(m);
       const mesh = new THREE.InstancedMesh(quad, m, max); mesh.count = 0; mesh.frustumCulled = false; mesh.renderOrder = 1; scene.add(mesh);
       this.dec[k] = { mesh, max, i: 0, n: 0 };
     }
@@ -164,7 +166,10 @@ export class FX {
     D.mesh.setMatrixAt(D.i, this._m); D.i = (D.i + 1) % D.max; D.n = Math.min(D.n + 1, D.max); D.mesh.count = D.n; D.mesh.instanceMatrix.needsUpdate = true;
   }
   // ---------------- tracers ----------------
-  tracer(o, dir, dist, speed = 520, len = 3.5, col = [1, 0.75, 0.4]) {
+  tracer(o, dir, dist, speed = 520, len = 3.5, col) {
+    // Neon style: your rounds and your air support burn cyan, hostile fire burns hot pink-red
+    if (STYLE.neon) col = !col ? [0.6, 1.8, 2.2] : col[1] >= 0.8 ? [0.9, 1.6, 2.2] : [2.2, 0.45, 0.8];
+    else if (!col) col = [1, 0.75, 0.4];
     if (this.tr.length >= this.trMax) this.tr.shift();
     this.tr.push({ ox: o.x, oy: o.y, oz: o.z, dx: dir.x, dy: dir.y, dz: dir.z, dist, t: 0, speed, len, col });
   }

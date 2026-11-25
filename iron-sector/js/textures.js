@@ -1,6 +1,7 @@
 // Procedural PBR materials: every surface is generated here as albedo + normal + roughness maps (tileable).
 import * as THREE from 'three';
-import { clamp, mulberry32 } from './core.js';
+import { clamp, mulberry32, STYLE } from './core.js';
+import { neonMaterials } from './neon.js';
 
 const fract = (x) => x - Math.floor(x);
 function hash2(x, y, s) {
@@ -223,5 +224,6 @@ export async function buildMaterials(texSize, onProgress) {
   flat('hazard', 0xd9a520, { roughness: 0.6, metalness: 0.3, surf: 'metal' });
   flat('armory', 0x3a4a2e, { roughness: 0.6, metalness: 0.4, surf: 'metal' });
   flat('screen', 0x0a1a10, { emissive: 0x6dff7a, emissiveIntensity: 0.9 });
+  if (STYLE.neon) neonMaterials(MAT, UVS, SURF);
   return MAT;
 }

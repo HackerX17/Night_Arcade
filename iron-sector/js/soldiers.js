@@ -2,7 +2,8 @@
 // and enemy AI: riflemen who fight from cover, rushers, rooftop marksmen and armored heavies.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { G, clamp, lerp, damp, rand, randInt, pick, wrapAngle, settings } from './core.js';
+import { G, clamp, lerp, damp, rand, randInt, pick, wrapAngle, settings, STYLE } from './core.js';
+import { poolPatch } from './neon.js';
 import { MAT } from './textures.js';
 import { worldGun, WEAPONS } from './weapons.js';
 
@@ -113,6 +114,11 @@ export class Soldiers {
       shin: mk(capsule(0.074, 0.42), uni, 2),
       boot: mk(new RoundedBoxGeometry(0.11, 0.11, 0.27, 2, 0.03).translate(0, -0.03, -0.06), boot, 2, false)
     };
+    if (STYLE.neon) { // Neon style: a glowing red visor band so hostiles read at night; bodies catch the street light
+      const vg = new THREE.CylinderGeometry(0.114, 0.114, 0.026, 18, 1, true, Math.PI - 1.0, 2.0).scale(0.95, 1, 1).translate(0, NECK + 0.012, -0.01);
+      this.M.visor = mk(vg, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xff2d55).multiplyScalar(3), side: THREE.DoubleSide }), 1, false);
+      for (const m of [uni, vest, helm, head, glove, boot]) poolPatch(m);
+    }
     this.GM = {}; this.gunInfo = {};
     for (const id of GUNS) { const info = worldGun(id); this.gunInfo[id] = info; this.GM[id] = mk(info.geo, MAT.gunmetal, 1, true); }
   }
@@ -209,6 +215,7 @@ export class Soldiers {
   }
   _die(s, dir, part, kind, force) {
     s.alive = false; s.deadT = 0; if (s.cover) { s.cover.taken = null; s.cover = null; }
+    if (this.M.visor) { this.M.visor.setMatrixAt(s.i, ZERO); this.M.visor.instanceMatrix.needsUpdate = true; } // Neon: the visor goes dark at once
     const hitJ = part === 'head' ? 2 : part === 'leg' ? 10 : part === 'arm' ? 7 : 1;
     this._ragdoll(s, dir, force, hitJ);
     // drop the weapon where the hands were
@@ -552,6 +559,7 @@ export class Soldiers {
       seg(M.vest, i, J[0], J[1], R, SPINE * sc, b * 1.02);
       seg(M.head, i, J[1], J[2], R, NECK * sc, sc, false);
       seg(M.helmet, i, J[1], J[2], R, NECK * sc, sc * (s.def.armored ? 1.1 : 1), false);
+      if (M.visor) { if (s.alive) seg(M.visor, i, J[1], J[2], R, NECK * sc, sc * (s.def.armored ? 1.1 : 1), false); else M.visor.setMatrixAt(i, ZERO); }
       seg(M.uarm, i * 2, J[3], J[4], R, UARM * sc, sc); seg(M.uarm, i * 2 + 1, J[6], J[7], R, UARM * sc, sc);
       seg(M.farm, i * 2, J[4], J[5], R, FARM * sc, sc); seg(M.farm, i * 2 + 1, J[7], J[8], R, FARM * sc, sc);
       seg(M.hand, i * 2, J[4], J[5], R, FARM * sc, sc); seg(M.hand, i * 2 + 1, J[7], J[8], R, FARM * sc, sc);

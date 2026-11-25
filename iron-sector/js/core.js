@@ -35,8 +35,10 @@ export const PRESETS = {
   ultra:  { renderScale: 1.25, shadows: true,  ao: true,  bloom: true,  aa: true,  shadowRes: 4096, texSize: 1024, lights: 8 }
 };
 const DEFAULTS = { preset: isTouch ? 'low' : 'high', fov: 80, sens: 1, adsSens: 0.85, invertY: false, padSens: 1, aimAssist: true,
-  master: 0.8, sfx: 1, music: 0.5, showFps: false, difficulty: 'regular', autoQuality: true };
+  master: 0.8, sfx: 1, music: 0.5, showFps: false, difficulty: 'regular', autoQuality: true, style: 'neon' };
 export const settings = Object.assign({}, DEFAULTS, PRESETS[DEFAULTS.preset], store.get('iron.settings', {}));
+// the look the world was built with: Neon (night city) or Classic (the original golden-hour look). Switching reloads the page.
+export const STYLE = { neon: settings.style !== 'classic' };
 export function saveSettings() { store.set('iron.settings', settings); }
 export function applyPreset(name) { Object.assign(settings, PRESETS[name], { preset: name }); saveSettings(); }
 

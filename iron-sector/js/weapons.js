@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { G, settings, clamp, lerp, rand, damp, Spring, smoothstep } from './core.js';
+import { G, settings, clamp, lerp, rand, damp, Spring, smoothstep, STYLE } from './core.js';
 import { MAT } from './textures.js';
 
 export const WEAPONS = {
@@ -88,6 +88,17 @@ function optic(group, kind, y, z) {
   }
   g.userData.sightY = y + sightY; g.userData.z = z; return g;
 }
+// Neon style: thin cyan light strips along the sides of each first-person gun
+let NEONVM = null;
+function neonAccents(g, model, A) {
+  if (!NEONVM) NEONVM = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x00e5ff).multiplyScalar(1.5) });
+  // [half width, y, z centre, length] per model; the pistol's strips ride on its slide
+  const S = { ar: [0.0335, 0.058, -0.36, 0.24], dmr: [0.0335, 0.058, -0.4, 0.32], smg: [0.029, 0.052, -0.27, 0.12], shotgun: [0.029, 0.045, -0.04, 0.18],
+    lmg: [0.0375, 0.052, -0.38, 0.22], sniper: [0.0315, 0.012, -0.36, 0.28], pistol: [0.0165, 0.006, 0, 0.15], launcher: [0.0465, 0.07, -0.18, 0.7] }[model];
+  if (!S) return;
+  const [hw, y, z, L] = S, parent = model === 'pistol' && A.slide ? A.slide : g, geo = new THREE.BoxGeometry(0.003, 0.005, L);
+  for (const x of [-hw - 0.0015, hw + 0.0015]) P(parent, geo, NEONVM, x, y, z);
+}
 // every weapon: group facing -Z, origin at the pistol grip. Anchors: grip, fore, mag, eject, muzzle, sightY, bolt
 function buildModel(w) {
   const d = w.def, g = new THREE.Group(), V = vmMats(), M = V.metal, Pm = V.poly, A = {};
@@ -159,6 +170,7 @@ function buildModel(w) {
       muzzle.set(0, 0.07, -0.8); fore.set(0, -0.03, -0.3); sightY = 0.165; mag.visible = false; break;
     }
   }
+  if (STYLE.neon && !LITE) neonAccents(g, d.model, A);
   if (w.att.optic && d.model !== 'pistol' && d.model !== 'launcher' && d.model !== 'shotgun') { const o = optic(g, w.att.optic, railY, railZ); sightY = o.userData.sightY; A.optic = o; }
   if (w.att.suppressor) { P(g, cylZ(0.022, 0.19, 14), MAT.gunmetal, 0, muzzle.y, muzzle.z - 0.09); muzzle.z -= 0.18; }
   if (w.att.extmag && A.mag && A.mag.children[0]) A.mag.children[0].scale.y = 1.35;

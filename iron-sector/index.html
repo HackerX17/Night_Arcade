@@ -189,6 +189,24 @@ body.touch #prompt { top: 34%; font-size: 13px; } body.touch #cmsg { top: 60%; f
 body.touch #subs { bottom: auto; top: 22%; font-size: 13px; }
 body.touch #xpFeed { font-size: 18px; }
 @media (max-width: 700px) { #minimap { width: 128px; height: 128px; } .ammo { font-size: 48px; } #bannerTitle { font-size: 44px; } .stats { grid-template-columns: repeat(2, minmax(90px, auto)); } }
+/* ---------------- Neon style (Settings > Graphics > Style): night-city menus and HUD ---------------- */
+body.neon { --bg: #07031a; --amber: #00e5ff; --pink: #ff3de0; --panel: rgba(10,5,28,.84); --faint: rgba(170,215,255,.16); --dim: rgba(226,236,255,.66); }
+body.neon .shade { background: linear-gradient(90deg, rgba(9,3,26,.93) 0%, rgba(9,3,26,.7) 38%, rgba(9,3,26,.14) 70%, rgba(9,3,26,0) 100%); }
+body.neon #splash { background: radial-gradient(ellipse at center, rgba(30,8,60,.4), rgba(7,3,22,.96)); }
+body.neon h1.title { text-shadow: 0 0 22px rgba(255,61,224,.45), 0 0 2px rgba(255,255,255,.6); }
+body.neon h1.title span { color: #8ff4ff; text-shadow: 0 0 6px #00e5ff, 0 0 22px rgba(0,229,255,.8), 0 0 48px rgba(0,229,255,.4); }
+body.neon .kicker, body.neon .sect, body.neon #bannerSub, body.neon #streakHint { color: var(--pink); text-shadow: 0 0 10px rgba(255,61,224,.6); }
+body.neon h2.head { text-shadow: 0 0 18px rgba(0,229,255,.35); }
+body.neon .item:hover, body.neon .item:focus-visible { background: linear-gradient(90deg, rgba(0,229,255,.18), transparent); text-shadow: 0 0 12px rgba(0,229,255,.55); }
+body.neon .btn { color: #04121a; box-shadow: 0 0 18px rgba(0,229,255,.5), 0 0 2px #fff inset; }
+body.neon .btn.ghost { color: var(--ink); box-shadow: inset 0 0 0 1px rgba(0,229,255,.45), 0 0 12px rgba(0,229,255,.15); }
+body.neon .seg button.on { background: rgba(0,229,255,.16); box-shadow: 0 0 10px rgba(0,229,255,.35); }
+body.neon .card.sel { box-shadow: inset 0 0 0 1px var(--amber), 0 0 16px rgba(0,229,255,.3); }
+body.neon .panel, body.neon .rank, body.neon .arm { border-color: rgba(0,229,255,.22); box-shadow: 0 0 24px rgba(120,60,255,.12); }
+body.neon #streakIcons div.ready { box-shadow: 0 0 12px rgba(0,229,255,.6); }
+body.neon .tb.on { background: rgba(0,229,255,.45); }
+body.neon #armory { background: rgba(7,3,22,.74); }
+body.neon .xpbar i, body.neon .loadbar i { box-shadow: 0 0 10px rgba(0,229,255,.7); }
 @media (max-height: 520px) {
   h1.title { font-size: clamp(44px, 17vh, 132px); } h2.head { font-size: clamp(28px, 10vh, 64px); }
   .inner { padding-block: calc(env(safe-area-inset-top, 0px) + 3vh) calc(env(safe-area-inset-bottom, 0px) + 3vh); gap: 18px; }
@@ -287,6 +305,7 @@ body.touch #xpFeed { font-size: 18px; }
     <div><div class="kicker">Options</div><h2 class="head">Settings</h2></div>
     <div class="panel">
       <div class="sect">Graphics</div>
+      <div class="set">Style<div class="seg" id="styleSeg"><button data-style="neon">Neon</button><button data-style="classic">Classic</button></div><span></span></div>
       <div class="seg" id="presetSeg"><button data-preset="low">Low</button><button data-preset="medium">Medium</button><button data-preset="high">High</button><button data-preset="ultra">Ultra</button></div>
       <label class="set">Render scale<input type="range" id="sScale" min="50" max="150" step="5"><output id="vScale"></output></label>
       <label class="set">Shadows<input type="checkbox" id="sShadows"><span></span></label>

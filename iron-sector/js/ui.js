@@ -1,11 +1,13 @@
 // UI: the in-game HUD (minimap, ammo, cash, wave status, killfeed, hit markers, damage and grenade indicators, scope overlay),
 // menus, the settings screen, the armory and the end-of-mission report.
 import * as THREE from 'three';
-import { G, settings, saveSettings, applyPreset, clamp, lerp, wrapAngle } from './core.js';
+import { G, settings, saveSettings, applyPreset, clamp, lerp, wrapAngle, STYLE } from './core.js';
 import { magSize } from './weapons.js';
 import { SUPPORT, rankFor } from './systems.js';
 
 const $ = (id) => document.getElementById(id);
+// accent colour: amber in Classic, cyan in Neon
+const ACC = STYLE.neon ? '#00e5ff' : '#f2a93b', ACCA = STYLE.neon ? '0,229,255' : '242,169,59';
 const fmt = (n) => Math.round(n).toLocaleString('en-US');
 
 export class UI {
@@ -48,7 +50,7 @@ export class UI {
     g.translate(W / 2, W / 2); g.rotate(yaw); g.scale(sc, sc); g.translate(-pl.pos.x, -pl.pos.z);
     g.drawImage(this.mmBase, -60, -60, 120, 120);
     // armories
-    for (const a of G.mapInfo.armories) { g.fillStyle = '#f2a93b'; g.fillRect(a.pos.x - 1, a.pos.z - 1, 2, 2); }
+    for (const a of G.mapInfo.armories) { g.fillStyle = ACC; g.fillRect(a.pos.x - 1, a.pos.z - 1, 2, 2); }
     // support assets
     for (const a of G.support.active) {
       if (a.kind === 'sentry') { g.fillStyle = '#9fd2ff'; g.beginPath(); g.arc(a.mesh.position.x, a.mesh.position.z, 1, 0, 7); g.fill(); }
@@ -176,7 +178,7 @@ export class UI {
     this.cmsgT -= dt;
     if (this.cmsgT <= 0) {
       let msg = '', col = '';
-      if (pl.alive && ar.state !== 'reload' && !ar.state.startsWith('shell')) { if (w.mag === 0 && w.reserve === 0) { msg = 'No ammo'; col = '#e5483a'; } else if (low && w.reserve > 0) { msg = G.input.source === 'pad' ? 'Reload [X]' : G.input.source === 'touch' ? 'Reload' : 'Reload [R]'; col = '#f2a93b'; } else if (w.reserve === 0 && low) { msg = 'Low ammo'; col = '#e5483a'; } }
+      if (pl.alive && ar.state !== 'reload' && !ar.state.startsWith('shell')) { if (w.mag === 0 && w.reserve === 0) { msg = 'No ammo'; col = '#e5483a'; } else if (low && w.reserve > 0) { msg = G.input.source === 'pad' ? 'Reload [X]' : G.input.source === 'touch' ? 'Reload' : 'Reload [R]'; col = ACC; } else if (w.reserve === 0 && low) { msg = 'Low ammo'; col = '#e5483a'; } }
       if (this.cache.cm !== msg) { this.cache.cm = msg; e.cmsg.textContent = msg; e.cmsg.style.color = col; }
     } else this.cache.cm = null;
     // crosshair
@@ -227,6 +229,7 @@ export class UI {
   bindSettings(onQuality) {
     const S = settings, sync = () => {
       for (const b of $('presetSeg').children) b.classList.toggle('on', b.dataset.preset === S.preset);
+      for (const b of $('styleSeg').children) b.classList.toggle('on', b.dataset.style === (S.style === 'classic' ? 'classic' : 'neon'));
       const r = (id, v, out, txt) => { $(id).value = v; if (out) $(out).textContent = txt; };
       r('sScale', Math.round(S.renderScale * 100), 'vScale', `${Math.round(S.renderScale * 100)}%`); r('sFov', S.fov, 'vFov', `${S.fov}°`);
       r('sSens', Math.round(S.sens * 100), 'vSens', S.sens.toFixed(2)); r('sAds', Math.round(S.adsSens * 100), 'vAds', S.adsSens.toFixed(2)); r('sPad', Math.round(S.padSens * 100), 'vPad', S.padSens.toFixed(2));
@@ -235,6 +238,14 @@ export class UI {
     };
     this.syncSettings = sync;
     for (const b of $('presetSeg').children) b.addEventListener('click', () => { applyPreset(b.dataset.preset); sync(); onQuality(); if (G.audio) G.audio.uiSound('select'); });
+    // Style rebuilds the whole district, so it reloads the game: straight away from the menus, or when you leave the current mission
+    for (const b of $('styleSeg').children) b.addEventListener('click', () => {
+      const v = b.dataset.style; if ((S.style === 'classic' ? 'classic' : 'neon') === v) return;
+      S.style = v; saveSettings(); sync(); if (G.audio) G.audio.uiSound('select');
+      const name = v === 'neon' ? 'Neon' : 'Classic';
+      if (G.main && G.main.mode === 'game') $('setNote').textContent = `${name} style is saved. It switches on when you go back to the main menu.`;
+      else { $('setNote').textContent = `Switching to the ${name} style…`; setTimeout(() => location.reload(), 150); }
+    });
     const slider = (id, fn) => $(id).addEventListener('input', (ev) => { fn(+ev.target.value); saveSettings(); sync(); });
     slider('sScale', (v) => { S.renderScale = v / 100; S.preset = 'custom'; onQuality(); });
     slider('sFov', (v) => { S.fov = v; });
@@ -247,10 +258,10 @@ export class UI {
   rankSVG(el, i) {
     const enlisted = i < 11, n = enlisted ? Math.min(3, 1 + Math.floor(i / 2) % 3 + (i >= 6 ? 0 : 0)) : 1 + ((i - 11) % 4);
     let s = '';
-    if (enlisted) { for (let k = 0; k < n; k++) s += `<path d="M10 ${18 + k * 9} L27 ${8 + k * 9} L44 ${18 + k * 9}" fill="none" stroke="#f2a93b" stroke-width="5" stroke-linejoin="round"/>`; if (i >= 6) s += `<path d="M10 40 Q27 50 44 40" fill="none" stroke="#f2a93b" stroke-width="4"/>`; }
-    else if (i < 14) { for (let k = 0; k < n; k++) s += `<rect x="${12 + k * 12}" y="12" width="7" height="30" fill="#f2a93b"/>`; }
-    else { for (let k = 0; k < n; k++) { const cx = 27 + (k - (n - 1) / 2) * 13; s += `<path d="M${cx} 17 l3 7 h7 l-6 4 2 7 -6 -4 -6 4 2 -7 -6 -4 h7 z" fill="#f2a93b"/>`; } }
-    el.innerHTML = `<rect x="1" y="1" width="52" height="52" fill="rgba(242,169,59,.08)" stroke="rgba(242,169,59,.45)"/>` + s;
+    if (enlisted) { for (let k = 0; k < n; k++) s += `<path d="M10 ${18 + k * 9} L27 ${8 + k * 9} L44 ${18 + k * 9}" fill="none" stroke="${ACC}" stroke-width="5" stroke-linejoin="round"/>`; if (i >= 6) s += `<path d="M10 40 Q27 50 44 40" fill="none" stroke="${ACC}" stroke-width="4"/>`; }
+    else if (i < 14) { for (let k = 0; k < n; k++) s += `<rect x="${12 + k * 12}" y="12" width="7" height="30" fill="${ACC}"/>`; }
+    else { for (let k = 0; k < n; k++) { const cx = 27 + (k - (n - 1) / 2) * 13; s += `<path d="M${cx} 17 l3 7 h7 l-6 4 2 7 -6 -4 -6 4 2 -7 -6 -4 h7 z" fill="${ACC}"/>`; } }
+    el.innerHTML = `<rect x="1" y="1" width="52" height="52" fill="rgba(${ACCA},.08)" stroke="rgba(${ACCA},.45)"/>` + s;
   }
   showRank(prefix, xp) {
     const r = rankFor(xp);

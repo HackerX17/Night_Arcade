@@ -1,6 +1,6 @@
 // Main: boot and loading, screen flow (splash, menus, pause, armory, mission report), pointer lock, the frame loop and the menu flyover.
 import * as THREE from 'three';
-import { G, settings, saveSettings, Input, isTouch, clamp, lerp, rand, pick } from './core.js';
+import { G, settings, saveSettings, Input, isTouch, clamp, lerp, rand, pick, STYLE } from './core.js';
 import { AudioEngine } from './audio.js';
 import { buildMaterials } from './textures.js';
 import { Renderer } from './render.js';
@@ -39,6 +39,7 @@ function hud(on) { $('hud').hidden = !on; $('touch').hidden = !(on && isTouch); 
 async function boot() {
   const press = $('splashPress'), note = $('splashNote');
   show('splash');
+  if (STYLE.neon) { document.body.classList.add('neon'); try { await Promise.race([document.fonts.load('600 56px Teko'), new Promise((r) => setTimeout(r, 1500))]); } catch (e) { /* sign art falls back to a system font */ } }
   let renderer;
   try { renderer = new Renderer($('view')); }
   catch (e) { press.textContent = 'WebGL is not available'; note.textContent = 'Iron Sector needs a browser with WebGL 2 and hardware acceleration turned on.'; return; }
@@ -116,6 +117,7 @@ function wireMenus() {
 }
 function selectDiff(d) { settings.difficulty = d; saveSettings(); document.querySelectorAll('#diffCards .card').forEach((c) => c.classList.toggle('sel', c.dataset.diff === d)); }
 function toMenu() {
+  if ((settings.style === 'classic') === STYLE.neon) { location.reload(); return; } // a Style change was saved during the mission
   mode = 'menu'; paused = false; hud(false); G.input.exitLock(); G.input.capture = false;
   G.enemies.clear(); G.throwables.clear(); G.pickups.clear(); G.support.reset(); G.props.reset(); G.fx.clear();
   G.renderer.vmPass.enabled = false;
