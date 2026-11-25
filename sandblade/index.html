@@ -89,10 +89,10 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
 .cta.ghost { background: rgba(20,0,50,.55); box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); font-size: 14px; padding: 12px 32px; }
 .best { font-size: 13px; letter-spacing: .16em; text-transform: uppercase; opacity: .9; font-variant-numeric: tabular-nums; }
 .over h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(30px, 8vw, 48px); letter-spacing: .08em; }
-.statsgrid { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 28px; font-variant-numeric: tabular-nums; }
+.statsgrid { display: grid; grid-template-columns: repeat(3, auto); gap: 6px clamp(14px, 5vw, 28px); font-variant-numeric: tabular-nums; }
 .statsgrid div { display: flex; flex-direction: column; gap: 2px; }
 .statsgrid span { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; opacity: .85; }
-.statsgrid strong { font-family: var(--display); font-weight: 400; font-size: 28px; }
+.statsgrid strong { font-family: var(--display); font-weight: 400; font-size: clamp(20px, 6.4vw, 28px); white-space: nowrap; }   /* "31,302 m" stays on one line on small phones */
 .newbest { color: var(--glow); letter-spacing: .2em; text-transform: uppercase; font-size: 13px; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .cta { transition: none; } }
 .cta.music { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; padding: 10px 22px; }
@@ -742,11 +742,12 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
 "use strict";
 const cvs = document.getElementById("c"), ctx = cvs.getContext("2d");
 const $ = id => document.getElementById(id);
-let W = 0, H = 0, DPR = 1;
+let W = 0, H = 0, DPR = 1, hudBot = 0, hudBotDirty = true;   // hudBot: where the HUD ends, so popups start below it
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = innerWidth; H = innerHeight;
   cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
+  hudBotDirty = true;
 }
 addEventListener("resize", resize); resize();
 
@@ -1001,13 +1002,13 @@ showBest();
 function start() {
   initAudio(); reset(); hold = false; paused = false; $("pauseMenu").hidden = true; state = "play";
   if (window.ArcadeSound) { window.ArcadeSound.pause(false); window.ArcadeSound.play(); }
-  $("menu").hidden = true; $("over").hidden = true; $("logo").hidden = true; $("hud").hidden = false;
+  $("menu").hidden = true; $("over").hidden = true; $("logo").hidden = true; $("hud").hidden = false; hudBotDirty = true;
 }
 function gameOver() {
   state = "over";
   const s = score(), isBest = s > best;
   if (isBest) { best = s; store.set("sandblade-best", String(best)); }
-  $("oDist").textContent = Math.floor(Math.max(0, p.x) / 10) + " m";
+  $("oDist").textContent = Math.floor(Math.max(0, p.x) / 10).toLocaleString() + " m";
   $("oShards").textContent = shardCount;
   $("overTitle").textContent = `The storm took you on island ${islandIdx + 1}`;
   $("oScore").textContent = s.toLocaleString();
@@ -1118,7 +1119,7 @@ function cometSmash() {
 function startFever() {
   fever = 5; flashT = 0.5; shake = 0.25; chord();
   ring(p.x, p.y - 30, "#ffd35c", 420, 0.8, 16); spiral(p.x, p.y - 30, "rgba(255,215,110,");
-  popup("FEVER!  speed × score ×2", true);
+  popup("FEVER!  faster · shards & tricks ×2", true);
 }
 
 function launch(k) {
@@ -1326,7 +1327,7 @@ function renderPowers() {
     html += chip(P.color, P.glyph, P.name, frac);
   }
   if (fever > 0) html += chip("#ffd35c", "★", "Fever", fever / 5);
-  if (el._last !== html) { el.innerHTML = html; el._last = html; }
+  if (el._last !== html) { el.innerHTML = html; el._last = html; hudBotDirty = true; }
 }
 
 function update(dt) {
@@ -1360,7 +1361,7 @@ function update(dt) {
     for (const k of POWER_KEYS) if (k !== "ward") powers[k] = Math.max(0, powers[k] - dt);
     fever = Math.max(0, fever - dt);
     const alt = surf(p.x) - p.y;
-    if (!p.grounded && !p.launch && alt > 1400 && !skyMsg) { skyMsg = true; popup(`Sky high!  ${Math.round(alt / 10)} m up`, true); trickScore += 300; }
+    if (!p.grounded && !p.launch && alt > 1400 && !skyMsg) { skyMsg = true; popup(`Sky high!  ${Math.round(alt / 10)} m up  +300`, true); trickScore += 300; }
     if (p.grounded) skyMsg = false;
     maxAlt = Math.max(maxAlt, alt);
     renderPowers();
@@ -1493,7 +1494,7 @@ function update(dt) {
 
   // HUD
   if (playing) {
-    $("dist").textContent = Math.floor(Math.max(0, p.x) / 10) + " m";
+    $("dist").textContent = Math.floor(Math.max(0, p.x) / 10).toLocaleString() + " m";
     $("scoreLbl").textContent = `Score ${score().toLocaleString()} · Island ${islandIdx + 1}`;
     $("shardCount").textContent = shardCount;
   }
@@ -1509,7 +1510,7 @@ function mixHex(a, b, t) { const A = hexRgb(a), B = hexRgb(b); return `rgb(${A.m
 // colours that change along an island: two-colour islands melt back and forth, Spectrum Run drifts round the colour wheel
 const islandStart = k => (k === 0 ? -4000 : BOUNDS[k - 1]);
 const blendT = (k, x) => 0.5 - 0.5 * Math.cos(TAU * (x - islandStart(k)) / 9000);
-const rainbowHue = x => { const u = (x - islandStart(islandAt(x))) / 36000; return (((220 - 360 * u) % 360) + 360) % 360; };   // one full turn of the colour wheel every 36 km
+const rainbowHue = x => { const u = (x - islandStart(islandAt(x))) / 36000; return (((220 - 360 * u) % 360) + 360) % 360; };   // one full turn of the colour wheel every 3.6 km (36,000 units)
 function hillAt(k, x) {
   const T = isl(k);
   if (T.type === "rainbow") { const h = rainbowHue(x); return [hsl(h, 0.95, 0.58), hsl(h, 0.9, 0.4), hsl(h, 0.8, 0.14)]; }
@@ -2087,11 +2088,14 @@ function drawVignette() {
   if (flashT > 0) { ctx.fillStyle = `rgba(220,245,255,${flashT * 0.5})`; ctx.fillRect(0, 0, W, H); }
 }
 
+// popups start below the HUD, which grows a row when several power-ups are running
+function hudBottom() { if (hudBotDirty) { const el = $("hud"); hudBot = el.hidden ? 0 : el.getBoundingClientRect().bottom; hudBotDirty = false; } return hudBot; }
 function drawPopups() {
   ctx.textAlign = "center";
+  const top = Math.max(H * 0.26, hudBottom() + 26);
   popups.forEach((pp, i) => {
     const a = pp.t < 0.15 ? pp.t / 0.15 : clamp(1 - (pp.t - 1.1) / 0.5, 0, 1);
-    const y = H * 0.26 + i * 34 - pp.t * 12, pop = 0.6 + 0.4 * easeOutBack(pp.t / 0.3);
+    const y = top + i * 34 - pp.t * 12, pop = 0.6 + 0.4 * easeOutBack(pp.t / 0.3);
     let fs = (pp.big ? 22 : 17) * pop;
     ctx.font = `${Math.round(fs)}px Audiowide, system-ui, sans-serif`;
     const tw = ctx.measureText(pp.text).width;                            // shrink long messages to fit narrow phones
