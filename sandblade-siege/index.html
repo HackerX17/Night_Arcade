@@ -96,7 +96,7 @@ body {
 #labels div.gold { color: var(--gold); -webkit-text-stroke-color: rgba(60,30,0,.9); text-shadow: 0 0 12px #ff9f1a; font-size: 19px; }
 #labels div.tag { font-family: var(--display); font-weight: 400; font-size: 14px; padding: 3px 10px; border-radius: 99px; background: rgba(16,60,190,.88); -webkit-text-stroke: 0; color: #fff; text-shadow: none; box-shadow: 0 0 12px rgba(43,140,255,.85), inset 0 0 0 1px rgba(160,210,255,.6); }
 #labels div.tag.red { background: rgba(176,16,44,.9); box-shadow: 0 0 12px rgba(255,46,77,.85), inset 0 0 0 1px rgba(255,170,180,.6); }
-#hint { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 5vh); z-index: 6; pointer-events: none; text-align: center;
+#hint { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + max(5vh, 58px)); z-index: 6; pointer-events: none; text-align: center;
   font: 700 14px var(--body); letter-spacing: .24em; text-transform: uppercase; color: #fff; text-shadow: 0 0 8px var(--accent), 0 1px 6px rgba(4,0,24,.9); transition: opacity .6s; }
 #flash { position: fixed; inset: 0; z-index: 7; pointer-events: none; background: #eafcff; opacity: 0; }
 #hurt { position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0; background: radial-gradient(ellipse 90% 60% at 50% 100%, rgba(255, 30, 60, .62), rgba(255, 30, 60, 0) 70%); }

@@ -217,6 +217,12 @@ body.neon .xpbar i, body.neon .loadbar i { box-shadow: 0 0 10px rgba(0,229,255,.
   #bannerTitle { font-size: 40px; } #bannerSub { font-size: 12px; }
   .arm { padding: 12px; gap: 8px; max-height: 94vh; } .buy { padding: 8px; } .buy b { font-size: 18px; } .buy span { font-size: 11px; } #armCash { font-size: 28px; }
 }
+/* narrow phones held upright: the menu's two columns stack instead of squeezing the rank card off the screen */
+@media (max-width: 640px) and (orientation: portrait) {
+  .inner { flex-direction: column; gap: 22px; }
+  #menu .inner > .col:last-child { align-items: stretch !important; justify-content: flex-end !important; max-width: none !important; }
+  #menu .rank { max-width: none; }
+}
 @media (prefers-reduced-motion: reduce) { #splash .press { animation: none; } }
 </style>
 

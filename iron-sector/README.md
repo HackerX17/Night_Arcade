@@ -42,7 +42,7 @@ On phones and tablets, the left thumb moves (push far forward to sprint) and the
   - Armored juggernauts carry machine guns.
   - Every enemy navigates with A* path-finding and falls as a physics ragdoll.
 - **Survival loop:** escalating waves, intermissions, a cash economy, three armory stations, perks, and four difficulty levels.
-- **Air support:** recon drone (radar), precision airstrike, attack helicopter and sentry gun. You earn them with 3-, 5- and 8-kill streaks or buy them at the armory.
+- **Air support:** recon drone (radar), precision airstrike, attack helicopter and sentry gun. You earn them with 3-, 5- and 8-kill streaks (a streak ends if you fall below 35 health) or buy them at the armory.
 - **Two looks** (Settings → Graphics → Style):
   - **Neon** (the default): the Old Quarter at night under a synthwave sky with a big moon and stars. Neon tubes outline the rooftops, the shop signs become glowing tube signs, four billboards light the street ends, windows glow across the skyline, and the lane lines and curbs shine. Street lamps, signs, fires and the armories cast coloured light on everything around them. Hostiles wear glowing red visors so you can pick them out in the dark. Your tracers burn cyan and theirs burn hot pink.
   - **Classic**: the original golden-hour look, exactly as it was.

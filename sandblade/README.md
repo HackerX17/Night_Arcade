@@ -11,7 +11,7 @@ Open `index.html` in any browser (phone or desktop). On a phone, use "Add to Hom
 - Desktop: Space or Down arrow
 - Pause: the II button (or Esc / P). The game also pauses itself if you switch apps.
 
-Dive on the way down a hill, let go on the way up, and land smoothly on a downslope to chain combos; three in a row starts **Fever** (extra speed, double score and shards). Speed comes from riding well: a smooth landing after a dive gives you a kick, a bad landing on an uphill slows you down.
+Dive on the way down a hill, let go on the way up, and land smoothly on a downslope to chain combos; three in a row starts **Fever** (extra speed, and double shards and trick points). Speed comes from riding well: a smooth landing after a dive gives you a kick, a bad landing on an uphill slows you down.
 
 Each **island** is long and ends in a huge drop and a giant ramp that throws you across the water. The jump keeps the speed you brought to it (no free boost) and sets you down on a steep landing slope, so you carry that energy straight into a slide and whip back up. Reaching a new island also pushes the storm back. Every island has its own colours: 14 hand-made ones, then **Spectrum Run** on every 15th island, whose colours drift from blue through green and yellow to red as you ride it, then two-colour islands that blend from one colour into the other.
 
