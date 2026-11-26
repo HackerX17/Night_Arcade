@@ -1393,7 +1393,26 @@ function drawPickup(q, t) {
 
 // ---------- drawing: the ninja ----------
 // Local frame: feet at the origin, "up" is -y, running direction is +x.
+// the hero: the arcade's robot (CC0, Quaternius), rendered from 3D into 16 frames: 12 running, 4 in the air
+const ROBOT = Object.assign(new Image(), { src: "sprites/robot.png" }), RF = 192, RS = 0.55, robotTint = {};
+function robotSheet(mono) {   // ghosts and afterimages: the same frames in one flat colour
+  if (!mono) return ROBOT; if (robotTint[mono]) return robotTint[mono];
+  const c = document.createElement("canvas"); c.width = ROBOT.naturalWidth; c.height = ROBOT.naturalHeight; const g = c.getContext("2d");
+  g.drawImage(ROBOT, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = mono; g.fillRect(0, 0, c.width, c.height); return (robotTint[mono] = c);
+}
+function drawRobot(phase, air, mono) {
+  const i = air ? (phase ? 13 : 12) : Math.floor((((phase % TAU) + TAU) % TAU) / TAU * 12) % 12, sx = (i % 4) * RF, sy = Math.floor(i / 4) * RF;
+  ctx.save(); if (!mono) { ctx.shadowColor = XMAS ? "#ffffff" : "#ff2bd6"; ctx.shadowBlur = 14; }
+  ctx.drawImage(robotSheet(mono), sx, sy, RF, RF, -96 * RS, -183 * RS, RF * RS, RF * RS); ctx.restore();
+  if (XMAS && !mono) {   // a Santa hat on the dome
+    ctx.save(); ctx.translate(-2, -64); ctx.rotate(-0.15); ctx.scale(1.35, 1.35); const fl = Math.sin(phase * 1.7) * 2;
+    ctx.fillStyle = "#e8132f"; ctx.beginPath(); ctx.moveTo(-9, 4); ctx.quadraticCurveTo(-2, -12, 8, 3); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-6, -1); ctx.quadraticCurveTo(-12, -11 + fl * 0.5, -17, -5 + fl * 0.6); ctx.lineTo(-10, 0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.ellipse(-0.5, 3.5, 10, 2.8, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(-17, -5 + fl * 0.6, 3.2, 0, TAU); ctx.fill(); ctx.restore();
+  }
+}
 function drawNinja(phase, air, mono) {
+  if (ROBOT.complete && ROBOT.naturalWidth) return drawRobot(phase, air, mono);   // the vector figure stays as the fallback
   const suit = mono || "#2a1d86", dark = mono || "#140a48";
   ctx.lineCap = "round"; ctx.lineJoin = "round";
   const hip = { x: 0, y: -24 }, lean = air ? 0.15 : 0.4;
