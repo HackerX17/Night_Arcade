@@ -1,4 +1,6 @@
 <meta charset="utf-8">
+<script src="../shared/gfx.js" data-game="chopper"></script>
+<script type="importmap">{ "imports": { "three": "../shared/na3d/three.module.min.js" } }</script>
 <title>Chopper Cave</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -47,6 +49,7 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   <button class="iconbtn" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zm6.5 0H17v14h-3.5z"/></svg></button>
   <button class="iconbtn" id="mute" aria-label="Mute" aria-pressed="false"></button>
 </div>
+<div id="gfxTitle" style="position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6" hidden></div>
 <div class="pausebox" id="pauseMenu" hidden><h2>Paused</h2><button class="cta" id="resume">Resume</button><button class="cta ghost" id="restart">Restart</button><button class="cta ghost" id="pauseHome">Main menu</button><button class="cta ghost" data-am-open>Music &amp; sound</button></div>
 
 <!-- arcade-music:start · generated from shared/arcade-music.html by tools/sync-music.py; edit that file, then run the script -->
@@ -1220,9 +1223,13 @@ function render(t) {
   if (state === "play" || state === "dead") P = palette(dist); else P = palette(0);
   S = Math.min(W / VW, H / VH); OX = (W - VW * S) / 2; OY = (H - VH * S) / 2;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.fillStyle = css(P.s0); ctx.fillRect(0, 0, W, H);
+  if (gfxBox) gfxBox.hidden = state !== "title";
+  const D3 = !!(window.CC3D && window.CC3D.ok) && !(mode === "hyper" && state === "play");   // 3D mode: js/hd.js draws the cave; Hyperspace keeps its own look
+  if (D3) { ctx.clearRect(0, 0, W, H); window.CC3D.render(t); } else { ctx.fillStyle = css(P.s0); ctx.fillRect(0, 0, W, H); }
   ctx.save(); ctx.translate(OX, OY); ctx.scale(S, S);
   ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.clip();
+  if (D3) { if (state === "play" && best > 0) drawBestGate(t); for (const q of pickups) text(PICK[q.type].name, q.x, q.y + Math.sin(q.ph * 3) * 3 + 30, 8, css(PICK[q.type].col), "center", false); }
+  else {
   if (mode === "hyper" && state === "play") drawHyper(t);
   else { drawBackdrop(t); drawWalls(t); drawPickups(t); if (state === "play" && best > 0) drawBestGate(t); }
   drawTrail();
@@ -1230,6 +1237,7 @@ function render(t) {
   ctx.save(); ctx.globalCompositeOperation = "lighter";
   for (const s of sparks) { ctx.fillStyle = s.col ? css(s.col, Math.min(1, s.life * 1.6)) : s.life > 0.7 ? "rgba(255,255,255,.95)" : s.life > 0.35 ? css(P.a, 0.9) : css(P.s2, 0.8); ctx.fillRect(s.x - 2, s.y - 2, 4, 4); }
   ctx.restore();
+  }
   // distance and best, top left over the cave ceiling
   const d = Math.floor(dist / 10);
   if (state !== "title") drawHUD(t, mode === "hyper" && hy ? d + Math.round(hy.bonus) : d);
@@ -1284,6 +1292,13 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 // test hook (add #debug to the address)
+const gfxBox = window.NAGFX ? document.getElementById("gfxTitle") : null;   // the Original / 3D switch on the title screen and in the pause menu
+if (window.NAGFX) { window.NAGFX.mount(gfxBox); window.NAGFX.mount("#pauseMenu"); }
+// read-only view of the cave for the 3D renderer (js/hd.js)
+window.CCS = { VW, VH, COL, HELI_X, PICK, cvs, wallTop, wallBot, blockBox, get layout() { return { S, OX, OY, W, H }; }, get P() { return P; }, get cols() { return cols; }, get scroll() { return scroll; },
+  get dist() { return dist; }, get heli() { return heli; }, get blocks() { return blocks; }, get pickups() { return pickups; }, get trail() { return trail; }, get sparks() { return sparks; },
+  get powers() { return powers || {}; }, get grace() { return grace; }, get state() { return state; }, get deadT() { return deadT; }, get mode() { return mode; }, get flash() { return flash; } };
+if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => { window.CC3D = m.attach(window.CCS); }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
 if (/debug/.test(location.hash)) window.__CC = { give(type) { collect({ type, x: HELI_X, y: heli.y }); }, get mode() { return mode; }, get hy() { return hy; }, get powers() { return powers; }, get pickups() { return pickups; }, get wideK() { return wideK; }, get grace() { return grace; }, get slowK() { return slowK; }, get speed() { return speed; }, get banner() { return banner; }, hyC: (x) => hyCenter(x), hyH: () => hyHalf(), wallTop, wallBot, blockBox, hits: () => heliHits(),
   get state() { return state; }, get heli() { return heli; }, get dist() { return dist; }, get hold() { return hold; }, cols: () => cols, blocks: () => blocks, scrollOff: () => scroll,
   start() { reset(); state = "play"; }, press, release, setHold(v) { hold = v; },
