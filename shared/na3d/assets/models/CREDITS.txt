@@ -1,3 +1,6 @@
 car_concept.gltf: "CarConcept" by Eric Chadwick, Darmstadt Graphics Group, from the Khronos glTF Sample Assets.
 Licence: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Simplified and recompressed for the web (fewer triangles, 512 px WebP textures).
 The Khronos and glTF logos that ship with the sample are not used.
+
+robot.gltf: "RobotExpressive" by Tomas Laulhe (Quaternius), modifications by Don McCurdy. Licence: CC0 1.0 (public domain).
+Source: the three.js examples (r160), examples/models/gltf/RobotExpressive, as a glTF with embedded data.
