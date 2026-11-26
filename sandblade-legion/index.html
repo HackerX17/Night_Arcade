@@ -88,6 +88,16 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   .result h2 { font-size: clamp(22px, 8vh, 34px); }
   .result strong { font-size: 24px; }
 }
+/* level select: a grid of every level you have reached, coloured by its palette */
+.lvgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 10px; width: min(600px, 100%); max-height: min(56vh, 520px); overflow-y: auto; padding: 6px; overscroll-behavior: contain; }
+#levels { background: radial-gradient(ellipse at 50% 40%, rgba(12,4,48,.9), rgba(4,0,22,.96)); }
+.lvtile { --c: var(--accent); min-height: 72px; display: grid; place-content: center; gap: 6px; border-radius: 14px; cursor: pointer; color: #fff; background: rgba(14,6,52,.92); border: 1px solid rgba(255,255,255,.14); box-shadow: inset 0 -3px 0 var(--c); font: 400 24px/1 var(--display); font-variant-numeric: tabular-nums; transition: transform .15s ease; }
+.lvtile small { font: 700 11px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: #ffd23f; }
+.lvtile:hover { transform: translateY(-2px); } .lvtile:active { transform: translateY(1px); }
+.lvtile:focus-visible { outline: 2px solid var(--c); outline-offset: 3px; }
+.lvtile.cur { box-shadow: inset 0 0 0 2px var(--c), inset 0 -3px 0 var(--c); }
+.lvtile[disabled] { opacity: .32; cursor: default; box-shadow: none; } .lvtile[disabled] small { color: var(--cream); }
+@media (prefers-reduced-motion: reduce) { .lvtile { transition: none; } .lvtile:hover, .lvtile:active { transform: none; } }
 </style>
 
 <canvas id="c" aria-label="Sandblade Legion game"></canvas>
@@ -103,8 +113,15 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
 <div class="overlay" id="menu">
   <div class="how"><b>Tap a lane</b> or drag to steer. Blue gates grow your legion, <em>red gates</em> shrink it. Squads and the horde fight one for one, so steer around any squad bigger than your legion. Your riders shoot walls down and raise + gates on their own. Break the wall to reach the big bonus, then outnumber the horde.</div>
   <button class="cta" id="play">March</button>
+  <button class="cta ghost" id="levelsBtn">Levels</button>
   <button class="cta ghost music" data-am-open><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z" fill="currentColor"/></svg>Music &amp; sound</button>
   <div class="sub" id="menuLvl"></div>
+</div>
+
+<div class="overlay result" id="levels" hidden>
+  <h2>Levels</h2>
+  <div class="lvgrid" id="lvGrid" role="group" aria-label="Choose a level"></div>
+  <button class="cta ghost" id="levelsBack">Back</button>
 </div>
 
 <div class="overlay result" id="pauseMenu" hidden>
@@ -1019,6 +1036,19 @@ function toMenu() {
   $("menu").hidden = false; $("logo").hidden = false; updateMenu();
 }
 for (const id of ["pauseHome", "winHome", "loseHome"]) $(id).addEventListener("click", toMenu);
+// level select: every level you have reached, with the most riders you finished it with
+const compact = (n) => { for (const [v, u] of [[1e9, "B"], [1e6, "M"], [1e3, "K"]]) if (n >= v) return (n / v).toFixed(n < v * 10 ? 1 : 0).replace(/\.0$/, "") + u; return String(n); };
+function showLevels() {
+  const max = Math.max(1, +(store.get("legion-level-v2") || 1)), n = Math.max(12, Math.ceil((max + 3) / 4) * 4);
+  $("lvGrid").innerHTML = Array.from({ length: n }, (_, i) => { const k = i + 1, best = +(store.get("legion-best-" + k) || 0), locked = k > max;
+    const tag = locked ? "Locked" : best ? compact(best) : k === 1 ? "Mega" : "New";
+    return `<button class="lvtile${k === level ? " cur" : ""}" data-pad data-l="${k}" style="--c:${themeOf(k).a}"${locked ? " disabled" : ""} aria-label="Level ${k}, ${locked ? "locked" : best ? "best " + best.toLocaleString() + " riders" : tag}">${k}<small>${tag}</small></button>`; }).join("");
+  $("menu").hidden = true; $("logo").hidden = true; $("levels").hidden = false;
+}
+const hideLevels = () => { $("levels").hidden = true; $("menu").hidden = false; $("logo").hidden = false; };
+$("levelsBtn").addEventListener("click", showLevels); $("levelsBack").addEventListener("click", hideLevels);
+$("lvGrid").addEventListener("click", (e) => { const b = e.target.closest(".lvtile"); if (!b || b.disabled) return; level = +b.dataset.l; $("levels").hidden = true; updateMenu(); start(); });
+addEventListener("keydown", (e) => { if (e.code === "Escape" && !$("levels").hidden) hideLevels(); });
 
 function updateMenu() { $("menuLvl").innerHTML = `${level === 1 ? "Level 1 · Mega level" : `Level ${level}`}<span class="pal">${themeOf(level).name}</span>`; }
 updateMenu();
@@ -1039,6 +1069,7 @@ function endLevel(won) {
     const kept = armyAtClash ? army / armyAtClash : 1;   // shot down before it reached you, or how much of the legion the clash left
     $("winTitle").textContent = !armyAtClash ? "Total domination" : kept >= 0.75 ? "Crushed them" : kept >= 0.4 ? "Victory" : "Just made it";
     $("winCount").textContent = army.toLocaleString();
+    if (army > +(store.get("legion-best-" + level) || 0)) store.set("legion-best-" + level, String(army));   // the level select shows your best finish
     if (+(store.get("legion-level-v2") || 1) <= level) store.set("legion-level-v2", String(level + 1));   // the next level is yours even if you close the game now
     $("winSub").textContent = `Level ${level} · horde of ${boss.max.toLocaleString()} wiped out`;
     $("win").hidden = false; sfx.win();
