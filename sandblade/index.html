@@ -1,4 +1,6 @@
 <meta charset="utf-8">
+<script src="../shared/gfx.js" data-game="sandblade"></script>
+<script type="importmap">{ "imports": { "three": "../shared/na3d/three.module.min.js" } }</script>
 <title>Sandblade</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -2206,6 +2208,12 @@ function drawPopups() {
 
 function render(t) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (window.SB3D && window.SB3D.ok) {   // 3D mode: js/hd.js draws the world, the rider and the effects; this layer keeps the screen-space bits
+    ctx.clearRect(0, 0, W, H);
+    window.SB3D.render(t);
+    drawSpeedLines(t); drawVignette(); drawLandingMarker(baseScale() * cam.zoom, t); drawPopups();
+    return;
+  }
   if (shake > 0) { const k = shake * 16 * (window.ARCADE_CALM ? 0.15 : 1); ctx.translate((Math.random() - 0.5) * k, (Math.random() - 0.5) * k); }
   const pal = scenePal();
   drawSky(t, pal);
@@ -2251,6 +2259,24 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+// read-only view of the game for the 3D renderer (js/hd.js)
+function scenePalRGB() {
+  const cx = cam.x + W / (baseScale() * cam.zoom) * 0.5, k = islandAt(cx);
+  let S = skyOf(k, cx);
+  if (k < BOUNDS.length && BOUNDS[k] - cx < 1500) {
+    const t = smooth(1 - (BOUNDS[k] - cx) / 1500), B = skyOf(k + 1, BOUNDS[k] + 1);
+    S = { sky: S.sky.map((c, i) => mixRGB(c, B.sky[i], t)), city: t < 0.5 ? S.city : B.city, glow: mixRGB(S.glow, B.glow, t) };
+  }
+  return S;
+}
+window.SBS = { WATER_Y, ABYSS, GAP, RAMP, POWER, cvs, groundY, islandAt, isl, hillAt, noseY, slopeAt, rigPoints, trailColor, baseScale, hexRgb, hash, pal: scenePalRGB,
+  get W() { return W; }, get H() { return H; }, get state() { return state; }, get paused() { return paused; }, get p() { return p; }, get cam() { return cam; },
+  get storm() { return storm; }, get shards() { return shards; }, get pickups() { return pickups; }, get particles() { return particles; }, get rings() { return rings; },
+  get ghosts() { return ghosts; }, get meteors() { return meteors; }, get echo() { return echo; }, get rig() { return rig; }, get scarf() { return scarf; }, get trail() { return trail; },
+  get arcPath() { return arcPath; }, get lightning() { return lightning; }, get powers() { return powers; }, get fever() { return fever; }, get islandIdx() { return islandIdx; },
+  get BOUNDS() { return BOUNDS; }, get END() { return END; }, get shake() { return shake; }, get QUALITY() { return QUALITY; }, get elapsed() { return elapsed; } };
+if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), pl = $("play"); if (w && pl) pl.after(w); window.NAGFX.mount("#pauseMenu"); }
+if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => m.attach(window.SBS)).then((api) => { window.SB3D = api; }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
 // test hook (add #debug to the address)
 if (/debug/.test(location.hash)) window.__SB = {
   get p() { return p; }, get cam() { return cam; }, view: () => ({ W, H, s: baseScale() * cam.zoom }), surf: (x) => surf(x), get state() { return state; }, get islandIdx() { return islandIdx; }, get elapsed() { return elapsed; }, get storm() { return storm; }, get combo() { return combo; },
