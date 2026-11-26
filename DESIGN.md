@@ -79,6 +79,7 @@ Every page includes the shared player (`shared/arcade-music.html`, copied in by 
 | Void Eater | electro |
 | Nova Strike | trance |
 | Glowline | techno |
+| Grid Viper | electro |
 | Pulse Runner | outrun |
 
 Sound effects check `ArcadeSound.sfx` and the game's own mute. Opening Music & sound (`arcademusicpanel`) or leaving the tab (`visibilitychange`) pauses the game.

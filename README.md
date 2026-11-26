@@ -1,6 +1,6 @@
 # Night Arcade
 
-Twelve original neon browser games. They run on phones and computers with nothing to install.
+Thirteen original neon browser games. They run on phones and computers with nothing to install.
 
 **Play:** https://hackerx17.github.io/Night_Arcade/
 
@@ -11,6 +11,7 @@ Twelve original neon browser games. They run on phones and computers with nothin
 | Void Eater | City swallower in 3D: a tiny void that grows by swallowing everything smaller, from cones to whole buildings. Two-minute battles against three rival voids, or solo. | [`void-eater/`](void-eater/) |
 | Nova Strike | Vertical space shooter: waves of invaders, five gun levels, lasers and homing missiles, and three bosses with three phases each. | [`nova-strike/`](nova-strike/) |
 | Glowline | Neon snake arena: steer toward your pointer, eat glowing light to grow, boost to cut off the 22 rival snakes, and burst anyone whose head hits you. Sixteen skins, leaderboard, minimap. | [`glowline/`](glowline/) |
+| Grid Viper | Classic snake on a neon grid: eat the dot, grow, never bite your own tail. Classic, No walls and Maze modes, three speeds, golden stars, skins to unlock. Swipe, keys, D-pad or controller. | [`grid-viper/`](grid-viper/) |
 | Pulse Runner | Endless runner in 3D: an animated robot dodges, jumps and slides down a neon highway, ride on the trains, fly the jetpack, complete missions for orbs, and spend them on longer power-ups. | [`pulse-runner/`](pulse-runner/) |
 | Sandblade | Hill rider: dive down neon hills, ramp from island to island (each with its own colour scheme), and outrun the storm. 11 power-ups. | [`sandblade/`](sandblade/) |
 | Skyline Leap | Wall climber: leap between two towers, dodge window hazards and smash drones mid-air. 7 power-ups, and a Christmas version. | [`skyline-leap/`](skyline-leap/) |
@@ -23,7 +24,7 @@ Twelve original neon browser games. They run on phones and computers with nothin
 
 Every game, and the home page, has a **Music & sound** button. Pick the music you want:
 
-- **Game music**: each game's own soundtrack, synthesised live in the browser (no audio files): house in Sandblade Legion, deep house in Sandblade, electro house in Skyline Leap (Christmas house in its Christmas version) and Void Eater, battle techno in Sandblade Siege, techno in Chopper Cave (electro in Hyperspace) and Glowline, outrun in Redline Nights (battle techno in pursuits) and Pulse Runner, chill house in Prism Breaker, trance in Nova Strike, and Iron Sector's own score. It starts when you start playing, pauses with the game, and has its own volume.
+- **Game music**: each game's own soundtrack, synthesised live in the browser (no audio files): house in Sandblade Legion, deep house in Sandblade, electro house in Skyline Leap (Christmas house in its Christmas version), Void Eater and Grid Viper, battle techno in Sandblade Siege, techno in Chopper Cave (electro in Hyperspace) and Glowline, outrun in Redline Nights (battle techno in pursuits) and Pulse Runner, chill house in Prism Breaker, trance in Nova Strike, and Iron Sector's own score. It starts when you start playing, pauses with the game, and has its own volume.
 - **My music**: your own songs or your music app (below).
 - **Off**: no music.
 
