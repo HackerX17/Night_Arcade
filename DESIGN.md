@@ -60,6 +60,7 @@ Neon on canvas: draw the glow as a wide, low-alpha stroke under a thin bright on
 - Animations are tied to game time, not frame count, so 120 Hz screens run at the same speed.
 - **Reduced motion**: the shared shell sets `window.ARCADE_CALM` from `prefers-reduced-motion`; every game multiplies its screen shake and white flashes by `(window.ARCADE_CALM ? 0.15 : 1)`. CSS motion (hover lifts, the hub's neon flicker) turns off under the same media query.
 - **Haptics**: crashes and game overs call `navigator.vibrate` (phones), and the shared shell turns the same calls into controller rumble.
+- **Your record in the world**: games measured in distance or height draw your best as a dashed gold line or gate in the level itself (Skyline Leap's towers, Chopper Cave's cave) with the number on it; passing it fires a "New record" moment and the line turns green or slips behind you.
 
 ## Sound
 
@@ -95,6 +96,7 @@ Every game has the same skeleton, so players never hunt for a button:
 1. **Menu**: logo, one call to action, best score, a short "how to play", Music & sound.
 2. **Play**: HUD, the icon row, Escape or P to pause.
 3. **Pause**: Resume, Restart (or New game), Main menu, Music & sound. Results screens also offer Main menu.
+   Runners can add **missions** (Pulse Runner): three goals at a time on the menu with progress bars, paid in the game's currency, the next one dealt a tier harder; results sum up what was completed next to the score and keep the primary button in view.
    Level-based games add a **Levels** screen from the menu: a grid of every level reached, coloured by its palette, showing stars or best result; locked levels dimmed; Back, Escape or B to return.
 4. **Results**: the outcome in one big word or number, a stats grid, NEW BEST when earned, Play again, Main menu.
 5. **Storage**: `localStorage` under a game prefix (`prism-`, `void-`, `nova-`, `glow-`, `pulse-`, `redline-`…), every read and write wrapped in `try/catch` so a blocked store never breaks the game.
