@@ -1,4 +1,6 @@
 <meta charset="utf-8">
+<script src="../shared/gfx.js" data-game="nova"></script>
+<script type="importmap">{ "imports": { "three": "../shared/na3d/three.module.min.js" } }</script>
 <title>Nova Strike</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -1089,7 +1091,19 @@ function sidePanels() {
 }
 const fhTop = () => Math.min(120, FH * S * 0.16);
 function glowStroke(width, alpha = 0.35) { ctx.globalAlpha *= alpha; ctx.lineWidth = width * 3; ctx.stroke(); ctx.globalAlpha /= alpha; ctx.lineWidth = width; ctx.stroke(); }
+// 3D mode: js/hd.js draws the field; this canvas keeps the side panels, the floating numbers, the hitbox and the HUD
+function draw3D() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H); window.NS3D.render();
+  if (OX >= 180 && P && state !== "menu") sidePanels();
+  const pr = window.NS3D.project;
+  if (P && P.alive && P.focus) { const [x, y] = pr(P.x, P.y, 0.4); ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(x, y, 3.5 * S, 0, TAU); ctx.fill(); ctx.strokeStyle = "#ff3de0"; ctx.lineWidth = 1.5; ctx.stroke(); }
+  ctx.textAlign = "center"; ctx.font = `800 ${Math.round(13 * S)}px Jost, system-ui`;
+  for (const f of floats) { const [x, y] = pr(f.x, f.y, 0.6); ctx.globalAlpha = Math.max(0, 1 - f.t); ctx.fillStyle = f.col; ctx.fillText(f.text, x, y - f.t * 20 * S); }
+  ctx.globalAlpha = 1;
+  if (state === "play" || state === "dying") hudDraw();
+}
 function draw() {
+  if (window.NS3D && window.NS3D.ok) return draw3D();
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = "#03001a"; ctx.fillRect(0, 0, W, H);
   if (OX > 24) drawSurround();
@@ -1269,6 +1283,12 @@ function frame(now) {
   try { if (!paused) update(state === "dying" ? dt * 0.4 : dt); draw(); } catch (e) { if (!frame.warned) { frame.warned = true; console.error(e); } }
 }
 requestAnimationFrame(frame);
+// read-only view of the fight for the 3D renderer (js/hd.js)
+window.NSS = { FW, FH, KIND, cvs, get layout() { return { OX, OY, S, W, H }; }, get time() { return time; }, get P() { return P; }, get enemies() { return enemies; }, get boss() { return boss; },
+  get eb() { return eb; }, get pb() { return pb; }, get pickups() { return pickups; }, get parts() { return parts; }, get rings() { return rings; }, get stars() { return stars; }, get state() { return state; },
+  get flash() { return flash; }, get shake() { return shake; } };
+if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => { window.NS3D = m.attach(window.NSS); }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
+if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), p = document.getElementById("play"); if (w && p) p.after(w); window.NAGFX.mount("#pauseMenu"); }
 if (/debug/.test(location.hash)) window.__NS = {
   get state() { return state; }, get P() { return P; }, get eb() { return eb; }, get enemies() { return enemies; }, get boss() { return boss; }, get wave() { return wave; }, get score() { return score; }, get pickups() { return pickups; },
   begin, bomb, setWave(n) { wave = n - 1; queue = []; enemies = []; eb = []; boss = null; waveClear = 0.01; }, sim(sec, dt = 1 / 60) { for (let i = 0; i < sec / dt; i++) update(dt); }, draw() { draw(); }, damageBoss, collect
