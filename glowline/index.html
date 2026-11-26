@@ -1,4 +1,6 @@
 <meta charset="utf-8">
+<script src="../shared/gfx.js" data-game="glow"></script>
+<script type="importmap">{ "imports": { "three": "../shared/na3d/three.module.min.js" } }</script>
 <title>Glowline</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -1069,6 +1071,12 @@ function draw() {
   else { camX = Math.cos(menuT * 0.05) * 1200; camY = Math.sin(menuT * 0.07) * 900; }
   zoom = lerp(zoom, viewK(), 0.05);
   const x0 = camX - W / 2 / zoom, x1 = camX + W / 2 / zoom, y0 = camY - H / 2 / zoom, y1 = camY + H / 2 / zoom;
+  if (window.GL3D && window.GL3D.ok) {   // 3D mode: js/hd.js draws the arena; this canvas keeps names, the joystick and the flash
+    ctx.clearRect(0, 0, W, H); window.GL3D.render({ camX, camY, zoom, x0, x1, y0, y1, W, H });
+    ctx.textAlign = "center";
+    for (const s of snakes) { if (!s.alive || !(s === me || s.mass > 400) || s.x < x0 - 200 || s.x > x1 + 200 || s.y < y0 - 200 || s.y > y1 + 200) continue;
+      const [nx, ny] = window.GL3D.project(s.x, s.y, s.r * 0.03); ctx.font = `800 ${s === me ? 15 : 13}px Jost, system-ui, sans-serif`; ctx.fillStyle = s === me ? "rgba(255,255,255,.95)" : "rgba(243,240,255,.72)"; ctx.fillText(s.name, nx, ny - s.r * zoom - 10); }
+  } else {
   // deep space, a parallax starfield, a faint neon grid
   ctx.fillStyle = "#05001a"; ctx.fillRect(0, 0, W, H);
   const neb = ctx.createRadialGradient(W * 0.3, H * 0.35, 0, W * 0.3, H * 0.35, Math.max(W, H) * 0.8); neb.addColorStop(0, "rgba(70,20,140,.35)"); neb.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = neb; ctx.fillRect(0, 0, W, H);
@@ -1110,6 +1118,7 @@ function draw() {
       ctx.fillStyle = "rgba(255,255,255,.8)"; ctx.beginPath(); ctx.arc(ex + Math.cos(look) * er * 0.42 - er * 0.18, ey + Math.sin(look) * er * 0.42 - er * 0.2, er * 0.16, 0, TAU); ctx.fill(); }
     // names over the bigger snakes and over you
     if (s === me || s.mass > 400) { ctx.font = `800 ${(s === me ? 15 : 13) / zoom}px Jost, system-ui, sans-serif`; ctx.textAlign = "center"; ctx.fillStyle = s === me ? "rgba(255,255,255,.95)" : "rgba(243,240,255,.72)"; ctx.fillText(s.name, s.x, s.y - r - 10 / zoom); }
+  }
   }
   // joystick ring under the finger
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -1204,6 +1213,10 @@ function frame(now) {
     hudT -= dt; if (hudT <= 0 && (state === "play" || state === "dead")) { hudT = 0.2; hud(); }
   } catch (e) { if (!frame.warned) { frame.warned = true; console.error(e); } }
 }
+// read-only view of the arena for the 3D renderer (js/hd.js)
+window.GLS = { WORLD, FG, FGN, fgrid, skinCol, cvs, get snakes() { return snakes; }, get me() { return me; }, get state() { return state; }, get t() { return t; } };
+if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => { window.GL3D = m.attach(window.GLS); }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
+if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), p = document.getElementById("play"); if (w && p) p.after(w); window.NAGFX.mount("#pauseMenu"); }
 requestAnimationFrame(frame);
 if (/debug/.test(location.hash)) window.__GL = {
   get state() { return state; }, get me() { return me; }, get snakes() { return snakes; }, get foods() { return foods; }, begin, toMenu, step, draw, hud, kill: (s, by) => killSnake(s, by), think,
