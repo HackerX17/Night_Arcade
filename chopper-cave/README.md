@@ -17,3 +17,5 @@ The note button (and Music & sound on the pause screen) picks the music: the gam
 
 Open `index.html` in any browser. It plays best with the phone turned sideways.
 Single file, no dependencies.
+
+Your best distance stands in the cave as a glowing dashed **BEST gate**; fly through it for a **New record**.

@@ -778,7 +778,7 @@ let heli, cols, blocks, trail, sparks, scroll, dist, speed, trailT, deadT, flash
 // Slow-Mo, and the Portal to Hyperspace, a bonus world you fly until you crash, then you drop back into the cave
 let pickups, powers, wideK, slowK, grace, mode, hy, nextPick, firstPortal, notes;
 const WIDEN = 46, PICK_R = 24;
-let best = +(store.get("chopper-best") || 0), muted = store.get("chopper-muted") === "1", newBest = false;
+let best = +(store.get("chopper-best") || 0), muted = store.get("chopper-muted") === "1", newBest = false, passedBest = false;
 let gapC, gapH, nextBlock;
 
 function newCol() {
@@ -792,7 +792,7 @@ function newCol() {
 function reset() {
   heli = { y: VH / 2, vy: 0, tilt: 0 };
   cols = []; blocks = []; trail = []; sparks = [];
-  scroll = 0; dist = 0; speed = 210; trailT = 0; deadT = 0; flash = 0; stage = 0; banner = null; thrustT = 0;
+  passedBest = false; scroll = 0; dist = 0; speed = 210; trailT = 0; deadT = 0; flash = 0; stage = 0; banner = null; thrustT = 0;
   gapC = VH / 2; gapH = GAP_START; nextBlock = 520;
   pickups = []; powers = { shield: 0, wide: 0, slow: 0 }; wideK = 0; slowK = 0; grace = 0; mode = "cave"; hy = null; nextPick = 1500; firstPortal = true; notes = [];
   if (window.ArcadeSound) window.ArcadeSound.style("techno");
@@ -988,6 +988,7 @@ function update(dt) {
     wideK += ((powers.wide > 0 ? 1 : 0) - wideK) * Math.min(1, dt * (powers.wide > 0 ? 2.2 : 1.1));   // opens up quickly, eases back slowly
     slowK += ((powers.slow > 0 ? 1 : 0) - slowK) * Math.min(1, dt * 3);
     const dx = speed * (1 - 0.42 * slowK) * dt; scroll += dx; dist += dx;
+    if (!passedBest && best > 0 && Math.floor(dist / 10) > best) { passedBest = true; note("NEW RECORD!", "#ffd23f"); flash = Math.max(flash, 0.3); try { navigator.vibrate && navigator.vibrate(30); } catch (e) { /* no vibration */ } }
     while (scroll >= COL) { scroll -= COL; cols.shift(); cols.push(newCol()); }
     for (const b of blocks) b.x -= dx;
     blocks = blocks.filter(b => b.x + b.w > -10);
@@ -1206,6 +1207,15 @@ function drawHUD(t, d) {
   notes.forEach((n, i) => { const a = n.t < 0.2 ? n.t / 0.2 : clamp((1.6 - n.t) / 0.5, 0, 1); ctx.globalAlpha = a; text(n.text, VW / 2, VH * 0.62 + i * 18 - n.t * 8, 13, "#ffffff", "center", true, n.color); ctx.globalAlpha = 1; });
   if (mode === "hyper" && hy.intro > 0) { ctx.globalAlpha = clamp(hy.intro / 0.4, 0, 1); ctx.fillStyle = "rgba(10,0,36,.62)"; ctx.fillRect(0, VH * 0.42 - 36, VW, 70); text("HYPERSPACE", VW / 2, VH * 0.42, 34, "#ffffff", "center", true, "#ff3de0"); text("Orbs +3 m · rings +20 m · crash and you drop back", VW / 2, VH * 0.42 + 24, 11, "rgba(255,230,250,.95)", "center", false); ctx.globalAlpha = 1; }
 }
+// your best distance: a glowing dashed gate across the cave that you fly through for a new record
+function drawBestGate(t) {
+  const x = HELI_X + (best * 10 - dist); if (x < -30 || x > VW + 30) return;
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "#ffd23f"; ctx.globalAlpha = 0.22; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, VH); ctx.stroke();
+  ctx.globalAlpha = 0.95; ctx.lineWidth = 2; ctx.setLineDash([8, 7]); ctx.lineDashOffset = -t * 40; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, VH); ctx.stroke(); ctx.restore();
+  const label = `BEST ${best.toLocaleString()} m`; ctx.save(); ctx.font = "800 11px Jost, system-ui"; const w = ctx.measureText(label).width + 14;
+  ctx.fillStyle = "rgba(6,2,26,.82)"; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - w / 2, VH / 2 - 10, w, 20, 10) : ctx.rect(x - w / 2, VH / 2 - 10, w, 20); ctx.fill();
+  ctx.fillStyle = "#ffd23f"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(label, x, VH / 2 + 1); ctx.restore();
+}
 function render(t) {
   if (state === "play" || state === "dead") P = palette(dist); else P = palette(0);
   S = Math.min(W / VW, H / VH); OX = (W - VW * S) / 2; OY = (H - VH * S) / 2;
@@ -1214,7 +1224,7 @@ function render(t) {
   ctx.save(); ctx.translate(OX, OY); ctx.scale(S, S);
   ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.clip();
   if (mode === "hyper" && state === "play") drawHyper(t);
-  else { drawBackdrop(t); drawWalls(t); drawPickups(t); }
+  else { drawBackdrop(t); drawWalls(t); drawPickups(t); if (state === "play" && best > 0) drawBestGate(t); }
   drawTrail();
   if (state !== "dead" || deadT < 0.05) { if (!(grace > 0 && !powers.shield && Math.sin(t * 30) < -0.6)) drawHeli(t); drawShield(t); }
   ctx.save(); ctx.globalCompositeOperation = "lighter";
