@@ -1084,15 +1084,25 @@ function frame(now) {
   try {
     if (state === "demo") { state = "play"; isDemo = true; update(dt); isDemo = false; state = riders.length ? "demo" : state; $("msg").hidden = true; if (roundOver > 0 || riders.filter((r) => r.alive).length <= 1) { if (riders.filter((r) => r.alive).length <= 1) { roundOver = 0; newRound(); countdown = 0.01; $("msg").hidden = true; } } }
     else if (!paused) { applyInput(); update(dt); }
-    draw(now / 1000);
+    if (window.GL3D && window.GL3D.ok) { window.GL3D.render(now / 1000); drawOverlay(); } else draw(now / 1000);
     hudT -= dt; if (hudT <= 0 && state === "play") { hudT = 0.2; hud(); }
   } catch (e) { if (!frame.warned) { frame.warned = true; console.error(e); } }
 }
 requestAnimationFrame(frame);
+// the 3D arena (js/world3d.js) reads the match through this; the 2D canvas then only carries the pop-up numbers on top
+window.GLS = { get riders() { return riders; }, get segs() { return segs; }, get orbs() { return orbs; }, get flashes() { return flashes; }, get state() { return state; },
+  get countdown() { return countdown; }, get wrapT() { return wrapT; }, get twoP() { return twoP; }, A, ORB_INFO };
+function drawOverlay() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H);
+  for (const f of floats) { f.t += 1 / 60; const [x, y] = window.GL3D.project(f.x, f.y); ctx.globalAlpha = clamp(1.2 - f.t, 0, 1); ctx.fillStyle = f.col; ctx.font = "800 15px Jost, system-ui"; ctx.textAlign = "center"; ctx.fillText(f.text, x, y - 18 - f.t * 26); }
+  floats = floats.filter((f) => f.t < 1.2); ctx.globalAlpha = 1;
+}
 if (/debug/.test(location.hash)) window.__GL = {
   get state() { return state; }, get riders() { return riders; }, get round() { return round; }, get orbs() { return orbs; }, get countdown() { return countdown; }, get roundOver() { return roundOver; },
-  begin, newRound, aiChoose, takeOrb, setDiff(d) { diff = d; }, sim(sec, dt = 1 / 60) { for (let i = 0; i < sec / dt && (state === "play"); i++) { applyInput(); update(dt); } }, draw() { draw(performance.now() / 1000); hud(); },
+  begin, newRound, aiChoose, takeOrb, setDiff(d) { diff = d; }, sim(sec, dt = 1 / 60) { for (let i = 0; i < sec / dt && (state === "play"); i++) { applyInput(); update(dt); } }, draw() { const t = performance.now() / 1000; if (window.GL3D && window.GL3D.ok) { window.GL3D.render(t); drawOverlay(); } else draw(t); hud(); },
   occ: () => occ, matchWinner
 };
 })();
 </script>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
+<script type="module" src="js/world3d.js"></script>
