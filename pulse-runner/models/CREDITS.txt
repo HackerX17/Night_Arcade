@@ -1,0 +1,3 @@
+runner.glb: "RobotExpressive" by Tomás Laulhé (Quaternius, https://www.patreon.com/quaternius),
+modifications by Don McCurdy. Licence: CC0 1.0 (public domain). Source: three.js examples (r160),
+examples/models/gltf/RobotExpressive. Recoloured at runtime for Pulse Runner.

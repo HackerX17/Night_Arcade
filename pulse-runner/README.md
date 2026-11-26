@@ -11,4 +11,8 @@ Ride the beat down an endless neon highway: dodge, jump, slide, and never stop.
 
 The note button (and Music & sound on the pause screen) picks the music: the game's own outrun soundtrack, your own songs or music app, or none, with a separate switch for sound effects.
 
-Open `index.html` in any browser. Single file, no dependencies.
+## Graphics
+
+Pulse Runner draws in real 3D with [three.js](https://threejs.org) (r160, vendored in `vendor/`, MIT): a lit neon city that keeps coming, a synthwave sun, light pylons, subway trains with lit windows and headlights, laser gates, hazard hurdles, chevron ramps, spinning gems, bloom and neon reflections (`js/world3d.js`). The runner is **RobotExpressive** by Tomás Laulhé ([Quaternius](https://www.patreon.com/quaternius)), CC0 1.0, from the three.js examples, recoloured for the arcade, with its own Running, Jump and Death animations (`models/`). If a device has no WebGL, the game falls back to its 2D drawing.
+
+Open it from a web server (it loads JavaScript modules), or play it on the Night Arcade site.

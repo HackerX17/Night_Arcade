@@ -11,7 +11,7 @@ Twelve original neon browser games. They run on phones and computers with nothin
 | Void Eater | City swallower: a tiny void that grows by swallowing everything smaller, from cones to whole buildings. Two-minute battles against three rival voids, or solo. | [`void-eater/`](void-eater/) |
 | Nova Strike | Vertical space shooter: waves of invaders, five gun levels, lasers and homing missiles, and three bosses with three phases each. | [`nova-strike/`](nova-strike/) |
 | Glowline | Light-trail arena: four riders, glowing trails, first to 10 points. Orbs that help you or hurt everyone else; AI rivals or two players on one keyboard. | [`glowline/`](glowline/) |
-| Pulse Runner | Endless runner: dodge, jump and slide down a neon highway, ride on the trains, fly the jetpack, complete missions for orbs, and spend them on longer power-ups. | [`pulse-runner/`](pulse-runner/) |
+| Pulse Runner | Endless runner in 3D: an animated robot dodges, jumps and slides down a neon highway, ride on the trains, fly the jetpack, complete missions for orbs, and spend them on longer power-ups. | [`pulse-runner/`](pulse-runner/) |
 | Sandblade | Hill rider: dive down neon hills, ramp from island to island (each with its own colour scheme), and outrun the storm. 11 power-ups. | [`sandblade/`](sandblade/) |
 | Skyline Leap | Wall climber: leap between two towers, dodge window hazards and smash drones mid-air. 7 power-ups, and a Christmas version. | [`skyline-leap/`](skyline-leap/) |
 | Sandblade Legion | Crowd runner: steer your army down a neon road through multiplier gates, blast through walls to the big bonus, and charge the horde. Every fight is one for one, so only the bigger army wins. Each level has its own colour scheme. | [`sandblade-legion/`](sandblade-legion/) |
@@ -37,7 +37,7 @@ Plug in or pair a game controller and every game plays with it, menus included: 
 
 ## Running locally
 
-From this folder, run `python3 -m http.server 8000` and open http://localhost:8000/. Most games also work when opened directly as a file. Iron Sector and Redline Nights need the local server because they load JavaScript modules.
+From this folder, run `python3 -m http.server 8000` and open http://localhost:8000/. Most games also work when opened directly as a file. Iron Sector, Redline Nights and Pulse Runner need the local server because they load JavaScript modules.
 
 ## Design
 

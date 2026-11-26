@@ -1146,14 +1146,19 @@ function frame(now) {
     if (state === "menu") { menuDist += dt * 14; dist = menuDist; }
     if (!paused) update(dt);
     camX += ((R && state !== "menu" ? R.x * 0.6 : 0) - camX) * Math.min(1, dt * 6); camY = 2.4 + (R && state !== "menu" ? R.y * 0.6 : 0);
-    draw(now / 1000);
+    if (window.PR3D && window.PR3D.ok) window.PR3D.render(now / 1000); else draw(now / 1000);
     hudT -= dt; if (hudT <= 0 && state === "play") { hudT = 0.1; hud(); }
   } catch (e) { if (!frame.warned) { frame.warned = true; console.error(e); } }
 }
 requestAnimationFrame(frame);
+// read-only view of the run for the 3D renderer (js/world3d.js), which draws the same game the 2D canvas would
+window.PRS = { get state() { return state; }, get R() { return R; }, get objs() { return objs; }, get parts() { return parts; }, get dist() { return dist; }, get speed() { return speed; },
+  get pw() { return pw; }, get camX() { return camX; }, get camY() { return camY; }, get flash() { return flash; }, get shake() { return shake; }, LANE, TOP, PW };
 if (/debug/.test(location.hash)) window.__PR = {
   get state() { return state; }, get R() { return R; }, get objs() { return objs; }, get dist() { return dist; }, get speed() { return speed; }, get orbs() { return orbs; }, get pw() { return pw; },
-  get missions() { return M; }, get runStats() { return RUN; }, check: () => checkMissions(), begin, act, power, sim(sec, dt = 1 / 60, bot) { for (let i = 0; i < sec / dt && state === "play"; i++) { if (bot) bot(); update(dt); camX += (R.x * 0.6 - camX) * 0.1; camY = 2.4 + R.y * 0.6; } }, draw() { draw(performance.now() / 1000); hud(); }, score, refreshMenu
+  get missions() { return M; }, get runStats() { return RUN; }, check: () => checkMissions(), begin, act, power, sim(sec, dt = 1 / 60, bot) { for (let i = 0; i < sec / dt && state === "play"; i++) { if (bot) bot(); update(dt); camX += (R.x * 0.6 - camX) * 0.1; camY = 2.4 + R.y * 0.6; } }, draw() { const t = performance.now() / 1000; if (window.PR3D && window.PR3D.ok) window.PR3D.render(t); else draw(t); hud(); }, score, refreshMenu
 };
 })();
 </script>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
+<script type="module" src="js/world3d.js"></script>
