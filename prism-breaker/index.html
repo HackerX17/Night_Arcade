@@ -1,4 +1,6 @@
 <meta charset="utf-8">
+<script src="../shared/gfx.js" data-game="prism"></script>
+<script type="importmap">{ "imports": { "three": "../shared/na3d/three.module.min.js" } }</script>
 <title>Prism Breaker</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -1034,7 +1036,7 @@ function update(dt) {
 }
 
 // ---------- aiming ----------
-function toCell(px, py) { return { x: (px - FX) / CELL, y: (py - FY) / CELL }; }
+function toCell(px, py) { if (window.PB3D && window.PB3D.ok) { const c = window.PB3D.toCell(px, py); if (c) return c; } return { x: (px - FX) / CELL, y: (py - FY) / CELL }; }
 function aimFrom(px, py) {
   const p = toCell(px, py), lx = launchX, ly = FLOOR - R;
   let dx = p.x - lx, dy = p.y - ly;
@@ -1141,6 +1143,7 @@ function ballCol(i, t) {
 function burst(x, y, col, n, sp) { for (let i = 0; i < n && particles.length < 500; i++) { const a = Math.random() * TAU, v = rnd(0.3, 1) * sp / 40; particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1, life: 1, max: rnd(0.35, 0.8), col, s: rnd(0.04, 0.1) }); } }
 const X = (cx) => FX + cx * CELL, Y = (cy) => FY + cy * CELL;
 function render(t) {
+  if (window.PB3D && window.PB3D.ok) return render3D(t);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#05002a"); bg.addColorStop(0.6, "#120038"); bg.addColorStop(1, "#1d0046"); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   // drifting glow behind the field
@@ -1220,6 +1223,10 @@ function render(t) {
   for (const f of floaters) { ctx.globalAlpha = clamp(f.life * 1.5, 0, 1); ctx.fillStyle = f.col; ctx.fillText(f.text, X(f.x), Y(f.y)); }
   ctx.globalAlpha = 1;
   ctx.restore();
+  drawHud();
+}
+function drawHud() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   // HUD: level and best top-left; balls in flight speed
   if (state !== "menu") {
     const hx = inset.l + 16, hy = inset.t + 34;
@@ -1230,6 +1237,33 @@ function render(t) {
     ctx.fillText(`BEST ${Math.max(best, level).toLocaleString()}   ★ ${starsBank.toLocaleString()}`, hx, hy + 28);
     if (state === "fire" && speedMul > 1) { ctx.font = "800 13px Jost, system-ui, sans-serif"; ctx.fillStyle = "#00e5ff"; ctx.textAlign = "center"; ctx.fillText(`▶▶ ${speedMul}×`, X(COLS / 2), Y(FLOOR) + (WIDE ? -6 - CELL * 0.6 : 18)); }
   }
+}
+// 3D mode: js/hd.js draws the field; this canvas keeps the aim line, the counts, the floating numbers and the HUD
+function render3D(t) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H);
+  window.PB3D.render(t);
+  if (!grid) return;
+  const P3 = window.PB3D.project;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  if (state === "aim" || state === "advance" || (state === "fire" && toFire > 0)) {
+    const [lx, ly] = P3(launchX, FLOOR - R, 0.1), n = state === "fire" ? toFire : balls;
+    ctx.font = `700 ${Math.round(CELL * 0.3)}px Jost, system-ui, sans-serif`; ctx.fillStyle = "#dff9ff"; ctx.fillText(`×${n.toLocaleString()}`, lx, ly - CELL * 0.42);
+  }
+  if (state === "aim" && aimDir && aiming) {
+    const pts = preview(aimDir); ctx.save(); ctx.globalCompositeOperation = "lighter";
+    let acc = 0, px = launchX, py = FLOOR - R;
+    for (const p of pts) {
+      acc += Math.hypot(p.x - px, p.y - py); px = p.x; py = p.y; const [sx, sy] = P3(p.x, p.y, 0.14);
+      if (p.hit) { ctx.fillStyle = "rgba(255,255,255,.95)"; ctx.beginPath(); ctx.arc(sx, sy, R * CELL * 0.9, 0, TAU); ctx.fill(); acc = 0; continue; }
+      if (acc < 0.32) continue; acc = 0;
+      ctx.fillStyle = p.seg ? "rgba(255,255,255,.35)" : "rgba(220,250,255,.85)"; ctx.beginPath(); ctx.arc(sx, sy, CELL * (p.seg ? 0.04 : 0.055), 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+  ctx.font = `800 ${Math.round(CELL * 0.34)}px Jost, system-ui, sans-serif`;
+  for (const f of floaters) { const [sx, sy] = P3(f.x, f.y, 0.7); ctx.globalAlpha = clamp(f.life * 1.5, 0, 1); ctx.fillStyle = f.col; ctx.fillText(f.text, sx, sy); }
+  ctx.globalAlpha = 1;
+  drawHud();
 }
 function drawBlock(it, c, r, t) {
   const x = X(c + GAP), y = Y(r + GAP), s = (1 - 2 * GAP) * CELL, col = blockCol(it), rad = CELL * 0.14;
@@ -1331,6 +1365,12 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+// read-only view of the field for the 3D renderer (js/hd.js)
+window.PBS = { COLS, LINE, FLOOR, R, GAP, cvs, blockCol, ballCol, get layout() { return { FX, FY, CELL, W, H }; }, get grid() { return grid; }, get state() { return state; }, get shiftT() { return shiftT; },
+  get warn() { return warn; }, get beams() { return beams; }, get rings() { return rings; }, get flying() { return flying || []; }, get ghosts() { return ghosts || []; }, get particles() { return particles; },
+  get toFire() { return toFire; }, get launchX() { return launchX; }, get shake() { return shake; } };
+if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => { window.PB3D = m.attach(window.PBS); }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
+if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), p = document.getElementById("play"); if (w && p) p.after(w); window.NAGFX.mount("#pauseMenu"); }
 if (/debug/.test(location.hash)) window.__PB = {
   get state() { return state; }, get level() { return level; }, get balls() { return balls; }, get launchX() { return launchX; }, get grid() { return grid; }, get flying() { return flying; }, get ghosts() { return ghosts; }, get turnT() { return turnT; },
   get broken() { return broken; }, get starsRun() { return starsRun; }, get best() { return best; }, get warn() { return warn; },
