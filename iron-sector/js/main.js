@@ -208,7 +208,7 @@ function menuCamera(dt) {
 // ---------------------------------------------------------------- gamepad navigation for menus
 const padNav = { prev: [], t: 0 };
 function menuPad(dt) {
-  const pads = navigator.getGamepads ? navigator.getGamepads() : []; let gp = null; for (const p of pads) if (p && p.connected) { gp = p; break; }
+  let pads = []; try { pads = navigator.getGamepads ? navigator.getGamepads() : []; } catch (e) { /* refused in an embedding frame */ } let gp = null; for (const p of pads) if (p && p.connected) { gp = p; break; }
   if (!gp) return;
   const on = (i) => gp.buttons[i] && gp.buttons[i].value > 0.5, edge = (i) => on(i) && !padNav.prev[i];
   const ay = gp.axes[1] || 0, ax = gp.axes[0] || 0; padNav.t -= dt;

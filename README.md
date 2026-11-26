@@ -31,6 +31,10 @@ Every game, and the home page, has a **Music & sound** button. Pick the music yo
 
 In **My music**, buttons at the top that open your music app (on iPhone: Apple Music, Spotify or YouTube Music; on Android: YouTube Music, Spotify or Apple Music): start a song there and come back, and it keeps playing under the game. A web page can't reach the phone's music library itself, and streaming songs are copy-protected, so this is the way to use them. Below that you can add music files from your phone or computer; they play while you game and carry on when you switch to another game. The files stay in your own browser (IndexedDB) and are never uploaded. The player lives in `shared/arcade-music.html`; after editing it, run `python3 tools/sync-music.py` to copy it into every page, so each game stays one self-contained page.
 
+## Controllers
+
+Plug in or pair a game controller and every game plays with it, menus included: the stick or D-pad moves, **A** presses the highlighted button (or jumps, dives, fires), **B** backs out, **Start** pauses, **Y** opens Music & sound. Glowline takes a second controller for two players. Redline Nights and Iron Sector use their own controller layouts (see their READMEs). Crashes rumble the controller where the browser supports it.
+
 ## Running locally
 
 From this folder, run `python3 -m http.server 8000` and open http://localhost:8000/. Most games also work when opened directly as a file. Iron Sector and Redline Nights need the local server because they load JavaScript modules.

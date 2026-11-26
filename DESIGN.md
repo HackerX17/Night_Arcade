@@ -49,7 +49,7 @@ Neon on canvas: draw the glow as a wide, low-alpha stroke under a thin bright on
 ## Layout
 
 - Respect `env(safe-area-inset-*)` on every edge; the viewport meta uses `viewport-fit=cover`.
-- Fixed play fields letterbox to fit (Prism Breaker 7 columns, Nova Strike 360 × 640, Glowline 600 × 600, Chopper Cave 560 × 360) and use the spare space for side panels on wide screens.
+- Fixed play fields letterbox to fit (Prism Breaker 7 columns, Nova Strike 360 × 640, Glowline 600 × 600, Chopper Cave 560 × 360) and use the spare space on wide screens like an arcade cabinet: the game's world (space, the neon floor) carries on to the screen edges, the field sits in a glowing frame, and big-type readouts (wave, score, lives…) go beside it when there's room (Nova Strike).
 - Short screens (`max-height: 500–560px`, phones on their side) get a smaller logo and tighter gaps so nothing overlaps.
 - Touch targets are at least 40 px; game buttons (gas, brake, bomb) 64–92 px.
 
@@ -58,6 +58,8 @@ Neon on canvas: draw the glow as a wide, low-alpha stroke under a thin bright on
 - Impacts: brief screen shake that decays in under a second, a white flash for big moments, particle bursts in the thing's own colour.
 - Pickups and wins: a rising chime; losses: a short falling phrase. Sound effects are rate-limited so streams of hits don't stack.
 - Animations are tied to game time, not frame count, so 120 Hz screens run at the same speed.
+- **Reduced motion**: the shared shell sets `window.ARCADE_CALM` from `prefers-reduced-motion`; every game multiplies its screen shake and white flashes by `(window.ARCADE_CALM ? 0.15 : 1)`. CSS motion (hover lifts, the hub's neon flicker) turns off under the same media query.
+- **Haptics**: crashes and game overs call `navigator.vibrate` (phones), and the shared shell turns the same calls into controller rumble.
 
 ## Sound
 
@@ -80,13 +82,20 @@ Every page includes the shared player (`shared/arcade-music.html`, copied in by 
 
 Sound effects check `ArcadeSound.sfx` and the game's own mute. Opening Music & sound (`arcademusicpanel`) or leaving the tab (`visibilitychange`) pauses the game.
 
+## Controllers
+
+Every page includes the **Arcade Pad** layer (in `shared/arcade-music.html`, so it syncs with the music player). It turns a standard gamepad into the keys each game already handles: stick or D-pad = arrow keys, A = Space, B = B, X = Shift, Start = Escape (pause), Y = Music & sound. Wherever buttons are on screen (menus, pause, results, level select, the hub) the D-pad moves a cyan highlight between them and A presses it, so the whole arcade works from the couch.
+
+A game tunes it with `window.ArcadePad = { … }` after the shared block: `a`, `b`, `x`, `lt`, `rt` remap buttons to key codes; `repeat: [codes]` repeats held keys (Prism Breaker's aim); `pads: [null, { ArrowLeft: "KeyA", … }]` gives a second controller to player 2 (Glowline); `menuOnly: true` keeps the pad to menus for a game with its own driving controls (Redline Nights); `off: true` for a game with full controller support of its own (Iron Sector). Anything a player can pick needs `.cta`, `.seg`, `.mode`, `.shopbtn`, `a.play`, `button.music` or a `data-pad` attribute.
+
 ## The game shell
 
 Every game has the same skeleton, so players never hunt for a button:
 
 1. **Menu**: logo, one call to action, best score, a short "how to play", Music & sound.
 2. **Play**: HUD, the icon row, Escape or P to pause.
-3. **Pause**: Resume, Restart (or New game), Music & sound, Main menu.
+3. **Pause**: Resume, Restart (or New game), Main menu, Music & sound. Results screens also offer Main menu.
+   Level-based games add a **Levels** screen from the menu: a grid of every level reached, coloured by its palette, showing stars or best result; locked levels dimmed; Back, Escape or B to return.
 4. **Results**: the outcome in one big word or number, a stats grid, NEW BEST when earned, Play again, Main menu.
 5. **Storage**: `localStorage` under a game prefix (`prism-`, `void-`, `nova-`, `glow-`, `pulse-`, `redline-`…), every read and write wrapped in `try/catch` so a blocked store never breaks the game.
 6. **Testing**: add `#debug` to the address for a test hook (`window.__XX`) with `sim()` and `draw()`; Playwright bots in the audit scripts play whole games, check the numbers and take screenshots.
@@ -101,3 +110,5 @@ Every game has the same skeleton, so players never hunt for a button:
 
 - The vetted **web-design-guidelines** skill lives in `.claude/skills/` (Vercel's Web Interface Guidelines, pinned and hash-checked, no hooks, no network). Run it on a page before shipping: accessibility, focus states, forms, motion, layout, copy.
 - Check every new screen against this file in the three viewports above.
+- Run the **anti-slop-web-design** review too: one focal point per screen, real product shots (the hub's covers are captured from the games), quiet hover/press motion, 44 px targets, reduced motion respected.
+- Hub covers live in `shared/covers/` (640 × 360 WebP, about 10–40 KB each) plus `share.jpg` (1200 × 630) for link previews. Re-capture them when a game's look changes.

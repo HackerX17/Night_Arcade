@@ -153,7 +153,7 @@ export class Input {
     A.weapon = h('w1') ? 0 : h('w2') ? 1 : -1; A.swap = this.wheel !== 0;
 
     // ---- gamepad ----
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let pads = []; try { pads = navigator.getGamepads ? navigator.getGamepads() : []; } catch (e) { /* an embedding frame may refuse the Gamepad API */ }
     let gp = null; for (const p of pads) if (p && p.connected) { gp = p; break; }
     if (gp) {
       const P = this.pad, val = (i) => (gp.buttons[i] ? gp.buttons[i].value : 0), on = (i) => val(i) > 0.5, edge = (i) => on(i) && !P.prev[i];

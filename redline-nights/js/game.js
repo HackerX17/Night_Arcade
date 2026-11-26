@@ -152,7 +152,7 @@ function readInput(dt) {
   if (touch.gas) th = 1; if (touch.brake) br = 1; if (touch.hand) hand = true; if (touch.nitro) nitro = true;
   if (S.auto && TOUCH && !br && G.mode !== "title") th = Math.max(th, 1);
   // gamepad
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let pads = []; try { pads = navigator.getGamepads ? navigator.getGamepads() : []; } catch (e) { /* an embedding frame may refuse the Gamepad API */ }
   for (const p of pads) {
     if (!p) continue;
     const ax = p.axes[0] || 0; if (Math.abs(ax) > 0.12) steer = clamp(ax, -1, 1);

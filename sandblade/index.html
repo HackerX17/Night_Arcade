@@ -777,7 +777,7 @@ window.ARCADE_CALM = (() => { try { return matchMedia("(prefers-reduced-motion: 
       const s = along + Math.abs(vx * dy - vy * dx) * 2.5; if (s < score) { score = s; best = b; } }
     if (best) focusOn(best); };
   // pad rumble wherever a game asks the phone to vibrate
-  const pads = () => [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean);
+  const pads = () => { try { return [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean); } catch (e) { return []; } };   // an embedding frame may refuse the Gamepad API
   const rumble = (pattern) => { const ms = Array.isArray(pattern) ? pattern.reduce((a, v, i) => a + (i % 2 ? 0 : v), 0) : +pattern || 0; if (!ms) return;
     for (const p of pads()) try { p.vibrationActuator && p.vibrationActuator.playEffect("dual-rumble", { duration: Math.min(ms, 700), strongMagnitude: 0.8, weakMagnitude: 0.5 }); } catch (e) { /* no rumble */ } };
   try { const nv = navigator.vibrate ? navigator.vibrate.bind(navigator) : null; navigator.vibrate = (pattern) => { rumble(pattern); return nv ? nv(pattern) : false; }; } catch (e) { /* read-only: no rumble */ }
