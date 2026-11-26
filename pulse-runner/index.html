@@ -65,6 +65,15 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   .tag, .how { font-size: 13px; } .how { max-width: 72ch; padding: 6px 12px; } .cta { padding: 10px 32px; font-size: 14px; }
   .shop { grid-template-columns: repeat(4, minmax(120px, 1fr)); width: min(720px, 100%); } .big { font-size: 38px; }
 }
+.missions { width: min(420px, 100%); display: grid; gap: 6px; text-align: left; }
+.missions .mh { font: 700 12px var(--body); letter-spacing: .16em; text-transform: uppercase; color: rgba(243,240,255,.7); }
+.mis { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 8px 12px; border-radius: 12px; background: rgba(10,4,40,.72); border: 1px solid rgba(255,255,255,.12); font: 600 14px var(--body); color: #f3f0ff; }
+.mis .rw { color: #ffd23f; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mis .bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; } .mis .bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff2bd6, #00e5ff); }
+.mis small { font: 600 12px var(--body); color: rgba(243,240,255,.7); font-variant-numeric: tabular-nums; text-align: right; }
+.mis.done { border-color: rgba(125,255,58,.7); } .mis.done .rw { color: #7dff3a; }
+.donesum { font: 800 15px var(--body); letter-spacing: .06em; color: #7dff3a; text-shadow: 0 0 12px rgba(125,255,58,.5); }
+@media (max-height: 560px) { .missions { width: min(720px, 100%); grid-template-columns: repeat(3, 1fr); } .missions .mh { grid-column: 1 / -1; } .mis { font-size: 12px; padding: 6px 10px; } }
 </style>
 
 <canvas id="c" aria-label="Pulse Runner game. Swipe to change lanes, jump and slide."></canvas>
@@ -81,6 +90,7 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   <button class="cta" id="play">Run</button>
   <div class="sub2" id="menuBest"></div>
   <div class="shop" id="shop"></div>
+  <div class="missions" id="missions" role="group" aria-label="Missions"></div>
   <div class="how"><b>Swipe</b> left or right to change lanes, <b>up</b> to jump, <b>down</b> to slide (arrows or WASD, Space to jump). Jump the low barriers, slide under the gates, and run up the ramps onto the trains. Grab <em>orbs</em> and spend them above on longer power-ups: Magnet, Shield, ×2 and the Jetpack.</div>
   <button class="cta ghost music" data-am-open><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18.5a3 3 0 1 1-2-2.83V5.5l12-2.5v12.5a3 3 0 1 1-2-2.83V7.1L9 8.8z"/></svg>Music &amp; sound</button>
 </div>
@@ -97,8 +107,10 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   <div class="big" id="overScore">0</div>
   <div class="newbest" id="overNew" hidden>NEW BEST</div>
   <div class="stats" id="overStats"></div>
+  <div class="donesum" id="overDone" hidden></div>
   <button class="cta" id="again">Run again</button>
   <button class="cta ghost" id="overMenu">Main menu</button>
+  <div class="missions" id="overMissions" role="group" aria-label="Missions"></div>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -884,6 +896,8 @@ function update(dt) {
     if (hit) { crash(o); if (state !== "play") return; }
   }
   if (R.stumble > 0) R.stumble -= dt;
+  if (R.onTrain) RUN.train += dz;
+  checkMissions();
 }
 function crash(o) {
   if (R.stumble > 0) return;
@@ -893,7 +907,7 @@ function crash(o) {
   setTimeout(gameOver, 900);
 }
 function power(k) {
-  powerSound();
+  powerSound(); RUN.powers++;
   if (k === "shield") { R.shield = true; showMsg("SHIELD", "takes one hit", 1); return; }
   pw[k] = dur(k); showMsg(PW[k].name.toUpperCase(), `${Math.round(dur(k))} seconds`, 1);
   if (k === "jet") { for (let z = 6; z < dur(k) * speed; z += 2.2) objs.push({ t: "orb", lane: Math.round(Math.sin(z * 0.08) * 1.2), z, y: 5.8 }); }
@@ -902,6 +916,10 @@ function score() { return Math.floor(dist) + orbs * 10; }
 function gameOver() {
   state = "over"; const sc = score(), isNew = sc > best; if (isNew) { best = sc; store.set("pulse-best", String(best)); }
   bank += orbs; store.set("pulse-orbs", String(bank));
+  M.prog.train += RUN.train; M.prog.powers += RUN.powers; RUN.train = RUN.powers = 0; saveM();   // the run counts toward the running totals
+  const won = doneThisRun.reduce((a, t) => a + t.r, 0); $("overDone").hidden = !doneThisRun.length; clearTimeout(toastT); $("toast").hidden = true;
+  $("overDone").textContent = doneThisRun.length ? `✓ ${doneThisRun.length === 1 ? "1 mission" : doneThisRun.length + " missions"} complete · +◆ ${won.toLocaleString()}` : "";
+  $("overMissions").innerHTML = doneThisRun.map((t) => `<div class="mis done"><span>✓ ${t.text}</span><span class="rw">+◆ ${t.r}</span></div>`).join("") + missionRows(false);
   $("overScore").textContent = sc.toLocaleString(); $("overNew").hidden = !isNew;
   $("overStats").innerHTML = `<span>Distance</span><b>${Math.floor(dist).toLocaleString()} m</b><span>Orbs</span><b>${orbs.toLocaleString()}</b><span>Top speed</span><b>${Math.round(speed * 3.6)} km/h</b><span>Best</span><b>${best.toLocaleString()}</b><span>Orb bank</span><b>${bank.toLocaleString()}</b>`;
   $("over").hidden = false; $("hud").hidden = true; $("pauseBtn").hidden = true;
@@ -913,8 +931,8 @@ function act(a) {
   const sideBlocked = (ln) => R.y < TOP - 0.35 && pw.jet <= 0 && objs.some((o) => o.t === "train" && o.lane === ln && o.z < -0.2 && o.z + o.len > 0.3);
   if (a === "left" && R.lane > -1) { if (sideBlocked(R.lane - 1)) { bump(-1); return; } R.lane--; whoosh(); }
   if (a === "right" && R.lane < 1) { if (sideBlocked(R.lane + 1)) { bump(1); return; } R.lane++; whoosh(); }
-  if (a === "up" && pw.jet <= 0 && R.y <= groundAt() + 0.05) { R.vy = JUMP; R.slide = 0; jumpSound(); }
-  if (a === "down") { if (R.y > groundAt() + 0.1 && pw.jet <= 0) R.vy = -18; R.slide = 0.75; slideSound(); }
+  if (a === "up" && pw.jet <= 0 && R.y <= groundAt() + 0.05) { R.vy = JUMP; R.slide = 0; jumpSound(); RUN.jumps++; }
+  if (a === "down") { if (R.y > groundAt() + 0.1 && pw.jet <= 0) R.vy = -18; R.slide = 0.75; slideSound(); RUN.slides++; }
 }
 function bump(dir) { R.x += dir * 0.25; shake = 0.3; tone(140, 0.15, 0.08, "square"); }
 function groundAt() { let g = 0; for (const o of objs) { if (Math.abs(o.lane * LANE - R.x) > LANE * 0.5) continue; if (o.t === "ramp" && o.z <= 0.3 && o.z + o.len > 0) g = Math.max(g, ((0 - o.z) / o.len) * TOP); if (o.t === "train" && o.z <= 0.3 && o.z + o.len > 0 && R.y >= TOP - 0.35) g = TOP; } return g; }
@@ -1060,9 +1078,41 @@ function setMuted(m) { muted = m; if (window.ArcadeSound) window.ArcadeSound.mut
 setMuted(muted); $("mute").addEventListener("click", () => { initAudio(); setMuted(!muted); });
 if (window.ArcadeSound) window.ArcadeSound.style("outrun");                      // this game's soundtrack: outrun
 // ---------- menus and the shop ----------
+// ---------- missions: three goals at a time; finishing one pays orbs and deals the next, a tier harder ----------
+const MIS = {
+  dist: { kind: "run", goal: (t) => Math.round((600 * Math.pow(1.6, t)) / 100) * 100, text: (g) => `Run ${g.toLocaleString()} m in one run`, val: () => Math.floor(dist) },
+  orbs: { kind: "run", goal: (t) => Math.round((80 * Math.pow(1.5, t)) / 10) * 10, text: (g) => `Collect ${g.toLocaleString()} orbs in one run`, val: () => orbs },
+  train: { kind: "total", goal: (t) => Math.round((150 * Math.pow(1.8, t)) / 50) * 50, text: (g) => `Ride ${g.toLocaleString()} m on train roofs`, val: () => Math.floor(M.prog.train + RUN.train) },
+  jumps: { kind: "run", goal: (t) => 15 + 10 * t, text: (g) => `Jump ${g} times in one run`, val: () => RUN.jumps },
+  score: { kind: "run", goal: (t) => Math.round((2000 * Math.pow(1.6, t)) / 500) * 500, text: (g) => `Score ${g.toLocaleString()} in one run`, val: () => score() },
+  powers: { kind: "total", goal: (t) => 4 + 4 * t, text: (g) => `Grab ${g} power-ups`, val: () => M.prog.powers + RUN.powers },
+  slides: { kind: "run", goal: (t) => 10 + 8 * t, text: (g) => `Slide ${g} times in one run`, val: () => RUN.slides },
+};
+const ORDER = Object.keys(MIS);
+let RUN = { jumps: 0, slides: 0, train: 0, powers: 0 }, doneThisRun = [];
+const M = (() => { const d = { slots: ["dist", "orbs", "train"], next: 3, tier: {}, prog: { train: 0, powers: 0 } };
+  try { const s = JSON.parse(store.get("pulse-missions") || "{}"); return { ...d, ...s, tier: { ...(s.tier || {}) }, prog: { ...d.prog, ...(s.prog || {}) } }; } catch (e) { return d; } })();
+const saveM = () => store.set("pulse-missions", JSON.stringify(M));
+const tierOf = (k) => M.tier[k] || 0, goalOf = (k) => MIS[k].goal(tierOf(k)), reward = (k) => Math.min(600, 100 + 50 * tierOf(k));
+function checkMissions() {
+  M.slots.forEach((k, i) => {
+    const m = MIS[k], g = goalOf(k); if (m.val() < g) return;
+    const r = reward(k); bank += r; store.set("pulse-orbs", String(bank)); doneThisRun.push({ text: m.text(g), r });
+    if (m.kind === "total") { M.prog[k] = Math.max(0, M.prog[k] + RUN[k] - g); RUN[k] = 0; }   // anything past the goal carries over
+    M.tier[k] = tierOf(k) + 1;
+    for (let j = 0; j < ORDER.length; j++) { const c = ORDER[(M.next + j) % ORDER.length]; if (!M.slots.includes(c)) { M.slots[i] = c; M.next = (M.next + j + 1) % ORDER.length; break; } }
+    saveM(); toast(`Mission complete · +◆ ${r}`); powerSound(); try { navigator.vibrate && navigator.vibrate(30); } catch (e) { /* no vibration */ }
+  });
+}
+// a fresh run starts the one-run missions from zero; totals carry on between runs
+function missionRows(fresh) {
+  return `<div class="mh">Missions</div>` + M.slots.map((k) => { const m = MIS[k], g = goalOf(k), v = Math.min(g, fresh && m.kind === "run" ? 0 : m.val());
+    return `<div class="mis"><span>${m.text(g)}</span><span class="rw">◆ ${reward(k)}</span><span class="bar"><i style="width:${((100 * v) / g).toFixed(1)}%"></i></span><small>${v.toLocaleString()} / ${g.toLocaleString()}</small></div>`; }).join("");
+}
 let toastT = 0;
 function toast(msg) { const el = $("toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2000); }
 function refreshMenu() {
+  $("missions").innerHTML = missionRows(true);
   $("menuBest").textContent = `${best ? `Best ${best.toLocaleString()} · ` : ""}◆ ${bank.toLocaleString()} orbs`;
   const shop = $("shop"); shop.innerHTML = "";
   for (const k of ["magnet", "shield", "x2", "jet"]) {
@@ -1077,7 +1127,7 @@ function refreshMenu() {
     shop.appendChild(b);
   }
 }
-function begin() { initAudio(); newRun(); $("menu").hidden = $("over").hidden = $("pauseMenu").hidden = true; $("hud").hidden = false; $("pauseBtn").hidden = false; paused = false; if (window.ArcadeSound) { window.ArcadeSound.pause(false); window.ArcadeSound.play(); } }
+function begin() { initAudio(); newRun(); RUN = { jumps: 0, slides: 0, train: 0, powers: 0 }; doneThisRun = []; $("menu").hidden = $("over").hidden = $("pauseMenu").hidden = true; $("hud").hidden = false; $("pauseBtn").hidden = false; paused = false; if (window.ArcadeSound) { window.ArcadeSound.pause(false); window.ArcadeSound.play(); } }
 function toMenu() { state = "menu"; paused = false; $("menu").hidden = false; $("over").hidden = $("pauseMenu").hidden = true; $("hud").hidden = true; $("pauseBtn").hidden = true; refreshMenu(); if (window.ArcadeSound) window.ArcadeSound.pause(false); }
 function setPaused(on) { if (on && state !== "play") return; paused = on; $("pauseMenu").hidden = !on; sw = null; if (window.ArcadeSound) window.ArcadeSound.pause(on); }
 $("play").addEventListener("click", begin); $("again").addEventListener("click", begin); $("overMenu").addEventListener("click", toMenu);
@@ -1103,7 +1153,7 @@ function frame(now) {
 requestAnimationFrame(frame);
 if (/debug/.test(location.hash)) window.__PR = {
   get state() { return state; }, get R() { return R; }, get objs() { return objs; }, get dist() { return dist; }, get speed() { return speed; }, get orbs() { return orbs; }, get pw() { return pw; },
-  begin, act, power, sim(sec, dt = 1 / 60, bot) { for (let i = 0; i < sec / dt && state === "play"; i++) { if (bot) bot(); update(dt); camX += (R.x * 0.6 - camX) * 0.1; camY = 2.4 + R.y * 0.6; } }, draw() { draw(performance.now() / 1000); hud(); }, score, refreshMenu
+  get missions() { return M; }, get runStats() { return RUN; }, check: () => checkMissions(), begin, act, power, sim(sec, dt = 1 / 60, bot) { for (let i = 0; i < sec / dt && state === "play"; i++) { if (bot) bot(); update(dt); camX += (R.x * 0.6 - camX) * 0.1; camY = 2.4 + R.y * 0.6; } }, draw() { draw(performance.now() / 1000); hud(); }, score, refreshMenu
 };
 })();
 </script>
