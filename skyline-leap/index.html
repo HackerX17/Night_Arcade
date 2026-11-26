@@ -871,6 +871,7 @@ function deathText(kind) {
 let state = "menu";
 let p, camY, hazards, drones, debris, coins, pickups, particles, rings, popups, trail, ghosts, nextY, lastHaz;
 let elapsed, coinCount, smashScore, combo, shake, flash, slowmo, deadT, powers, districtIdx, tapBuffer;
+let bestH = +(store.get("skyline-best-height") || 0), passedBest = false;   // your highest climb, marked on the towers
 let best = +(store.get("skyline-best") || 0), muted = store.get("skyline-muted") === "1", slowTick = 0;
 const QUALITY = { bloom: true, ghosts: true, cap: 380 };
 
@@ -934,7 +935,7 @@ function tryJump() {
 }
 
 function start() {
-  initAudio(); reset(); state = "play"; paused = false; $("pauseMenu").hidden = true;
+  initAudio(); reset(); state = "play"; paused = false; passedBest = false; $("pauseMenu").hidden = true;
   if (window.ArcadeSound) { window.ArcadeSound.pause(false); window.ArcadeSound.play(); }
   $("menu").hidden = true; $("over").hidden = true; $("logo").hidden = true; $("hud").hidden = false; hudBotDirty = true;
   popup(`${district(0).name}`, true); if (XMAS) sfx.jingle();
@@ -954,6 +955,7 @@ function gameOver() {
   state = "over";
   const s = score(), isBest = s > best;
   if (isBest) { best = s; store.set("skyline-best", String(best)); }
+  if (meters() > bestH) { bestH = meters(); store.set("skyline-best-height", String(bestH)); }
   $("oHeight").textContent = meters().toLocaleString() + " m"; $("oCoins").textContent = coinCount; $("oScore").textContent = s.toLocaleString();
   $("newBest").hidden = !isBest; showBest();
   $("hud").hidden = true; $("over").hidden = false;
@@ -1121,6 +1123,7 @@ function update(dt) {
   camY = lerp(camY, p.y + lead, 1 - Math.exp(-(p.dead ? 2 : 9) * dt));
   if (playing && !p.dead) {
     $("height").textContent = meters().toLocaleString() + " m";
+    if (!passedBest && bestH > 0 && meters() > bestH) { passedBest = true; popup("NEW HEIGHT RECORD!", true); flash = Math.max(flash, 0.35); XMAS ? sfx.jingle() : sfx.district(); try { navigator.vibrate && navigator.vibrate(30); } catch (e) { /* no vibration */ } }
     $("scoreLbl").textContent = `Score ${score().toLocaleString()}`;
     $("coinCount").textContent = coinCount;
     renderPowers();
@@ -1538,6 +1541,15 @@ function drawPopups() {
   if (flash > 0) { ctx.fillStyle = `rgba(220,245,255,${flash * 0.45 * (window.ARCADE_CALM ? 0.15 : 1)})`; ctx.fillRect(0, 0, W, H); }
 }
 
+// your best height: a dashed neon line across the shaft, with a flash and a popup the moment you climb past it
+function drawBestLine(t) {
+  const y = sy(bestH * 10), x0 = sx(WL), x1 = sx(WR), beat = passedBest ? 1 : 0.7 + 0.3 * Math.sin(t * 4);
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = passedBest ? "#7dff3a" : "#ffd23f"; ctx.globalAlpha = 0.25 * beat; ctx.lineWidth = 8 * SC;
+  ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.globalAlpha = beat; ctx.lineWidth = 2 * SC; ctx.setLineDash([10 * SC, 8 * SC]); ctx.lineDashOffset = -t * 30;
+  ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.font = `800 ${Math.round(12 * SC)}px Jost, system-ui`; ctx.textBaseline = "bottom"; ctx.textAlign = "center"; ctx.fillStyle = passedBest ? "#7dff3a" : "#ffd23f";
+  ctx.fillText(passedBest ? "OLD BEST" : `BEST ${bestH.toLocaleString()} m`, (x0 + x1) / 2, y - 6 * SC); ctx.restore();
+}
 function render(t) {
   SC = scale(); OX = (W - LW * SC) / 2;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -1547,6 +1559,7 @@ function render(t) {
   for (const k of coins) if (vis(k.y)) drawCoin(k, t);
   for (const q of pickups) if (vis(q.y)) drawPickup(q, t);
   drawWalls(t);
+  if (bestH > 0 && vis(bestH * 10)) drawBestLine(t);
   for (const h of hazards) if (vis(h.y)) drawHazard(h, t);
   for (const d of drones) if (vis(d.y)) drawDrone(d, t);
   for (const b of debris) if (vis(b.y)) drawDebris(b);

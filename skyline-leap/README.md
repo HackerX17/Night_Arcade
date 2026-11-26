@@ -30,3 +30,5 @@ Pick **Christmas** on the menu (the game remembers your choice). Same game, all 
 **Music & sound** (on the menu, pause and game-over screens): the game's own electro-house soundtrack (Christmas house in the Christmas version), your own music, or none, and a separate switch for sound effects.
 
 Single file, no dependencies: HTML5 canvas and Web Audio. Bloom and afterimages switch off automatically on slow devices.
+
+Your best height is marked on the towers with a dashed gold line; climb past it for a **New height record** (the line turns green).
