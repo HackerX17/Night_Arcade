@@ -38,6 +38,12 @@ const camera = new THREE.PerspectiveCamera(62, 1, 0.3, 6000);
 scene.add(new THREE.HemisphereLight(0x6a4cff, 0x120820, 1.1));
 const moon = new THREE.DirectionalLight(0xb9c8ff, 1.2); moon.position.set(-300, 400, -500); scene.add(moon);
 const fill = new THREE.DirectionalLight(0xff4fd8, 0.55); fill.position.set(300, 120, 400); scene.add(fill);
+// 3D mode (the shared Original / 3D switch): the upgraded renderer loads before the world is built
+let HD = null;
+if (window.NAGFX && window.NAGFX.is3D) {
+  try { HD = await (await import("./hd.js")).prepare(renderer, scene); }
+  catch (e) { console.warn("3D mode unavailable:", e); HD = null; window.NAGFX.fallback(String(e && e.message || e)); }
+}
 // a neon "room" for car paint reflections
 function makeEnv() {
   const pm = new THREE.PMREMGenerator(renderer), s = new THREE.Scene();
@@ -47,11 +53,12 @@ function makeEnv() {
   strip(new THREE.Color(1.4, 0.5, 3), 40, 26, 0, 50, 4, Math.PI / 2); strip(new THREE.Color(0.9, 0.9, 1.2), 0, 45, 0, 30, 30); const top = s.children[s.children.length - 1]; top.rotation.x = Math.PI / 2;
   const rt = pm.fromScene(s, 0.02); pm.dispose(); return rt.texture;
 }
-const env = makeEnv();
+const env = HD ? HD.env : makeEnv();
 const world = buildWorld(scene);
-const post = isGL2 ? new Post(renderer) : null;
+const post = isGL2 && !HD ? new Post(renderer) : null;
 const parts = new Particles(scene), skids = new Skids(scene);
 const traffic = new Traffic(scene, env, 40), police = new Police(scene, env, 14);
+if (HD) HD.attach({ world, camera, G, police, getPlayer: () => player });
 const sound = new Sound();
 
 // the player's car
@@ -62,6 +69,7 @@ function buildPlayer(x, z, h) {
   if (playerModel) scene.remove(playerModel);
   const pc = paintOf(playerDef.id);
   playerModel = makeCarModel(playerDef.shape, pc.paint, pc.glow, env); scene.add(playerModel);
+  if (HD) HD.hero(playerModel);
   player = makeBody(tune(playerDef, G.save.up[playerDef.id]), x, z, h);
 }
 // beacons for the events, rival races and crash-spot rings
@@ -633,7 +641,7 @@ function startAttract() {
   const ev = G.events.find((e) => e.closed) || G.events[0];
   attract.path = ev.path; attract.idx = 0; const g = startGrid(ev);
   Object.assign(attract.b, { x: g[0].x, z: g[0].z, h: g[0].h, vx: 0, vz: 0, w: 0 });
-  if (!attractModel) { attractModel = makeCarModel("super", "#ff3de0", "#00e5ff", env); scene.add(attractModel); }
+  if (!attractModel) { attractModel = makeCarModel("super", "#ff3de0", "#00e5ff", env); scene.add(attractModel); if (HD) HD.hero(attractModel); }
   attractModel.visible = true; camInit = false;
   traffic.clear(); traffic.want = 22; police.clear();
 }
@@ -644,6 +652,7 @@ function applyQuality() {
   const q = G.settings.quality === "auto" ? (G.autoQ || (TOUCH ? "medium" : "high")) : G.settings.quality;
   G.q = q; dprCap = q === "high" ? (TOUCH ? 1.6 : 2) : q === "medium" ? 1.25 : 1;
   G.bloom = !!post && q !== "low";
+  if (HD) HD.quality(q);
   traffic.want = trafficWant();
   resize();
 }
@@ -652,6 +661,7 @@ function resize() {
   W = innerWidth; H = innerHeight; const dpr = Math.min(devicePixelRatio || 1, dprCap);
   renderer.setPixelRatio(dpr); renderer.setSize(W, H, false);
   if (post) post.setSize(Math.round(W * dpr), Math.round(H * dpr));
+  if (HD) HD.setSize(W, H, dpr);
   camera.aspect = W / H; camera.updateProjectionMatrix();
   ui && ui.resize(W, H);
 }
@@ -740,7 +750,8 @@ function draw() {
     gate.userData.mat.color.setRGB(...(R2.cp >= R2.cps.length - 1 && !R2.ev.closed ? [3, 2.6, 0.6] : [0.3, 2.6, 3.2]));
     drawChevrons(R2.ev.path, R2.idx);
   } else { gate.visible = false; drawChevrons(G.mode === "roam" ? G.gps : null, G.gpsIdx || 0); }
-  if (G.bloom) { post.comp.uniforms.flash.value = G.flash * 0.5; post.render(scene, camera); }
+  if (HD) HD.render(me);
+  else if (G.bloom) { post.comp.uniforms.flash.value = G.flash * 0.5; post.render(scene, camera); }
   else { renderer.setRenderTarget(null); renderer.render(scene, camera); }
   ui.draw(me);
 }
@@ -777,6 +788,7 @@ const ui = createUI(G, {
   get player() { return player; }, get tiltRaw() { return tilt.raw; },
   sound, speed: () => speedOf(G.mode === "title" ? attract.b : player), spdUnit, fmtMoney, TOUCH, police, traffic, openEvent, endPursuit
 });
+if (window.NAGFX) { window.NAGFX.mount("#sTitle"); window.NAGFX.mount("#sPause"); }
 applyQuality();
 buildPlayer(startSpot().x, startSpot().z, startSpot().h);
 startAttract();
@@ -810,7 +822,7 @@ function botDrive(path, st) {
 }
 if (/debug/.test(location.hash)) window.__RN = {
   botDrive, locateOnPath, addInfamy, wreckCop, updateRace, rivalEvent,
-  G, get player() { return player; }, police, traffic, crashSpots, obstacles, inp, keys, touch, tilt, camera, renderer, scene,
+  G, get player() { return player; }, get HD() { return HD; }, police, traffic, crashSpots, obstacles, inp, keys, touch, tilt, camera, renderer, scene,
   startCareer, toTitle, setupRace, openEvent, leaveRace, startPursuit, endPursuit, placeRoadblock, triggerCrashSpot, setGps, routeTo, changeCar, resetToRoad,
   step(dt) { step(dt); }, draw() { draw(); }, sim(sec, dt = 1 / 60, ctl) { for (let i = 0; i < sec / dt; i++) { if (ctl) ctl(); step(dt); } }, speedOf, aimAt, events: G.events, RIVALS, CARS, ui,
   setInput(o) { G.bot = Object.assign(G.bot || {}, o); }, clearInput() { G.bot = null; }, readInput

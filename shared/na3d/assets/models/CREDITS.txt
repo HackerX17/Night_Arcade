@@ -1,0 +1,3 @@
+car_concept.gltf: "CarConcept" by Eric Chadwick, Darmstadt Graphics Group, from the Khronos glTF Sample Assets.
+Licence: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Simplified and recompressed for the web (fewer triangles, 512 px WebP textures).
+The Khronos and glTF logos that ship with the sample are not used.

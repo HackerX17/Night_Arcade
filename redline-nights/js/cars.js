@@ -238,6 +238,7 @@ export function makeCarModel(kind, paint, glow, env) {
   const under = new THREE.Mesh(new THREE.PlaneGeometry(S.W + 1.4, S.L + 1.6), new THREE.MeshBasicMaterial({ map: glowTexture(), color: new THREE.Color(glow).multiplyScalar(1.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
   under.rotation.x = -Math.PI / 2; under.position.y = 0.05; root.add(under);
   root.userData = { body, wheels, paintMat, rimMat, under, shape: S, kind };
+  if (globalThis.NA3D_CAR) globalThis.NA3D_CAR(root);   // 3D mode upgrades the finish (clear coat, city reflections)
   return root;
 }
 export function paintModel(model, paint, glow) {

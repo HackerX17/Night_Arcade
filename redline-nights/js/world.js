@@ -368,7 +368,7 @@ export function buildWorld(scene) {
     tint.set(b.tint, k * 3); seed[k] = b.seed;
   });
   bGeo.setAttribute("aTint", new THREE.InstancedBufferAttribute(tint, 3)); bGeo.setAttribute("aSeed", new THREE.InstancedBufferAttribute(seed, 1));
-  bMesh.frustumCulled = false; scene.add(bMesh);
+  bMesh.frustumCulled = false; scene.add(bMesh); out.buildings = bMesh; out.ground = ground; out.ring = ring;
   // billboards on some rooftops near the roads
   const bbGroups = BRANDS.map((br) => ({ tex: brandTexture(br), list: [] }));
   parts.forEach((b, k) => {
@@ -396,7 +396,7 @@ export function buildWorld(scene) {
   const poles = new THREE.InstancedMesh(poleGeo, new THREE.MeshBasicMaterial({ color: 0x0b0a16 }), lampSpots.length);
   const heads = new THREE.InstancedMesh(headGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.7, 1.05) }), lampSpots.length);
   lampSpots.forEach((l, k) => { m4.compose(v3.set(l.x, 0, l.z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), l.rot), s3.set(1, 1, 1)); poles.setMatrixAt(k, m4); heads.setMatrixAt(k, m4); });
-  scene.add(poles, heads);
+  scene.add(poles, heads); out.lamps = lampSpots; out.lampHeads = heads;
   // plaza sculptures: slowly turning neon rings; the central plaza gets a tall obelisk
   out.rings = [];
   for (const row of blocks) for (const b of row) {

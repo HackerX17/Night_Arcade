@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<script src="../shared/gfx.js" data-game="redline"></script>
 <title>Redline Nights</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -924,4 +925,5 @@ window.ARCADE_CALM = (() => { try { return matchMedia("(prefers-reduced-motion: 
 <!-- arcade-music:end -->
 <script>window.ArcadePad = { menuOnly: true };   // controller: driving uses the game's own controller code; the shared pad layer only drives the menus</script>
 <script>if (matchMedia("(pointer: coarse)").matches || "ontouchstart" in window) document.body.classList.add("touch");</script>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script type="module" src="js/game.js"></script>
