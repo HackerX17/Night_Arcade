@@ -110,7 +110,20 @@ export function post(renderer, scene, camera, { bloom = [0.6, 0.45, 0.86], grade
   const bloomPass = new UnrealBloomPass(new THREE.Vector2(256, 256), bloom[0], bloom[1], bloom[2]);
   composer.addPass(bloomPass);
   composer.addPass(new OutputPass());
-  const gradePass = new ShaderPass({
+  const gradePass = makeGrade({ vignette, grain });
+  gradePass.enabled = grade; composer.addPass(gradePass);
+  const api = {
+    composer, bloom: bloomPass, grade: gradePass,
+    setSize(w, h) { composer.setSize(w, h); bloomPass.resolution.set(Math.max(1, w / 2), Math.max(1, h / 2)); gradePass.uniforms.res.value.set(w, h); },
+    render(dt = 0.016) { gradePass.uniforms.time.value = (gradePass.uniforms.time.value + dt) % 100; composer.render(dt); },
+  };
+  const sz = renderer.getSize(new THREE.Vector2()), pr = renderer.getPixelRatio(); composer.setPixelRatio(pr); api.setSize(sz.x, sz.y);
+  return api;
+}
+
+// the colour grade on its own (vignette, violet shadows, grain, flash, speed blur), for games that already have a composer
+export function makeGrade({ vignette = 0.8, grain = 0.025 } = {}) {
+  return new ShaderPass({
     uniforms: { tDiffuse: { value: null }, time: { value: 0 }, res: { value: new THREE.Vector2(1, 1) }, speed: { value: 0 }, flash: { value: 0 }, vig: { value: vignette }, grain: { value: grain }, tint: { value: new THREE.Vector3(1, 1, 1) } },
     vertexShader: QUAD_VS,
     fragmentShader: `uniform sampler2D tDiffuse; uniform float time, speed, flash, vig, grain; uniform vec2 res; uniform vec3 tint; varying vec2 vUv;
@@ -125,14 +138,6 @@ export function post(renderer, scene, camera, { bloom = [0.6, 0.45, 0.86], grade
         col = mix(col, vec3(1.0), flash);
         gl_FragColor = vec4(col, 1.0); }`,
   });
-  gradePass.enabled = grade; composer.addPass(gradePass);
-  const api = {
-    composer, bloom: bloomPass, grade: gradePass,
-    setSize(w, h) { composer.setSize(w, h); bloomPass.resolution.set(Math.max(1, w / 2), Math.max(1, h / 2)); gradePass.uniforms.res.value.set(w, h); },
-    render(dt = 0.016) { gradePass.uniforms.time.value = (gradePass.uniforms.time.value + dt) % 100; composer.render(dt); },
-  };
-  const sz = renderer.getSize(new THREE.Vector2()), pr = renderer.getPixelRatio(); composer.setPixelRatio(pr); api.setSize(sz.x, sz.y);
-  return api;
 }
 
 // ---------- wet ground: a real planar reflection any material can sample ----------

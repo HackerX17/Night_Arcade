@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<script src="../shared/gfx.js" data-game="pulse"></script>
 <title>Pulse Runner</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -1160,5 +1161,6 @@ if (/debug/.test(location.hash)) window.__PR = {
 };
 })();
 </script>
+<script>if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), p = document.getElementById("play"); if (w && p) p.after(w); window.NAGFX.mount("#pauseMenu"); }</script>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
 <script type="module" src="js/world3d.js"></script>

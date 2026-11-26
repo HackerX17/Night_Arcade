@@ -202,7 +202,7 @@ function makePower(o) { const g = new THREE.Group(), col = new THREE.Color(S.PW[
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col.clone().multiplyScalar(1.4), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); halo.scale.set(1.5, 1.5, 1); g.add(halo); g.userData.kind = o.kind; return g; }
 const BUILDERS = { train: makeTrain, barrier: makeBarrier, gate: makeGate, wall: makeWall, ramp: makeRamp, orb: makeOrb, power: makePower };
 const pools = {}, live = new Map();
-function take(o) { const key = o.t === "power" ? "power:" + o.kind : o.t, p = pools[key] || (pools[key] = []); let m = p.pop(); if (!m) { m = BUILDERS[o.t](o); scene.add(m); } m.visible = true; m.userData.key = key;
+function take(o) { const key = o.t === "power" ? "power:" + o.kind : o.t, p = pools[key] || (pools[key] = []); let m = p.pop(); if (!m) { m = BUILDERS[o.t](o); scene.add(m); if (window.PR3D && window.PR3D.onBuild) window.PR3D.onBuild(m, o); } m.visible = true; m.userData.key = key;
   if (o.t === "train") fitTrain(m, o); else if (o.t === "ramp") fitRamp(m, o); return m; }
 // ---------- particles ----------
 const MAXP = 700, pPos = new Float32Array(MAXP * 3), pCol = new Float32Array(MAXP * 3), pGeo = new THREE.BufferGeometry();
@@ -272,6 +272,10 @@ function render(t) {
   camera.lookAt(camX * 0.8, 1.15 + ry * 0.45, 9);
   key.target.position.set(rx, 0.6, 0); rim.target.position.set(rx, 0.8, 0);
   flashEl.style.opacity = String(Math.max(0, (S.flash || 0) * 0.5 * (window.ARCADE_CALM ? 0.15 : 1)));
+  if (window.PR3D.hd) window.PR3D.hd.tick(dt, t, dist);
   composer.render(dt);
 }
-window.PR3D = { ok: true, render, resize, renderer, scene, get hasModel() { return !!robot; } };
+window.PR3D = { ok: true, render, resize, renderer, scene, get hasModel() { return !!robot; },
+  // for the 3D mode (js/hd.js)
+  camera, composer, road, roadMat, plain, plainMat, LANE, X, get robot() { return robot; }, liveMeshes: () => [...live].map(([o, m]) => ({ o, m })) };
+if (window.NAGFX && window.NAGFX.is3D) import("./hd.js").then((m) => { window.PR3D.hd = m.attach(window.PR3D); }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
