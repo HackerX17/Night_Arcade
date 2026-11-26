@@ -184,7 +184,10 @@ function render(t) {
   camera.position.set(cx, Math.sin(pitch) * camD, cz + Math.cos(pitch) * camD); camera.lookAt(cx, 0, cz - camD * 0.04);
   const fd = 0.55 / Math.max(20, camD); scene.fog.density = fd; groundMat.uniforms.uFogD.value = fd; winMat.uniforms.uFogD.value = fd;
   sun.target.position.set(cx, 0, cz); sun.position.set(cx - 40, 90, cz + 60);
+  if (window.VE3D.hd) window.VE3D.hd.tick(dt, t);
   composer.render(dt);
 }
 const project = (wx, wy) => { V.set(wx * U, 1, wy * U).project(camera); return [(V.x + 1) / 2 * innerWidth, (1 - V.y) / 2 * innerHeight]; };
-window.VE3D = { ok: true, render, project, renderer, scene };
+window.VE3D = { ok: true, render, project, renderer, scene,
+  camera, composer, ground, groundMat, winMat, SHAPES, U, SIZE };   // for the 3D mode (js/hd.js)
+if (window.NAGFX && window.NAGFX.is3D) import("./hd.js").then((m) => { window.VE3D.hd = m.attach(window.VE3D); }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
