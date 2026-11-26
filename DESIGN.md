@@ -49,7 +49,7 @@ Neon on canvas: draw the glow as a wide, low-alpha stroke under a thin bright on
 ## Layout
 
 - Respect `env(safe-area-inset-*)` on every edge; the viewport meta uses `viewport-fit=cover`.
-- Fixed play fields letterbox to fit (Prism Breaker 7 columns, Nova Strike 360 × 640, Glowline 600 × 600, Chopper Cave 560 × 360) and use the spare space on wide screens like an arcade cabinet: the game's world (space, the neon floor) carries on to the screen edges, the field sits in a glowing frame, and big-type readouts (wave, score, lives…) go beside it when there's room (Nova Strike).
+- Fixed play fields letterbox to fit (Prism Breaker 7 columns, Nova Strike 360 × 640, Chopper Cave 560 × 360) and use the spare space on wide screens like an arcade cabinet: the game's world (space, the neon floor) carries on to the screen edges, the field sits in a glowing frame, and big-type readouts (wave, score, lives…) go beside it when there's room (Nova Strike).
 - Short screens (`max-height: 500–560px`, phones on their side) get a smaller logo and tighter gaps so nothing overlaps.
 - Touch targets are at least 40 px; game buttons (gas, brake, bomb) 64–92 px.
 
@@ -87,7 +87,7 @@ Sound effects check `ArcadeSound.sfx` and the game's own mute. Opening Music & s
 
 Every page includes the **Arcade Pad** layer (in `shared/arcade-music.html`, so it syncs with the music player). It turns a standard gamepad into the keys each game already handles: stick or D-pad = arrow keys, A = Space, B = B, X = Shift, Start = Escape (pause), Y = Music & sound. Wherever buttons are on screen (menus, pause, results, level select, the hub) the D-pad moves a cyan highlight between them and A presses it, so the whole arcade works from the couch.
 
-A game tunes it with `window.ArcadePad = { … }` after the shared block: `a`, `b`, `x`, `lt`, `rt` remap buttons to key codes; `repeat: [codes]` repeats held keys (Prism Breaker's aim); `pads: [null, { ArrowLeft: "KeyA", … }]` gives a second controller to player 2 (Glowline); `menuOnly: true` keeps the pad to menus for a game with its own driving controls (Redline Nights); `off: true` for a game with full controller support of its own (Iron Sector). Anything a player can pick needs `.cta`, `.seg`, `.mode`, `.shopbtn`, `a.play`, `button.music` or a `data-pad` attribute.
+A game tunes it with `window.ArcadePad = { … }` after the shared block: `a`, `b`, `x`, `lt`, `rt` remap buttons to key codes; `repeat: [codes]` repeats held keys (Prism Breaker's aim); `pads: [null, { ArrowLeft: "KeyA", … }]` gives a second controller to player 2; `menuOnly: true` keeps the pad to menus for a game that reads the controller itself (Redline Nights' driving, Glowline's point-the-stick steering), and `menu: "selector"` swaps in its own list of pickable buttons (Glowline adds its skins); `off: true` for a game with full controller support of its own (Iron Sector). Anything a player can pick needs `.cta`, `.seg`, `.mode`, `.shopbtn`, `a.play`, `button.music` or a `data-pad` attribute.
 
 ## The game shell
 
