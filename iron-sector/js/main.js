@@ -73,8 +73,10 @@ async function boot() {
   if (G.debug) window.__G = G;
   press.textContent = isTouch ? 'Tap to start' : 'Click to start';
   note.textContent = 'Best with headphones. Keyboard and mouse, controller or touch.';
-  const go = () => { $('splash').removeEventListener('pointerdown', go); removeEventListener('keydown', go); G.audio.init(); startAmbience(); toMenu(); };
-  $('splash').addEventListener('pointerdown', go); addEventListener('keydown', go);
+  // dismiss on the finished click/tap, not on pointerdown: otherwise the click that follows lands on whichever menu item
+  // appears under the finger (on phones the tap opened Controls instead of the menu)
+  const go = () => { $('splash').removeEventListener('click', go); removeEventListener('keydown', go); G.audio.init(); startAmbience(); toMenu(); };
+  $('splash').addEventListener('click', go); addEventListener('keydown', go);
   mode = 'splash';
   requestAnimationFrame(frame);
 }

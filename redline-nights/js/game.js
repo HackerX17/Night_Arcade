@@ -619,7 +619,7 @@ function updateCamera(dt, me) {
   const ahead = mode === "hood" ? 30 : 6;
   camLook.set(me.x + Math.sin(lookH) * ahead, mode === "hood" ? 1.1 : 1.15, me.z + Math.cos(lookH) * ahead);
   camera.position.copy(camPos);
-  if (G.shake > 0) { camera.position.x += (Math.random() - 0.5) * G.shake * 0.6; camera.position.y += (Math.random() - 0.5) * G.shake * 0.5; }
+  if (G.shake > 0) { const k = G.shake * (window.ARCADE_CALM ? 0.15 : 1); camera.position.x += (Math.random() - 0.5) * k * 0.6; camera.position.y += (Math.random() - 0.5) * k * 0.5; }
   if (me.nitroOn) { camera.position.x += (Math.random() - 0.5) * 0.05; camera.position.y += (Math.random() - 0.5) * 0.05; }
   camera.lookAt(camLook);
   const fovT = 60 + Math.min(20, spd * 0.24) + (me.nitroOn ? 8 : 0);

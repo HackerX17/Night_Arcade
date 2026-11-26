@@ -47,7 +47,7 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   <button class="iconbtn" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zm6.5 0H17v14h-3.5z"/></svg></button>
   <button class="iconbtn" id="mute" aria-label="Mute" aria-pressed="false"></button>
 </div>
-<div class="pausebox" id="pauseMenu" hidden><h2>Paused</h2><button class="cta" id="resume">Resume</button><button class="cta ghost" id="restart">Restart</button><button class="cta ghost" data-am-open>Music &amp; sound</button></div>
+<div class="pausebox" id="pauseMenu" hidden><h2>Paused</h2><button class="cta" id="resume">Resume</button><button class="cta ghost" id="restart">Restart</button><button class="cta ghost" id="pauseHome">Main menu</button><button class="cta ghost" data-am-open>Music &amp; sound</button></div>
 
 <!-- arcade-music:start · generated from shared/arcade-music.html by tools/sync-music.py; edit that file, then run the script -->
 <style>
@@ -141,6 +141,7 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
 #am-root .am-switch[aria-checked="true"] i { transform: translateX(22px); }
 /* your own music only shows when it's the music you picked */
 #am-root .am-notmine .am-apps, #am-root .am-notmine .am-files-h, #am-root .am-notmine .am-note, #am-root .am-notmine .am-now, #am-root .am-notmine #am-list, #am-root .am-notmine .am-foot { display: none; }
+.pad-focus { outline: 3px solid #00f0ff !important; outline-offset: 3px !important; box-shadow: 0 0 0 6px rgba(0, 240, 255, .25), 0 0 22px rgba(0, 240, 255, .55) !important; }
 </style>
 <div id="am-root" hidden role="dialog" aria-modal="true" aria-labelledby="am-title">
   <div id="am-sheet">
@@ -178,6 +179,8 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   </div>
 </div>
 <script>
+// players who ask their system for reduced motion get gentle screen shake and flashes in every game
+window.ARCADE_CALM = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } })();
 // My music: play your own songs while any arcade game runs. Songs live in IndexedDB (shared by every page on the same site),
 // settings in localStorage; when you move to another game, the music picks up again on your first tap there.
 (() => {
@@ -641,6 +644,85 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
   window.ArcadeMusic = { open, close, toggle, next, get playing() { return isPlaying(); }, get count() { return tracks.length; }, get engine() { return out === el ? "element" : "webaudio"; } };
 })();
 </script>
+<script>
+/* Arcade Pad: play any Night Arcade page with a game controller. The pad becomes the keys each game already understands
+   (stick or D-pad = arrow keys, A = Space, B = B, X = Shift, Start = Escape, Y = Music & sound), and wherever buttons are on
+   screen (menus, pause, results, the hub) the D-pad moves between them and A presses the highlighted one. Phone-style
+   vibration from a game also rumbles the pad. A page tunes it with window.ArcadePad = { a, b, x, lt, rt, repeat: [codes held
+   keys repeat], pads: [null, { ArrowLeft: "KeyA", ... }] for a second player, menuOnly (games with their own controls), off }. */
+(() => {
+  const KEY = { ArrowLeft: ["ArrowLeft", 37], ArrowRight: ["ArrowRight", 39], ArrowUp: ["ArrowUp", 38], ArrowDown: ["ArrowDown", 40], Space: [" ", 32], Enter: ["Enter", 13],
+    Escape: ["Escape", 27], ShiftLeft: ["Shift", 16], KeyA: ["a", 65], KeyB: ["b", 66], KeyD: ["d", 68], KeyP: ["p", 80], KeyS: ["s", 83], KeyW: ["w", 87], KeyX: ["x", 88] };
+  const cfg = () => window.ArcadePad || {};
+  const send = (type, code, repeat = false) => { const k = KEY[code] || [code, 0];
+    (document.body || document).dispatchEvent(new KeyboardEvent(type, { code, key: k[0], keyCode: k[1], which: k[1], repeat, shiftKey: code === "ShiftLeft" && type === "keydown", bubbles: true, cancelable: true })); };
+  const tap = (code) => { send("keydown", code); send("keyup", code); };
+  const panel = () => { const r = document.getElementById("am-root"); return r && !r.hidden ? r : null; };
+  const shown = (el) => { if (!el || el.disabled || el.closest("[hidden]")) return false; const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2 || r.bottom < 0 || r.right < 0 || r.top > innerHeight || r.left > innerWidth) return false;
+    const cs = getComputedStyle(el); return cs.visibility !== "hidden" && +cs.opacity > 0.05; };
+  // the buttons a player can choose between right now (the in-game icon row never counts: it is there during play)
+  const choices = () => { const p = panel(); if (p) return [...p.querySelectorAll("button, input[type=range]")].filter(shown);
+    return [...document.querySelectorAll(cfg().menu || ".cta, .seg, .mode, .shopbtn, a.play, button.music, [data-pad]")].filter((b) => !b.closest("#am-root") && shown(b)); };
+  const primary = (list) => list.find((b) => b.matches(".cta:not(.ghost), a.play")) || list[0];
+  const mid = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  let ring = null;
+  const focusOn = (b) => { if (!b) return; if (ring && ring !== b) ring.classList.remove("pad-focus"); ring = b; b.classList.add("pad-focus"); try { b.focus({ preventScroll: true }); b.scrollIntoView({ block: "nearest", inline: "nearest" }); } catch (e) { /* fine */ } };
+  const move = (list, dx, dy) => { const cur = list.includes(document.activeElement) ? document.activeElement : null; if (!cur) return focusOn(primary(list));
+    const c = mid(cur); let best = null, score = Infinity;
+    for (const b of list) { if (b === cur) continue; const p = mid(b), vx = p.x - c.x, vy = p.y - c.y, along = vx * dx + vy * dy; if (along <= 4) continue;
+      const s = along + Math.abs(vx * dy - vy * dx) * 2.5; if (s < score) { score = s; best = b; } }
+    if (best) focusOn(best); };
+  // pad rumble wherever a game asks the phone to vibrate
+  const pads = () => [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean);
+  const rumble = (pattern) => { const ms = Array.isArray(pattern) ? pattern.reduce((a, v, i) => a + (i % 2 ? 0 : v), 0) : +pattern || 0; if (!ms) return;
+    for (const p of pads()) try { p.vibrationActuator && p.vibrationActuator.playEffect("dual-rumble", { duration: Math.min(ms, 700), strongMagnitude: 0.8, weakMagnitude: 0.5 }); } catch (e) { /* no rumble */ } };
+  try { const nv = navigator.vibrate ? navigator.vibrate.bind(navigator) : null; navigator.vibrate = (pattern) => { rumble(pattern); return nv ? nv(pattern) : false; }; } catch (e) { /* read-only: no rumble */ }
+  const musicPanel = () => { const M = window.ArcadeMusic; if (M) { if (panel()) M.close(); else M.open(); } };   // Y opens and closes Music & sound
+  const prev = [], held = new Set(), rep = {};
+  let menu = null, navDir = "", navT = 0, used = false, raf = 0;
+  const loop = (t) => {
+    raf = 0; const list0 = pads(); if (!list0.length) { for (const c of held) send("keyup", c); held.clear(); return; }
+    raf = requestAnimationFrame(loop);
+    const c = cfg(); if (c.off) return;
+    const list = choices(), isMenu = list.length > 0;
+    if (isMenu !== menu) { for (const k of held) send("keyup", k); held.clear(); menu = isMenu; navDir = ""; }   // moving between play and a menu lets go of every key
+    const want = new Set();
+    list0.forEach((p) => {
+      const i = p.index, was = prev[i] || {}, b = (k) => !!(p.buttons[k] && (p.buttons[k].pressed || p.buttons[k].value > 0.5));
+      const ax = p.axes[0] || 0, ay = p.axes[1] || 0;
+      const now = { A: b(0), B: b(1), X: b(2), Y: b(3), LT: b(6), RT: b(7), Start: b(9), L: b(14) || ax < (was.L ? -0.3 : -0.5), R: b(15) || ax > (was.R ? 0.3 : 0.5), U: b(12) || ay < (was.U ? -0.3 : -0.5), D: b(13) || ay > (was.D ? 0.3 : 0.5) };
+      prev[i] = now; const edge = (k) => now[k] && !was[k];
+      if (Object.values(now).some(Boolean)) used = true;
+      if (isMenu) {
+        const dir = now.L ? "L" : now.R ? "R" : now.U ? "U" : now.D ? "D" : "";
+        if (dir && (dir !== navDir || t >= navT)) { navT = t + (dir !== navDir ? 380 : 150); navDir = dir; const [dx, dy] = { L: [-1, 0], R: [1, 0], U: [0, -1], D: [0, 1] }[dir]; move(list, dx, dy); }
+        else if (!dir && i === 0) navDir = "";
+        if (edge("A")) { const f = list.includes(document.activeElement) ? document.activeElement : primary(list); if (f) f.click(); }
+        if (edge("B") || edge("Start")) { if (panel()) { if (window.ArcadeMusic) window.ArcadeMusic.close(); } else if (!c.menuOnly) tap("Escape"); }
+        if (edge("Y") && !c.menuOnly) musicPanel();
+        return;
+      }
+      if (c.menuOnly) return;
+      const map = c.pads && c.pads[i]; if (i > 0 && !map) return;   // a second pad plays only where the game has a second player
+      const k = (code) => (map && code in map ? map[code] : code), add = (code, on) => { if (on && code) want.add(code); };
+      add(k("ArrowLeft"), now.L); add(k("ArrowRight"), now.R); add(k("ArrowUp"), now.U); add(k("ArrowDown"), now.D);
+      if (i === 0 || (map && map.buttons)) {
+        add("a" in c ? c.a : "Space", now.A); add("b" in c ? c.b : "KeyB", now.B); add("x" in c ? c.x : "ShiftLeft", now.X); add(c.rt, now.RT); add(c.lt, now.LT);
+        if (edge("Start")) tap("Escape");
+        if (edge("Y")) musicPanel();
+      }
+    });
+    for (const code of want) if (!held.has(code)) { held.add(code); send("keydown", code); rep[code] = t + 260; }
+    for (const code of [...held]) if (!want.has(code)) { held.delete(code); send("keyup", code); }
+    for (const code of c.repeat || []) if (held.has(code) && t >= rep[code]) { send("keydown", code, true); rep[code] = t + 33; }
+    if (isMenu && used && !list.includes(document.activeElement)) focusOn(primary(list));
+  };
+  addEventListener("gamepadconnected", () => { if (!raf) raf = requestAnimationFrame(loop); });
+  if (pads().length && !raf) raf = requestAnimationFrame(loop);
+  window.ArcadePadState = () => ({ pads: pads().length, menu, held: [...held], used });
+})();
+</script>
 <!-- arcade-music:end -->
 <script>
 (() => {
@@ -782,6 +864,7 @@ function press(e) {
   hold = true;
 }
 function release(e) {
+  if (!actx || actx.state === "suspended") initAudio();   // phones only allow sound to start on the finger lifting (pointerup), not on touch-down
   if (e && e.pointerId != null) fingers.delete(e.pointerId); else fingers.clear();
   hold = fingers.size > 0 || keyDown;
 }
@@ -1158,7 +1241,7 @@ function render(t) {
     if (newBest) text("NEW BEST!", VW / 2, 204, 13, "#ffd23f", "center", true, "#ffd23f");
     if (deadT > 0.7 && Math.sin(t * 5) > -0.3) text("TAP TO FLY AGAIN", VW / 2, 250, 12, css(P.a), "center", true, css(P.a));
   }
-  if (flash > 0) { ctx.fillStyle = `rgba(235,248,255,${flash * 0.55})`; ctx.fillRect(0, 0, VW, VH); }
+  if (flash > 0) { ctx.fillStyle = `rgba(235,248,255,${flash * 0.55 * (window.ARCADE_CALM ? 0.15 : 1)})`; ctx.fillRect(0, 0, VW, VH); }
   ctx.restore();
   // portrait phones: suggest turning sideways for a bigger cave
   if (H > W * 1.2) {
@@ -1179,6 +1262,7 @@ function setPaused(on) {
 document.getElementById("pauseBtn").addEventListener("click", () => setPaused(true));
 document.getElementById("resume").addEventListener("click", () => setPaused(false));
 document.getElementById("restart").addEventListener("click", () => { setPaused(false); reset(); state = "play"; });
+document.getElementById("pauseHome").addEventListener("click", () => { setPaused(false); reset(); state = "title"; });   // back to the title; the music carries on
 addEventListener("keydown", e => { if (e.code === "Escape" || e.code === "KeyP") setPaused(!paused); }, true);
 document.addEventListener("visibilitychange", () => { if (document.hidden) setPaused(true); });
 addEventListener("arcademusicpanel", e => { if (e.detail.open) setPaused(true); });   // opening My music pauses the flight

@@ -4,8 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Night Arcade</title>
-<meta name="description" content="Six free browser games. Tap a game to play on your phone or computer.">
+<meta name="description" content="Twelve free neon browser games: a street racer, a space shooter, a block breaker, runners, flyers and more. Tap a game to play on your phone or computer.">
 <meta name="theme-color" content="#0a0420">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Night Arcade">
+<meta property="og:description" content="Twelve free neon games for your phone or computer: a street racer, a space shooter, a block breaker, runners, flyers and more.">
+<meta property="og:image" content="https://hackerx17.github.io/Night_Arcade/shared/covers/share.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Audiowide&family=Jost:wght@400;500;600;700&display=swap">
 <style>
@@ -30,17 +37,41 @@ main { max-width: 980px; margin: 0 auto; padding-block: calc(env(safe-area-inset
 h1 { margin: 0; font: 400 clamp(40px, 10vw, 76px)/1 var(--display); color: #b9fbff; text-shadow: 0 0 8px var(--cyan), 0 0 30px #00b3ff, 0 0 60px var(--magenta); text-wrap: balance; }
 .lede { margin: 14px 0 36px; max-width: 52ch; color: var(--dim); font-size: 18px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
-.card { display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); min-width: 0; }
+.card { display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); min-width: 0; overflow: hidden; }
+.shot { display: block; width: calc(100% + 40px); max-width: none; height: auto; aspect-ratio: 16 / 9; object-fit: cover; margin: -20px -20px 4px; background: #0d0628; border-bottom: 1px solid var(--line); }
 .card .tag { font: 600 12px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--accent, var(--cyan)); }
-.card h2 { margin: 0; font: 400 26px/1.1 var(--display); }
+.card h3 { margin: 0; font: 400 26px/1.1 var(--display); }
 .card p { margin: 0; color: var(--dim); flex: 1; }
 .card .how { font-size: 14px; color: var(--ink); opacity: .8; }
-.play { align-self: flex-start; margin-top: 6px; display: inline-block; padding: 11px 26px; border-radius: 999px; color: #fff; text-decoration: none; font: 700 15px var(--body); letter-spacing: .12em; text-transform: uppercase;
+.card .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.new { font: 700 11px var(--body); letter-spacing: .16em; text-transform: uppercase; color: #0a0420; background: #ffd23f; border-radius: 999px; padding: 3px 9px 2px; box-shadow: 0 0 12px rgba(255,210,63,.45); }
+.card.feature { grid-column: 1 / -1; border-color: rgba(255,46,77,.55); background: linear-gradient(120deg, rgba(255,46,77,.16), transparent 55%), var(--card); }
+.card.feature h3 { font-size: clamp(28px, 6vw, 38px); }
+@media (min-width: 760px) {
+  .card.feature { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); column-gap: 26px; row-gap: 10px; align-content: start; }
+  .card.feature > * { grid-column: 1; }
+  .card.feature .shot { grid-column: 2; grid-row: 1 / span 6; width: 100%; margin: 0; border: 1px solid var(--line); border-radius: 12px; align-self: center; }
+  .card.feature .play { justify-self: start; }
+}
+.section { margin: 34px 0 14px; font: 600 13px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.section:first-of-type { margin-top: 0; }
+.play { align-self: flex-start; margin-top: 6px; display: inline-flex; align-items: center; min-height: 44px; padding: 11px 26px; border-radius: 999px; color: #fff; text-decoration: none; font: 700 15px var(--body); letter-spacing: .12em; text-transform: uppercase;
   background: linear-gradient(90deg, var(--magenta), #8a2bff 55%, #00c2ff); box-shadow: 0 0 16px rgba(255,43,214,.45); }
 .play:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.play:hover { filter: brightness(1.12); box-shadow: 0 0 22px rgba(255,43,214,.6); }
+.play:active { transform: translateY(1px) scale(.98); }
+.card { transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.card .shot { transition: transform .35s ease; transform-origin: 50% 60%; }
+.card:hover, .card:focus-within { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent, var(--cyan)) 55%, transparent); box-shadow: 0 10px 30px rgba(0,0,0,.35), 0 0 0 1px color-mix(in srgb, var(--accent, var(--cyan)) 25%, transparent); }
+.card:hover .shot { transform: scale(1.03); }
+.card.feature:hover .shot { transform: scale(1.02); }
+/* the one entrance: the sign flickers on like neon warming up */
+h1 { animation: neon-on 1.4s ease-out 1 both; }
+@keyframes neon-on { 0% { opacity: .15; text-shadow: none; } 12% { opacity: .9; } 16% { opacity: .3; } 24% { opacity: 1; } 30% { opacity: .55; } 40%, 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { h1 { animation: none; } .card, .card .shot, .play { transition: none; } .card:hover, .card:focus-within, .card:hover .shot { transform: none; } }
 footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: -14px 0 30px; }
-.music { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px 9px 14px; border-radius: 999px; cursor: pointer;
+.music { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 18px 9px 14px; border-radius: 999px; cursor: pointer;
   font: 700 14px var(--body); letter-spacing: .12em; text-transform: uppercase; color: #b9fbff;
   background: rgba(0,240,255,.07); border: 1px solid rgba(0,240,255,.55); box-shadow: 0 0 14px rgba(0,240,255,.18); }
 .music svg { width: 18px; height: 18px; fill: currentColor; }
@@ -53,44 +84,96 @@ footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
 <body>
 <main>
   <h1>Night Arcade</h1>
-  <p class="lede">Six free games that run right in your browser, on a phone or a computer. Tap one to play. Tip: on a phone, use "Add to Home Screen" to keep your favourite like an app.</p>
+  <p class="lede">Twelve free games that run right in your browser, on a phone or a computer, with touch, a keyboard or a game controller. Tap one to play. Tip: on a phone, use "Add to Home Screen" to keep your favourite like an app.</p>
   <div class="bar">
     <button class="music" id="musicBtn" type="button" data-am-open><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v10.6A4 4 0 1 0 11 17V7h8V3z"/></svg>Music &amp; sound</button>
     <span>Play your own songs while you game. They stay on your device.</span>
   </div>
+  <h2 class="section">New</h2>
+  <div class="grid">
+    <article class="card feature" style="--accent:#ff2e4d">
+      <img class="shot" src="shared/covers/redline.webp" width="640" height="360" alt="A police pursuit through the neon city in Redline Nights" fetchpriority="high">
+      <div class="top"><span class="tag">Street racer · 3D</span><span class="new">New</span></div><h3>Redline Nights</h3>
+      <p>Free-roam a neon city at night in eight original cars. Win sprints, circuits, drift battles and speed traps, then run from the police when your heat climbs: roadblocks, spike strips and a helicopter. Beat the Redline Ten one by one to win their cars.</p>
+      <span class="how">Drag or tilt your phone to steer, or use a keyboard or controller.</span>
+      <a class="play" href="redline-nights/">Play</a>
+    </article>
+    <article class="card" style="--accent:#b6ff00">
+      <img class="shot" src="shared/covers/prism.webp" width="640" height="360" alt="A stream of light breaking numbered blocks in Prism Breaker" loading="lazy" decoding="async">
+      <div class="top"><span class="tag">Block breaker</span><span class="new">New</span></div><h3>Prism Breaker</h3>
+      <p>Fire a stream of light at numbered blocks and break them before they cross the line. Lasers zap whole rows, prisms split your balls, bombs blast everything around them. Stars buy new ball colours.</p>
+      <span class="how">Drag to aim, let go to fire.</span>
+      <a class="play" href="prism-breaker/">Play</a>
+    </article>
+    <article class="card" style="--accent:#b46bff">
+      <img class="shot" src="shared/covers/void.webp" width="640" height="360" alt="A void swallowing cars and buildings in Void Eater" loading="lazy" decoding="async">
+      <div class="top"><span class="tag">City swallower</span><span class="new">New</span></div><h3>Void Eater</h3>
+      <p>Start as a tiny void and swallow cones, cars, buses, then whole buildings and the spire. Two-minute battles against three rival voids, or eat the city solo.</p>
+      <span class="how">Drag to move.</span>
+      <a class="play" href="void-eater/">Play</a>
+    </article>
+    <article class="card" style="--accent:#ffd23f">
+      <img class="shot" src="shared/covers/nova.webp" width="640" height="360" alt="A boss fight in Nova Strike" loading="lazy" decoding="async">
+      <div class="top"><span class="tag">Space shooter</span><span class="new">New</span></div><h3>Nova Strike</h3>
+      <p>Hold the line against waves of invaders. Power your guns up to a five-way spread, add lasers and homing missiles, and take down three giant bosses, each with three phases.</p>
+      <span class="how">Drag to fly. Your guns fire on their own.</span>
+      <a class="play" href="nova-strike/">Play</a>
+    </article>
+    <article class="card" style="--accent:#00f0ff">
+      <img class="shot" src="shared/covers/glow.webp" width="640" height="360" alt="Four glowing trails in the Glowline arena" loading="lazy" decoding="async">
+      <div class="top"><span class="tag">Light-trail arena</span><span class="new">New</span></div><h3>Glowline</h3>
+      <p>Four riders leave glowing trails in one arena. Curve, cut them off and don't touch the light. Orbs help you or wreck everyone else. Play three AI rivals, or a friend on one keyboard.</p>
+      <span class="how">Hold left or right to curve.</span>
+      <a class="play" href="glowline/">Play</a>
+    </article>
+    <article class="card" style="--accent:#ff2bd6">
+      <img class="shot" src="shared/covers/pulse.webp" width="640" height="360" alt="Running down the neon highway in Pulse Runner" loading="lazy" decoding="async">
+      <div class="top"><span class="tag">Endless runner</span><span class="new">New</span></div><h3>Pulse Runner</h3>
+      <p>Dodge, jump and slide down an endless neon highway. Run up ramps onto the trains, grab orbs, and fly over it all with the jetpack. Spend orbs to make power-ups last longer.</p>
+      <span class="how">Swipe to change lanes, jump and slide.</span>
+      <a class="play" href="pulse-runner/">Play</a>
+    </article>
+  </div>
+  <h2 class="section">The originals</h2>
   <div class="grid">
     <article class="card" style="--accent:#00f0ff">
-      <span class="tag">Hill rider</span><h2>Sandblade</h2>
+      <img class="shot" src="shared/covers/sandblade.webp" width="640" height="360" alt="Gliding over neon hills in Sandblade" loading="lazy" decoding="async">
+      <span class="tag">Hill rider</span><h3>Sandblade</h3>
       <p>Dive down neon hills, launch off giant ramps from island to island, each in its own colours, and outrun the storm. 11 power-ups, now with Comet, Starfall, Flow and Echo.</p>
       <span class="how">Hold to dive, let go to fly.</span>
       <a class="play" href="sandblade/">Play</a>
     </article>
     <article class="card" style="--accent:#7dff3a">
-      <span class="tag">Wall climber</span><h2>Skyline Leap</h2>
+      <img class="shot" src="shared/covers/skyline.webp" width="640" height="360" alt="Leaping between towers in Skyline Leap" loading="lazy" decoding="async">
+      <span class="tag">Wall climber</span><h3>Skyline Leap</h3>
       <p>Run up between two towers, leap wall to wall, dodge window hazards and smash drones mid-air. New power-ups, and a Christmas version with snow, lights and reindeer drones.</p>
       <span class="how">Tap to leap.</span>
       <a class="play" href="skyline-leap/">Play</a>
     </article>
     <article class="card" style="--accent:#ff2bd6">
-      <span class="tag">Crowd runner</span><h2>Sandblade Legion</h2>
-      <p>Steer your legion down a neon road through multiplier gates, blast through walls to the big bonus, and crush the horde. New colours every level.</p>
+      <img class="shot" src="shared/covers/legion.webp" width="640" height="360" alt="The legion marching through gates in Sandblade Legion" loading="lazy" decoding="async">
+      <span class="tag">Crowd runner</span><h3>Sandblade Legion</h3>
+      <p>Steer your legion down a neon road through multiplier gates, blast through walls to the big bonus, then charge the horde. Every fight is one for one, so only the bigger army wins. New colours every level.</p>
       <span class="how">Tap or swipe to change lanes.</span>
       <a class="play" href="sandblade-legion/">Play</a>
     </article>
     <article class="card" style="--accent:#ffd35c">
-      <span class="tag">Army flood</span><h2>Sandblade Siege</h2>
-      <p>A horde 400,000 strong charges your gate, and it grows every level. Aim a cannon of riders through ×20 and ×999 gates and mow them down one for one, in 3D on a neon battlefield that changes colours every level.</p>
+      <img class="shot" src="shared/covers/siege.webp" width="640" height="360" alt="The horde charging the gate in Sandblade Siege" loading="lazy" decoding="async">
+      <span class="tag">Army flood</span><h3>Sandblade Siege</h3>
+      <p>A horde 400,000 strong pours in through its portals and charges your gate, bigger every level, and now and then a giant stomps in. Aim a cannon of riders through ×20 and ×999 gates and mow them down one for one, in 3D.</p>
       <span class="how">Drag to aim.</span>
       <a class="play" href="sandblade-siege/">Play</a>
     </article>
     <article class="card" style="--accent:#00e5ff">
-      <span class="tag">Cave flyer</span><h2>Chopper Cave</h2>
-      <p>Fly a glowing helicopter through a neon cave as far as you can. Snappy controls; best played with the phone sideways.</p>
+      <img class="shot" src="shared/covers/chopper.webp" width="640" height="360" alt="Flying through Hyperspace in Chopper Cave" loading="lazy" decoding="async">
+      <span class="tag">Cave flyer</span><h3>Chopper Cave</h3>
+      <p>Fly a glowing helicopter through a neon cave as far as you can. Grab a Shield, Wide Cave or Slow-Mo, and dive through portals into Hyperspace, a synthwave bonus world. Best played with the phone sideways.</p>
       <span class="how">Hold to climb, let go to drop.</span>
       <a class="play" href="chopper-cave/">Play</a>
     </article>
     <article class="card" style="--accent:#00e5ff">
-      <span class="tag">Survival shooter</span><h2>Iron Sector</h2>
+      <img class="shot" src="shared/covers/iron.webp" width="640" height="360" alt="A neon-lit street in Iron Sector" loading="lazy" decoding="async">
+      <span class="tag">Survival shooter</span><h3>Iron Sector</h3>
       <p>Hold a neon-lit district at night against waves of riflemen, rooftop snipers and juggernauts. Buy weapons and attachments, call in airstrikes. Prefer daylight? Switch to Classic in Settings.</p>
       <span class="how">Mouse and keyboard, controller, or touch.</span>
       <a class="play" href="iron-sector/">Play</a>
@@ -193,6 +276,7 @@ addEventListener("arcademusic", (e) => { const b = document.getElementById("musi
 #am-root .am-switch[aria-checked="true"] i { transform: translateX(22px); }
 /* your own music only shows when it's the music you picked */
 #am-root .am-notmine .am-apps, #am-root .am-notmine .am-files-h, #am-root .am-notmine .am-note, #am-root .am-notmine .am-now, #am-root .am-notmine #am-list, #am-root .am-notmine .am-foot { display: none; }
+.pad-focus { outline: 3px solid #00f0ff !important; outline-offset: 3px !important; box-shadow: 0 0 0 6px rgba(0, 240, 255, .25), 0 0 22px rgba(0, 240, 255, .55) !important; }
 </style>
 <div id="am-root" hidden role="dialog" aria-modal="true" aria-labelledby="am-title">
   <div id="am-sheet">
@@ -230,6 +314,8 @@ addEventListener("arcademusic", (e) => { const b = document.getElementById("musi
   </div>
 </div>
 <script>
+// players who ask their system for reduced motion get gentle screen shake and flashes in every game
+window.ARCADE_CALM = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } })();
 // My music: play your own songs while any arcade game runs. Songs live in IndexedDB (shared by every page on the same site),
 // settings in localStorage; when you move to another game, the music picks up again on your first tap there.
 (() => {
@@ -691,6 +777,85 @@ addEventListener("arcademusic", (e) => { const b = document.getElementById("musi
     }
   };
   window.ArcadeMusic = { open, close, toggle, next, get playing() { return isPlaying(); }, get count() { return tracks.length; }, get engine() { return out === el ? "element" : "webaudio"; } };
+})();
+</script>
+<script>
+/* Arcade Pad: play any Night Arcade page with a game controller. The pad becomes the keys each game already understands
+   (stick or D-pad = arrow keys, A = Space, B = B, X = Shift, Start = Escape, Y = Music & sound), and wherever buttons are on
+   screen (menus, pause, results, the hub) the D-pad moves between them and A presses the highlighted one. Phone-style
+   vibration from a game also rumbles the pad. A page tunes it with window.ArcadePad = { a, b, x, lt, rt, repeat: [codes held
+   keys repeat], pads: [null, { ArrowLeft: "KeyA", ... }] for a second player, menuOnly (games with their own controls), off }. */
+(() => {
+  const KEY = { ArrowLeft: ["ArrowLeft", 37], ArrowRight: ["ArrowRight", 39], ArrowUp: ["ArrowUp", 38], ArrowDown: ["ArrowDown", 40], Space: [" ", 32], Enter: ["Enter", 13],
+    Escape: ["Escape", 27], ShiftLeft: ["Shift", 16], KeyA: ["a", 65], KeyB: ["b", 66], KeyD: ["d", 68], KeyP: ["p", 80], KeyS: ["s", 83], KeyW: ["w", 87], KeyX: ["x", 88] };
+  const cfg = () => window.ArcadePad || {};
+  const send = (type, code, repeat = false) => { const k = KEY[code] || [code, 0];
+    (document.body || document).dispatchEvent(new KeyboardEvent(type, { code, key: k[0], keyCode: k[1], which: k[1], repeat, shiftKey: code === "ShiftLeft" && type === "keydown", bubbles: true, cancelable: true })); };
+  const tap = (code) => { send("keydown", code); send("keyup", code); };
+  const panel = () => { const r = document.getElementById("am-root"); return r && !r.hidden ? r : null; };
+  const shown = (el) => { if (!el || el.disabled || el.closest("[hidden]")) return false; const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2 || r.bottom < 0 || r.right < 0 || r.top > innerHeight || r.left > innerWidth) return false;
+    const cs = getComputedStyle(el); return cs.visibility !== "hidden" && +cs.opacity > 0.05; };
+  // the buttons a player can choose between right now (the in-game icon row never counts: it is there during play)
+  const choices = () => { const p = panel(); if (p) return [...p.querySelectorAll("button, input[type=range]")].filter(shown);
+    return [...document.querySelectorAll(cfg().menu || ".cta, .seg, .mode, .shopbtn, a.play, button.music, [data-pad]")].filter((b) => !b.closest("#am-root") && shown(b)); };
+  const primary = (list) => list.find((b) => b.matches(".cta:not(.ghost), a.play")) || list[0];
+  const mid = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  let ring = null;
+  const focusOn = (b) => { if (!b) return; if (ring && ring !== b) ring.classList.remove("pad-focus"); ring = b; b.classList.add("pad-focus"); try { b.focus({ preventScroll: true }); b.scrollIntoView({ block: "nearest", inline: "nearest" }); } catch (e) { /* fine */ } };
+  const move = (list, dx, dy) => { const cur = list.includes(document.activeElement) ? document.activeElement : null; if (!cur) return focusOn(primary(list));
+    const c = mid(cur); let best = null, score = Infinity;
+    for (const b of list) { if (b === cur) continue; const p = mid(b), vx = p.x - c.x, vy = p.y - c.y, along = vx * dx + vy * dy; if (along <= 4) continue;
+      const s = along + Math.abs(vx * dy - vy * dx) * 2.5; if (s < score) { score = s; best = b; } }
+    if (best) focusOn(best); };
+  // pad rumble wherever a game asks the phone to vibrate
+  const pads = () => [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean);
+  const rumble = (pattern) => { const ms = Array.isArray(pattern) ? pattern.reduce((a, v, i) => a + (i % 2 ? 0 : v), 0) : +pattern || 0; if (!ms) return;
+    for (const p of pads()) try { p.vibrationActuator && p.vibrationActuator.playEffect("dual-rumble", { duration: Math.min(ms, 700), strongMagnitude: 0.8, weakMagnitude: 0.5 }); } catch (e) { /* no rumble */ } };
+  try { const nv = navigator.vibrate ? navigator.vibrate.bind(navigator) : null; navigator.vibrate = (pattern) => { rumble(pattern); return nv ? nv(pattern) : false; }; } catch (e) { /* read-only: no rumble */ }
+  const musicPanel = () => { const M = window.ArcadeMusic; if (M) { if (panel()) M.close(); else M.open(); } };   // Y opens and closes Music & sound
+  const prev = [], held = new Set(), rep = {};
+  let menu = null, navDir = "", navT = 0, used = false, raf = 0;
+  const loop = (t) => {
+    raf = 0; const list0 = pads(); if (!list0.length) { for (const c of held) send("keyup", c); held.clear(); return; }
+    raf = requestAnimationFrame(loop);
+    const c = cfg(); if (c.off) return;
+    const list = choices(), isMenu = list.length > 0;
+    if (isMenu !== menu) { for (const k of held) send("keyup", k); held.clear(); menu = isMenu; navDir = ""; }   // moving between play and a menu lets go of every key
+    const want = new Set();
+    list0.forEach((p) => {
+      const i = p.index, was = prev[i] || {}, b = (k) => !!(p.buttons[k] && (p.buttons[k].pressed || p.buttons[k].value > 0.5));
+      const ax = p.axes[0] || 0, ay = p.axes[1] || 0;
+      const now = { A: b(0), B: b(1), X: b(2), Y: b(3), LT: b(6), RT: b(7), Start: b(9), L: b(14) || ax < (was.L ? -0.3 : -0.5), R: b(15) || ax > (was.R ? 0.3 : 0.5), U: b(12) || ay < (was.U ? -0.3 : -0.5), D: b(13) || ay > (was.D ? 0.3 : 0.5) };
+      prev[i] = now; const edge = (k) => now[k] && !was[k];
+      if (Object.values(now).some(Boolean)) used = true;
+      if (isMenu) {
+        const dir = now.L ? "L" : now.R ? "R" : now.U ? "U" : now.D ? "D" : "";
+        if (dir && (dir !== navDir || t >= navT)) { navT = t + (dir !== navDir ? 380 : 150); navDir = dir; const [dx, dy] = { L: [-1, 0], R: [1, 0], U: [0, -1], D: [0, 1] }[dir]; move(list, dx, dy); }
+        else if (!dir && i === 0) navDir = "";
+        if (edge("A")) { const f = list.includes(document.activeElement) ? document.activeElement : primary(list); if (f) f.click(); }
+        if (edge("B") || edge("Start")) { if (panel()) { if (window.ArcadeMusic) window.ArcadeMusic.close(); } else if (!c.menuOnly) tap("Escape"); }
+        if (edge("Y") && !c.menuOnly) musicPanel();
+        return;
+      }
+      if (c.menuOnly) return;
+      const map = c.pads && c.pads[i]; if (i > 0 && !map) return;   // a second pad plays only where the game has a second player
+      const k = (code) => (map && code in map ? map[code] : code), add = (code, on) => { if (on && code) want.add(code); };
+      add(k("ArrowLeft"), now.L); add(k("ArrowRight"), now.R); add(k("ArrowUp"), now.U); add(k("ArrowDown"), now.D);
+      if (i === 0 || (map && map.buttons)) {
+        add("a" in c ? c.a : "Space", now.A); add("b" in c ? c.b : "KeyB", now.B); add("x" in c ? c.x : "ShiftLeft", now.X); add(c.rt, now.RT); add(c.lt, now.LT);
+        if (edge("Start")) tap("Escape");
+        if (edge("Y")) musicPanel();
+      }
+    });
+    for (const code of want) if (!held.has(code)) { held.add(code); send("keydown", code); rep[code] = t + 260; }
+    for (const code of [...held]) if (!want.has(code)) { held.delete(code); send("keyup", code); }
+    for (const code of c.repeat || []) if (held.has(code) && t >= rep[code]) { send("keydown", code, true); rep[code] = t + 33; }
+    if (isMenu && used && !list.includes(document.activeElement)) focusOn(primary(list));
+  };
+  addEventListener("gamepadconnected", () => { if (!raf) raf = requestAnimationFrame(loop); });
+  if (pads().length && !raf) raf = requestAnimationFrame(loop);
+  window.ArcadePadState = () => ({ pads: pads().length, menu, held: [...held], used });
 })();
 </script>
 <!-- arcade-music:end -->
