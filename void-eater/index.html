@@ -1174,7 +1174,7 @@ function hud() {
   $("powers").innerHTML = me ? [["MAGNET", me.magnet, PCOL[0]], ["BOOST", me.boost, PCOL[1]], ["MEGA", me.mega, PCOL[2]]].filter((p) => p[1] > 0).map((p) => `<span class="pw" style="color:${p[2]}">${p[0]} ${Math.ceil(p[1])}s</span>`).join("") : "";
 }
 function pop(wx, wy, text, col) {
-  const z = camZ, x = W / 2 + (wx - camX) * z, y = H / 2 + (wy - camY) * z + H * 0.06;
+  const z = camZ, p3 = window.VE3D && window.VE3D.ok ? window.VE3D.project(wx, wy) : null, x = p3 ? p3[0] : W / 2 + (wx - camX) * z, y = p3 ? p3[1] - 24 : H / 2 + (wy - camY) * z + H * 0.06;
   const el = document.createElement("div"); el.className = "pop"; el.textContent = text; el.style.color = col; el.style.left = `${x}px`; el.style.top = `${y}px`;
   $("pops").appendChild(el); setTimeout(() => el.remove(), 1150);
 }
@@ -1233,14 +1233,23 @@ function frame(now) {
   try {
     if (!paused) update(dt);
     if (state === "menu") { camX = SIZE / 2 + Math.cos(now / 9000) * 500; camY = SIZE / 2 + Math.sin(now / 9000) * 500; }
-    draw(now / 1000);
+    if (window.VE3D && window.VE3D.ok) { window.VE3D.render(now / 1000); drawOverlay(); } else draw(now / 1000);
     hudT -= dt; if (hudT <= 0 && state === "play") { hudT = 0.15; hud(); }
   } catch (e) { if (!frame.warned) { frame.warned = true; console.error(e); } }
 }
 requestAnimationFrame(frame);
+// the 3D city (js/world3d.js) reads the game through this; the 2D canvas then only carries the joystick on top
+window.VES = { get objs() { return objs; }, get voids() { return voids; }, get me() { return me; }, get pickups() { return pickups; }, get parts() { return parts; },
+  get state() { return state; }, get camX() { return camX; }, get camY() { return camY; }, effR, SIZE, BLK, ST, PCOL };
+function drawOverlay() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H);
+  if (stick && stick.on) { ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(stick.x0, stick.y0, 50, 0, TAU); ctx.stroke(); const ex = stick.x - stick.x0, ey = stick.y - stick.y0, l = Math.min(50, Math.hypot(ex, ey)), a = Math.atan2(ey, ex); ctx.fillStyle = "rgba(0,229,255,.55)"; ctx.beginPath(); ctx.arc(stick.x0 + Math.cos(a) * l, stick.y0 + Math.sin(a) * l, 18, 0, TAU); ctx.fill(); }
+}
 if (/debug/.test(location.hash)) window.__VE = {
   get state() { return state; }, get me() { return me; }, get voids() { return voids; }, get objs() { return objs; }, get tLeft() { return tLeft; }, set tLeft(v) { tLeft = v; }, get eaten() { return eatenArea / totalArea; },
-  start, newRound, aiThink, effR, fits, setGrow(g) { GROW = g; }, sim(sec, dt = 1 / 30) { for (let i = 0; i < sec / dt && state === "play"; i++) update(dt); }, draw(t = performance.now() / 1000) { draw(t); hud(); }, grid: () => grid, pickups: () => pickups
+  start, newRound, aiThink, effR, fits, setGrow(g) { GROW = g; }, sim(sec, dt = 1 / 30) { for (let i = 0; i < sec / dt && state === "play"; i++) update(dt); }, draw(t = performance.now() / 1000) { if (window.VE3D && window.VE3D.ok) { window.VE3D.render(t); drawOverlay(); } else draw(t); hud(); }, grid: () => grid, pickups: () => pickups
 };
 })();
 </script>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
+<script type="module" src="js/world3d.js"></script>

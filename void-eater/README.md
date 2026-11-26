@@ -11,4 +11,8 @@ You're a hungry little void in a neon city. Anything smaller than you falls in. 
 
 The note button (and Music & sound on the pause screen) picks the music: the game's own electro house soundtrack, your own songs or music app, or none, with a separate switch for sound effects.
 
-Open `index.html` in any browser. Single file, no dependencies.
+## Graphics
+
+Void Eater draws the city in real 3D with [three.js](https://threejs.org) (r160, vendored in `vendor/`, MIT): instanced towers with lit windows and neon rooftop edges, traffic, people, trees, street lamps and the spire on neon streets. Every void is a real hole cut in the ground with a glowing pit and a slow swirl, and whatever it swallows tumbles down into it (`js/world3d.js`). The camera pulls back as you grow. Without WebGL the game falls back to its 2D drawing.
+
+Open it from a web server (it loads JavaScript modules), or play it on the Night Arcade site.

@@ -8,7 +8,7 @@ Twelve original neon browser games. They run on phones and computers with nothin
 | --- | --- | --- |
 | Redline Nights | Street racer in 3D: free-roam a neon city at night, win sprints, circuits, drift battles and speed traps, run from the police (heat, roadblocks, spike strips, a helicopter) and beat the Redline Ten for their cars. Tilt, touch, keyboard or gamepad. | [`redline-nights/`](redline-nights/) |
 | Prism Breaker | Block breaker: aim and fire a stream of light at numbered blocks before they cross the line. Lasers, prisms, bombs, and ball colours to unlock. | [`prism-breaker/`](prism-breaker/) |
-| Void Eater | City swallower: a tiny void that grows by swallowing everything smaller, from cones to whole buildings. Two-minute battles against three rival voids, or solo. | [`void-eater/`](void-eater/) |
+| Void Eater | City swallower in 3D: a tiny void that grows by swallowing everything smaller, from cones to whole buildings. Two-minute battles against three rival voids, or solo. | [`void-eater/`](void-eater/) |
 | Nova Strike | Vertical space shooter: waves of invaders, five gun levels, lasers and homing missiles, and three bosses with three phases each. | [`nova-strike/`](nova-strike/) |
 | Glowline | Light-trail arena: four riders, glowing trails, first to 10 points. Orbs that help you or hurt everyone else; AI rivals or two players on one keyboard. | [`glowline/`](glowline/) |
 | Pulse Runner | Endless runner in 3D: an animated robot dodges, jumps and slides down a neon highway, ride on the trains, fly the jetpack, complete missions for orbs, and spend them on longer power-ups. | [`pulse-runner/`](pulse-runner/) |
@@ -37,7 +37,7 @@ Plug in or pair a game controller and every game plays with it, menus included: 
 
 ## Running locally
 
-From this folder, run `python3 -m http.server 8000` and open http://localhost:8000/. Most games also work when opened directly as a file. Iron Sector, Redline Nights and Pulse Runner need the local server because they load JavaScript modules.
+From this folder, run `python3 -m http.server 8000` and open http://localhost:8000/. Most games also work when opened directly as a file. Iron Sector, Redline Nights, Pulse Runner and Void Eater need the local server because they load JavaScript modules.
 
 ## Design
 
