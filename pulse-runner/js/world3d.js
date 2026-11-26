@@ -121,7 +121,7 @@ scene.add(flames);
 let robot = null, mixer = null, acts = {}, curAct = null, heroH = 1.5;
 const fallback = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.7, 6, 12), new THREE.MeshStandardMaterial({ color: 0x2b0f5c, emissive: 0xff2bd6, emissiveIntensity: 0.6 }));
 fallback.position.y = 0.65; hero.add(fallback);
-new GLTFLoader().load(new URL("../models/runner.glb", import.meta.url).href, (gltf) => {
+new GLTFLoader().load(new URL("../models/runner.json", import.meta.url).href, (gltf) => {
   robot = gltf.scene; robot.traverse((o) => { if (!o.isMesh) return; o.frustumCulled = false;
     const n = o.material && o.material.name; const m = o.material = o.material.clone();
     if (n === "Main") { m.color.set("#5b16d6"); m.metalness = 0.55; m.roughness = 0.28; m.emissive = new THREE.Color("#3a0a8a"); m.emissiveIntensity = 0.55; }
