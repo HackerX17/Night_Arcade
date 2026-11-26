@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { G, settings, saveSettings, Input, isTouch, clamp, lerp, rand, pick, STYLE } from './core.js';
 import { AudioEngine } from './audio.js';
-import { buildMaterials } from './textures.js';
+import { buildMaterials, MAT } from './textures.js';
 import { Renderer } from './render.js';
 import { World, Nav } from './world.js';
 import { buildMap } from './map.js';
@@ -47,8 +47,15 @@ async function boot() {
   G.audio = new AudioEngine(); G.input = new Input(); G.ui = new UI();
   const step = async (label, frac) => { press.textContent = `${label} · ${Math.round(frac * 100)}%`; await new Promise((r) => setTimeout(r, 0)); };
   await buildMaterials(settings.texSize, (f) => { press.textContent = `Building materials · ${Math.round(f * 60)}%`; });
+  // 3D mode (the shared Original / 3D switch): real textures, wet streets, rain
+  let HD3D = null;
+  if (window.NAGFX && window.NAGFX.is3D) {
+    try { HD3D = await import('./hd.js'); HD3D.upgradeMaterials(MAT); }
+    catch (e) { console.warn('3D mode unavailable:', e); HD3D = null; window.NAGFX.fallback(String(e && e.message || e)); }
+  }
   await step('Constructing the Old Quarter', 0.62);
   G.world = new World(); const { info } = buildMap(renderer.scene, G.world); G.mapInfo = info;
+  if (HD3D) { try { G.hd = HD3D.attach(renderer, MAT, { neon: STYLE.neon, quality: settings.preset }); } catch (e) { console.warn('3D mode unavailable:', e); } }
   await step('Surveying routes', 0.72);
   G.nav = new Nav(); G.nav.build(G.world);
   await step('Deploying', 0.86);
@@ -67,6 +74,7 @@ async function boot() {
   const fitTouch = () => $('touch').style.setProperty('--k', String(clamp(innerHeight / 520, 0.62, 1.2)));
   fitTouch(); addEventListener('resize', fitTouch);
   wireMenus();
+  if (window.NAGFX) { const m = document.querySelector('#menu .list'), pz = document.querySelector('#pause .list'); if (m) window.NAGFX.mount(m.parentNode); if (pz) window.NAGFX.mount(pz.parentNode); }
   G.input.onLockChange = onLock;
   addEventListener('blur', () => { if (mode === 'game' && !paused && !G.debug) pauseGame(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'game' && !paused) pauseGame(); });

@@ -144,15 +144,18 @@ export function mirror(renderer, { w, d, x = 0, y = 0, z = 0, scale = 0.5, hide 
   const rt = m.getRenderTarget(); rt.texture.generateMipmaps = true; rt.texture.minFilter = THREE.LinearMipmapLinearFilter;
   const worldMat = new THREE.Matrix4(), inv = new THREE.Matrix4();
   const uniforms = { tMirror: { value: rt.texture }, uMirrorMat: { value: worldMat }, uMirrorOn: { value: 1 } };
-  const before = m.onBeforeRender;
+  const before = m.onBeforeRender; let armed = true, once = false;
   m.onBeforeRender = function (r, s, cam, ...rest) {
-    if (!uniforms.uMirrorOn.value) return;
+    if (!uniforms.uMirrorOn.value || (once && !armed)) return;
+    armed = false;
     const vis = hide.map((o) => o.visible); hide.forEach((o) => (o.visible = false));
     before.call(this, r, s, cam, ...rest);
     hide.forEach((o, k) => (o.visible = vis[k]));
     worldMat.copy(m.material.uniforms.textureMatrix.value).multiply(inv.copy(m.matrixWorld).invert());
   };
   return { mesh: m, uniforms, hide,
+    // games with several render passes per frame call this once per frame, so the reflection renders once
+    beginFrame() { once = true; armed = true; },
     resize(s = scale) { scale = s; const z2 = renderer.getDrawingBufferSize(new THREE.Vector2()); rt.setSize(Math.max(64, Math.round(z2.x * s)), Math.max(64, Math.round(z2.y * s))); },
     set on(v) { uniforms.uMirrorOn.value = v ? 1 : 0; m.visible = !!v; }, get on() { return !!uniforms.uMirrorOn.value; } };
 }
@@ -168,21 +171,30 @@ vec3 naReflect(vec3 wp, vec2 nudge, float lod){
 float naPuddle(vec2 xz, float amt){ return smoothstep(1.0 - amt, 1.0 - amt + 0.07, naFbm(xz * 0.11 + 3.0)); }`;
 
 // Make a standard material wet: darker, glossy, puddles that mirror the street.
-export function wetStandard(material, mir, { wet = 0.6, puddles = 0.5, ripple = 1 } = {}) {
+export function wetStandard(material, mir, { wet = 0.6, puddles = 0.5, ripple = 1, groundY = null } = {}) {
   material.userData.wet = { wet, puddles };
-  material.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, mir.uniforms, { uWet: { value: wet }, uPuddles: { value: puddles }, uRipple: { value: ripple }, uTimeW: material.userData.timeU || (material.userData.timeU = { value: 0 }) });
+  const prev = material.onBeforeCompile, prevKey = material.customProgramCacheKey ? material.customProgramCacheKey() : '';
+  if (groundY !== null) material.defines = Object.assign({}, material.defines, { NA_GROUND: '' });
+  material.customProgramCacheKey = () => 'naWet|' + prevKey + '|' + (groundY !== null);
+  material.onBeforeCompile = (sh, rr) => {
+    if (prev && prev !== THREE.Material.prototype.onBeforeCompile) prev.call(material, sh, rr);
+    Object.assign(sh.uniforms, mir.uniforms, { uWet: { value: wet }, uPuddles: { value: puddles }, uRipple: { value: ripple }, uGroundY: { value: groundY || 0 }, uTimeW: material.userData.timeU || (material.userData.timeU = { value: 0 }) });
     sh.vertexShader = 'varying vec3 vWPw;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vWPw = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = 'varying vec3 vWPw; uniform float uWet, uPuddles, uRipple, uTimeW;\n' + NOISE_GLSL + '\n' + WET_GLSL + '\n' + sh.fragmentShader
+    sh.fragmentShader = 'varying vec3 vWPw; uniform float uWet, uPuddles, uRipple, uTimeW, uGroundY;\n' + NOISE_GLSL + '\n' + WET_GLSL + '\n' + sh.fragmentShader
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
-        float puddle = naPuddle(vWPw.xz, uPuddles);
-        roughnessFactor = mix(roughnessFactor, 0.05, max(puddle, uWet * 0.5));`)
-      .replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb *= 1.0 - 0.45 * uWet;')
+        float wetMask = 1.0;
+        #ifdef NA_GROUND
+          vec3 gNw = inverseTransformDirection(normalize(vNormal), viewMatrix);
+          wetMask = smoothstep(0.8, 0.95, gNw.y) * (1.0 - smoothstep(0.12, 0.4, abs(vWPw.y - uGroundY)));
+        #endif
+        float puddle = naPuddle(vWPw.xz, uPuddles) * wetMask;
+        roughnessFactor = mix(roughnessFactor, 0.05, max(puddle, uWet * 0.5 * wetMask));`)
+      .replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb *= 1.0 - 0.4 * uWet;')
       .replace('#include <opaque_fragment>', `
         vec3 Vd = normalize(vViewPosition); float fres = pow(1.0 - clamp(dot(normalize(normal), Vd), 0.0, 1.0), 4.0);
         vec2 rip = (vec2(naNoise(vWPw.xz * 2.7 + uTimeW * 0.7), naNoise(vWPw.xz * 2.9 - uTimeW * 0.6)) - 0.5) * 0.03 * uRipple;
         vec3 refl = naReflect(vWPw, normal.xy * (puddle > 0.5 ? 0.01 : 0.04) + rip, mix(4.0, 0.3, max(puddle, uWet * 0.25)));
-        float kR = clamp((puddle * 0.95 + uWet * 0.45) * (0.35 + 0.65 * fres), 0.0, 1.0);
+        float kR = clamp((puddle * 0.95 + uWet * 0.45 * wetMask) * (0.35 + 0.65 * fres), 0.0, 1.0);
         outgoingLight = outgoingLight * (1.0 - 0.6 * kR) + refl * kR;
         #include <opaque_fragment>`);
   };
