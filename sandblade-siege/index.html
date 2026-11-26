@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<script src="../shared/gfx.js" data-game="siege"></script>
 <title>Sandblade Siege</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -868,6 +869,7 @@ window.ARCADE_CALM = (() => { try { return matchMedia("(prefers-reduced-motion: 
 })();
 </script>
 <!-- arcade-music:end -->
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script type="module">
 import * as THREE from './vendor/three.module.min.js';
 
@@ -1000,7 +1002,8 @@ moon.position.set(-16, 34, 4); moon.target.position.set(0, 0, -36); moon.castSha
 Object.assign(moon.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 140 }); moon.shadow.mapSize.set(2048, 2048); moon.shadow.bias = -0.0006; moon.shadow.normalBias = 0.03;
 scene.add(moon, moon.target);
 let W = 1, H = 1, hudBottom = 0;   // hudBottom: where the HUD ends, so the army tags stay below it (measured while it is on screen)
-function resize() { W = innerWidth; H = innerHeight; hudBottom = 0; renderer.setSize(W, H); camera.aspect = W / H; camera.fov = W / H < 0.75 ? 52 : 50; camera.updateProjectionMatrix(); }
+let HD = null;   // the 3D mode (js/hd.js), when the graphics switch is on 3D
+function resize() { W = innerWidth; H = innerHeight; hudBottom = 0; renderer.setSize(W, H); camera.aspect = W / H; camera.fov = W / H < 0.75 ? 52 : 50; camera.updateProjectionMatrix(); if (HD) HD.setSize(W, H); }
 addEventListener('resize', resize); resize();
 
 // ---------- procedural textures (white light on black: the materials tint them with the level's neon) ----------
@@ -1819,7 +1822,7 @@ function draw() {
   for (const p of parts) { if (k >= PMAX) break; pPos[k * 3] = p.x; pPos[k * 3 + 1] = p.y; pPos[k * 3 + 2] = -p.d; pCol[k * 4] = p.r; pCol[k * 4 + 1] = p.g; pCol[k * 4 + 2] = p.b; pCol[k * 4 + 3] = p.a * (p.life / p.max); pSize[k] = p.size; k++; }
   pGeo.setDrawRange(0, k); pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true; pGeo.attributes.size.needsUpdate = true;
   drawMotes(); spectrum(); groundMat.uniforms.uTime.value = arenaMat.uniforms.uTime.value = t;
-  renderer.render(scene, camera);
+  if (HD) HD.render(); else renderer.render(scene, camera);
   placeLabels();
 }
 
@@ -2018,6 +2021,11 @@ function frame(now) {
   if (!window.__hold) tick(dt);
 }
 const fontsReady = document.fonts && document.fonts.load ? Promise.race([Promise.all([document.fonts.load('400 100px Audiowide'), document.fonts.load('800 100px Jost')]), new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve();
+if (window.NAGFX && window.NAGFX.is3D) {
+  try { HD = (await import('./js/hd.js')).attach({ renderer, scene, camera, groundMat, arenaMat, units: [blueMesh, redMesh] }); HD.setSize(W, H); }
+  catch (e) { console.warn('3D mode unavailable:', e); HD = null; window.NAGFX.fallback(String((e && e.message) || e)); }
+}
+if (window.NAGFX) { const m = document.getElementById('menu'), cta = m && m.querySelector('.cta'); const w = window.NAGFX.mount('#menu'); if (w && cta) cta.after(w); window.NAGFX.mount('#pauseMenu'); }
 fontsReady.then(() => { reset(); updateMenu(); updateCamera(0, true); requestAnimationFrame(frame); });
 if (DEBUG) window.__S = { get giants() { return giants; }, get reserve() { return reserveFigs; }, get giantQ() { return giantQ; }, get state() { return { phase, level, blue: blue.length, red: red.length, blueTotal, redTotal, elapsed, hordeFront, hordeBack, gateHP, gateMax: L.gate, marching, cannon: cannon.x }; }, sim(sec, stp = 1 / 60, render = true) { for (let i = 0; i < sec / stp; i++) { if (phase === 'play' || phase === 'won' || phase === 'lost') step(stp); updateCamera(stp); } if (render) { draw(); hud(); } }, aim(x) { cannon.tx = x; }, start, setLevel(n) { level = n; }, reset() { reset(); updateMenu(); updateCamera(0, true); }, menu() { phase = 'menu'; for (const id of ['menu', 'logo']) $(id).hidden = false; for (const id of ['win', 'lose', 'hud', 'gate', 'hint']) $(id).hidden = true; }, blues: () => blue, reds: () => red, walls: () => walls, level: () => L, tune(o) { Object.assign(L, o); }, flow: (x, d) => { const c = flowAt(x, d); return c < 0 ? null : [+flowX[c].toFixed(2), +flowD[c].toFixed(2), flowDbg.open[c], Math.round(flowDbg.dist[c] * 10) / 10]; } };
 </script>
