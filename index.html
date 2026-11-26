@@ -14,6 +14,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Audiowide&family=Jost:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: one centred column; a neon title, then a grid of game cards that stacks to one column on phones. Single dark neon look. */
@@ -40,7 +41,11 @@ h1 { margin: 0; font: 400 clamp(40px, 10vw, 76px)/1 var(--display); color: #b9fb
 .card { display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); min-width: 0; overflow: hidden; }
 .shot { display: block; width: calc(100% + 40px); max-width: none; height: auto; aspect-ratio: 16 / 9; object-fit: cover; margin: -20px -20px 4px; background: #0d0628; border-bottom: 1px solid var(--line); }
 .card .tag { font: 600 12px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--accent, var(--cyan)); }
-.card h3 { margin: 0; font: 400 26px/1.1 var(--display); }
+.card h3 { margin: 0; font: 400 26px/1.1 var(--display); text-wrap: balance; }
+a, button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.skip { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); top: -60px; z-index: 5; display: inline-flex; align-items: center; min-height: 44px; padding: 10px 16px; border-radius: 999px; background: var(--cyan); color: #0a0420; font: 700 14px var(--body); text-decoration: none; }
+.skip:focus-visible { top: calc(env(safe-area-inset-top, 0px) + 10px); outline: 2px solid #fff; outline-offset: 2px; }
+#games { scroll-margin-top: 16px; }
 .card p { margin: 0; color: var(--dim); flex: 1; }
 .card .how { font-size: 14px; color: var(--ink); opacity: .8; }
 .card .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -82,53 +87,54 @@ footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
 </style>
 </head>
 <body>
+<a class="skip" href="#games">Skip to the games</a>
 <main>
-  <h1>Night Arcade</h1>
-  <p class="lede">Twelve free games that run right in your browser, on a phone or a computer, with touch, a keyboard or a game controller. Tap one to play. Tip: on a phone, use "Add to Home Screen" to keep your favourite like an app.</p>
+  <h1 translate="no">Night Arcade</h1>
+  <p class="lede">12 free games that run right in your browser, on a phone or a computer, with touch, a keyboard or a game controller. Tap one to play. Tip: on a phone, use “Add to Home Screen” to keep your favourite like an app.</p>
   <div class="bar">
     <button class="music" id="musicBtn" type="button" data-am-open><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v10.6A4 4 0 1 0 11 17V7h8V3z"/></svg>Music &amp; sound</button>
     <span>Play your own songs while you game. They stay on your device.</span>
   </div>
-  <h2 class="section">New</h2>
+  <h2 class="section" id="games">New</h2>
   <div class="grid">
     <article class="card feature" style="--accent:#ff2e4d">
       <img class="shot" src="shared/covers/redline.webp" width="640" height="360" alt="A police pursuit through the neon city in Redline Nights" fetchpriority="high">
-      <div class="top"><span class="tag">Street racer · 3D</span><span class="new">New</span></div><h3>Redline Nights</h3>
+      <div class="top"><span class="tag">Street racer · 3D</span><span class="new">New</span></div><h3 translate="no">Redline Nights</h3>
       <p>Free-roam a neon city at night in eight original cars. Win sprints, circuits, drift battles and speed traps, then run from the police when your heat climbs: roadblocks, spike strips and a helicopter. Beat the Redline Ten one by one to win their cars.</p>
       <span class="how">Drag or tilt your phone to steer, or use a keyboard or controller.</span>
       <a class="play" href="redline-nights/">Play</a>
     </article>
     <article class="card" style="--accent:#b6ff00">
       <img class="shot" src="shared/covers/prism.webp" width="640" height="360" alt="A stream of light breaking numbered blocks in Prism Breaker" loading="lazy" decoding="async">
-      <div class="top"><span class="tag">Block breaker</span><span class="new">New</span></div><h3>Prism Breaker</h3>
+      <div class="top"><span class="tag">Block breaker</span><span class="new">New</span></div><h3 translate="no">Prism Breaker</h3>
       <p>Fire a stream of light at numbered blocks and break them before they cross the line. Lasers zap whole rows, prisms split your balls, bombs blast everything around them. Stars buy new ball colours.</p>
       <span class="how">Drag to aim, let go to fire.</span>
       <a class="play" href="prism-breaker/">Play</a>
     </article>
     <article class="card" style="--accent:#b46bff">
       <img class="shot" src="shared/covers/void.webp" width="640" height="360" alt="A void swallowing cars and buildings in Void Eater" loading="lazy" decoding="async">
-      <div class="top"><span class="tag">City swallower</span><span class="new">New</span></div><h3>Void Eater</h3>
+      <div class="top"><span class="tag">City swallower</span><span class="new">New</span></div><h3 translate="no">Void Eater</h3>
       <p>Start as a tiny void and swallow cones, cars, buses, then whole buildings and the spire. Two-minute battles against three rival voids, or eat the city solo.</p>
       <span class="how">Drag to move.</span>
       <a class="play" href="void-eater/">Play</a>
     </article>
     <article class="card" style="--accent:#ffd23f">
       <img class="shot" src="shared/covers/nova.webp" width="640" height="360" alt="A boss fight in Nova Strike" loading="lazy" decoding="async">
-      <div class="top"><span class="tag">Space shooter</span><span class="new">New</span></div><h3>Nova Strike</h3>
+      <div class="top"><span class="tag">Space shooter</span><span class="new">New</span></div><h3 translate="no">Nova Strike</h3>
       <p>Hold the line against waves of invaders. Power your guns up to a five-way spread, add lasers and homing missiles, and take down three giant bosses, each with three phases.</p>
       <span class="how">Drag to fly. Your guns fire on their own.</span>
       <a class="play" href="nova-strike/">Play</a>
     </article>
     <article class="card" style="--accent:#00f0ff">
       <img class="shot" src="shared/covers/glow.webp" width="640" height="360" alt="Four glowing trails in the Glowline arena" loading="lazy" decoding="async">
-      <div class="top"><span class="tag">Light-trail arena</span><span class="new">New</span></div><h3>Glowline</h3>
+      <div class="top"><span class="tag">Light-trail arena</span><span class="new">New</span></div><h3 translate="no">Glowline</h3>
       <p>Four riders leave glowing trails in one arena. Curve, cut them off and don't touch the light. Orbs help you or wreck everyone else. Play three AI rivals, or a friend on one keyboard.</p>
       <span class="how">Hold left or right to curve.</span>
       <a class="play" href="glowline/">Play</a>
     </article>
     <article class="card" style="--accent:#ff2bd6">
       <img class="shot" src="shared/covers/pulse.webp" width="640" height="360" alt="Running down the neon highway in Pulse Runner" loading="lazy" decoding="async">
-      <div class="top"><span class="tag">Endless runner</span><span class="new">New</span></div><h3>Pulse Runner</h3>
+      <div class="top"><span class="tag">Endless runner</span><span class="new">New</span></div><h3 translate="no">Pulse Runner</h3>
       <p>Dodge, jump and slide down an endless neon highway. Run up ramps onto the trains, grab orbs, and fly over it all with the jetpack. Missions pay orbs; spend them to make power-ups last longer.</p>
       <span class="how">Swipe to change lanes, jump and slide.</span>
       <a class="play" href="pulse-runner/">Play</a>
@@ -138,42 +144,42 @@ footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
   <div class="grid">
     <article class="card" style="--accent:#00f0ff">
       <img class="shot" src="shared/covers/sandblade.webp" width="640" height="360" alt="Gliding over neon hills in Sandblade" loading="lazy" decoding="async">
-      <span class="tag">Hill rider</span><h3>Sandblade</h3>
+      <span class="tag">Hill rider</span><h3 translate="no">Sandblade</h3>
       <p>Dive down neon hills, launch off giant ramps from island to island, each in its own colours, and outrun the storm. 11 power-ups, now with Comet, Starfall, Flow and Echo.</p>
       <span class="how">Hold to dive, let go to fly.</span>
       <a class="play" href="sandblade/">Play</a>
     </article>
     <article class="card" style="--accent:#7dff3a">
       <img class="shot" src="shared/covers/skyline.webp" width="640" height="360" alt="Leaping between towers in Skyline Leap" loading="lazy" decoding="async">
-      <span class="tag">Wall climber</span><h3>Skyline Leap</h3>
+      <span class="tag">Wall climber</span><h3 translate="no">Skyline Leap</h3>
       <p>Run up between two towers, leap wall to wall, dodge window hazards and smash drones mid-air. New power-ups, and a Christmas version with snow, lights and reindeer drones.</p>
       <span class="how">Tap to leap.</span>
       <a class="play" href="skyline-leap/">Play</a>
     </article>
     <article class="card" style="--accent:#ff2bd6">
       <img class="shot" src="shared/covers/legion.webp" width="640" height="360" alt="The legion marching through gates in Sandblade Legion" loading="lazy" decoding="async">
-      <span class="tag">Crowd runner</span><h3>Sandblade Legion</h3>
+      <span class="tag">Crowd runner</span><h3 translate="no">Sandblade Legion</h3>
       <p>Steer your legion down a neon road through multiplier gates, blast through walls to the big bonus, then charge the horde. Every fight is one for one, so only the bigger army wins. New colours every level.</p>
       <span class="how">Tap or swipe to change lanes.</span>
       <a class="play" href="sandblade-legion/">Play</a>
     </article>
     <article class="card" style="--accent:#ffd35c">
       <img class="shot" src="shared/covers/siege.webp" width="640" height="360" alt="The horde charging the gate in Sandblade Siege" loading="lazy" decoding="async">
-      <span class="tag">Army flood</span><h3>Sandblade Siege</h3>
+      <span class="tag">Army flood</span><h3 translate="no">Sandblade Siege</h3>
       <p>A horde 400,000 strong pours in through its portals and charges your gate, bigger every level, and now and then a giant stomps in. Aim a cannon of riders through ×20 and ×999 gates and mow them down one for one, in 3D.</p>
       <span class="how">Drag to aim.</span>
       <a class="play" href="sandblade-siege/">Play</a>
     </article>
     <article class="card" style="--accent:#00e5ff">
       <img class="shot" src="shared/covers/chopper.webp" width="640" height="360" alt="Flying through Hyperspace in Chopper Cave" loading="lazy" decoding="async">
-      <span class="tag">Cave flyer</span><h3>Chopper Cave</h3>
+      <span class="tag">Cave flyer</span><h3 translate="no">Chopper Cave</h3>
       <p>Fly a glowing helicopter through a neon cave as far as you can. Grab a Shield, Wide Cave or Slow-Mo, and dive through portals into Hyperspace, a synthwave bonus world. Best played with the phone sideways.</p>
       <span class="how">Hold to climb, let go to drop.</span>
       <a class="play" href="chopper-cave/">Play</a>
     </article>
     <article class="card" style="--accent:#00e5ff">
       <img class="shot" src="shared/covers/iron.webp" width="640" height="360" alt="A neon-lit street in Iron Sector" loading="lazy" decoding="async">
-      <span class="tag">Survival shooter</span><h3>Iron Sector</h3>
+      <span class="tag">Survival shooter</span><h3 translate="no">Iron Sector</h3>
       <p>Hold a neon-lit district at night against waves of riflemen, rooftop snipers and juggernauts. Buy weapons and attachments, call in airstrikes. Prefer daylight? Switch to Classic in Settings.</p>
       <span class="how">Mouse and keyboard, controller, or touch.</span>
       <a class="play" href="iron-sector/">Play</a>
