@@ -1649,7 +1649,7 @@ requestAnimationFrame(frame);
 window.SLS = { LW, WL, WR, HAZ, PCOL, PGLYPH, BAUBLES, hash, district, cvs, get XMAS() { return XMAS; }, get layout() { return { W, H, SC, OX }; }, get camY() { return camY; }, get p() { return p; },
   get coins() { return coins || []; }, get pickups() { return pickups || []; }, get hazards() { return hazards || []; }, get drones() { return drones || []; }, get debris() { return debris || []; },
   get powers() { return powers || {}; }, get state() { return state; } };
-if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), pl = document.getElementById("play"); if (w && pl) pl.after(w); window.NAGFX.mount("#pauseMenu"); }
+if (window.NAGFX) { window.NAGFX.mountRow("#menu"); window.NAGFX.mountRow("#pauseMenu"); }
 if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => m.attach(window.SLS)).then((api) => { window.SL3D = api; }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
 if (/debug/.test(location.hash)) window.__SL = {
   get p() { return p; }, get state() { return state; }, get powers() { return powers; }, get coins() { return coinCount; }, score, start, setMode,

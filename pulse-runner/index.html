@@ -38,7 +38,9 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
 #msg small { display: block; font: 700 14px var(--body); letter-spacing: .16em; margin-top: 8px; text-shadow: 0 1px 6px #000; }
 .overlay { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px;
   padding: calc(env(safe-area-inset-top, 0px) + 24px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 24px) max(16px, env(safe-area-inset-left, 0px));
-  background: radial-gradient(ellipse at 50% 40%, rgba(30,8,90,.45), rgba(5,0,30,.86) 70%); overflow-y: auto; }
+  background: radial-gradient(ellipse at 50% 40%, rgba(30,8,90,.45), rgba(5,0,30,.86) 70%); overflow-y: auto; justify-content: flex-start; }
+/* centred while it fits; a menu taller than the phone scrolls from its top (a centred column would cut the logo off out of reach) */
+.overlay::before, .overlay::after { content: ""; flex: 1 0 0; }
 .overlay.result { background: radial-gradient(ellipse at 50% 40%, rgba(24,6,70,.86), rgba(5,0,30,.95) 70%); }
 .logo { margin: 0; font: 400 clamp(42px, 12vw, 86px)/1 var(--display); letter-spacing: .05em; color: #fff; text-shadow: 0 0 6px var(--glow), 0 0 24px var(--glow), 0 0 50px #8a2bff; }
 .logo span { display: block; color: #e0fbff; text-shadow: 0 0 6px var(--accent), 0 0 24px var(--accent); }
@@ -62,6 +64,7 @@ canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
 .toast { position: fixed; z-index: 20; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); transform: translateX(-50%); background: rgba(10,4,40,.9); border: 1px solid rgba(255,255,255,.2); padding: 9px 18px; border-radius: 999px; font-size: 14px; pointer-events: none; white-space: nowrap; }
 @media (max-height: 560px) {
   .overlay { gap: 8px; padding-top: calc(env(safe-area-inset-top, 0px) + 10px); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+
   .logo { font-size: clamp(28px, 10vh, 46px); } .logo span { display: inline; margin-left: .3em; }
   .tag, .how { font-size: 13px; } .how { max-width: 72ch; padding: 6px 12px; } .cta { padding: 10px 32px; font-size: 14px; }
   .shop { grid-template-columns: repeat(4, minmax(120px, 1fr)); width: min(720px, 100%); } .big { font-size: 38px; }
@@ -1161,6 +1164,6 @@ if (/debug/.test(location.hash)) window.__PR = {
 };
 })();
 </script>
-<script>if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), p = document.getElementById("play"); if (w && p) p.after(w); window.NAGFX.mount("#pauseMenu"); }</script>
+<script>if (window.NAGFX) { window.NAGFX.mountRow("#menu"); window.NAGFX.mountRow("#pauseMenu"); }</script>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
 <script type="module" src="js/world3d.js"></script>

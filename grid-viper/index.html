@@ -1163,7 +1163,7 @@ window.GVS = { N, get mode() { return mode; }, get state() { return state; }, ge
   get walls() { return walls; }, get t() { return t; }, get deadT() { return deadT; }, get cause() { return cause; }, get bulges() { return bulges; }, get parts() { return parts; },
   get shake() { return shake; }, get skin() { return skinById(skinId); }, bodyCol, bodyPoints, get box() { return { bx, by, size, cell, W, H }; }, cvs };
 if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => { window.GV3D = m.attach(window.GVS); }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
-if (window.NAGFX) { const m = document.getElementById("menu"), cta = m && m.querySelector(".cta"); const w = window.NAGFX.mount("#menu"); if (w && cta) cta.after(w); const pz = document.getElementById("pauseMenu") || document.getElementById("pause"); if (pz) window.NAGFX.mount(pz); }
+if (window.NAGFX) { window.NAGFX.mountRow("#menu"); const pz = document.getElementById("pauseMenu") || document.getElementById("pause"); if (pz) window.NAGFX.mountRow(pz); }
 buildSkins(); markMenu(); preview(); requestAnimationFrame(frame);
 if (/debug/.test(location.hash)) window.__GV = {
   get state() { return state; }, get snake() { return snake; }, get food() { return food; }, set food(v) { food = v; }, get bonus() { return bonus; }, get score() { return score; }, get dir() { return dir; }, get rate() { return rate; }, get walls() { return walls; },

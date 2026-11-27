@@ -1288,7 +1288,7 @@ window.NSS = { FW, FH, KIND, cvs, get layout() { return { OX, OY, S, W, H }; }, 
   get eb() { return eb; }, get pb() { return pb; }, get pickups() { return pickups; }, get parts() { return parts; }, get rings() { return rings; }, get stars() { return stars; }, get state() { return state; },
   get flash() { return flash; }, get shake() { return shake; } };
 if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => { window.NS3D = m.attach(window.NSS); }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
-if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), p = document.getElementById("play"); if (w && p) p.after(w); window.NAGFX.mount("#pauseMenu"); }
+if (window.NAGFX) { window.NAGFX.mountRow("#menu"); window.NAGFX.mountRow("#pauseMenu"); }
 if (/debug/.test(location.hash)) window.__NS = {
   get state() { return state; }, get P() { return P; }, get eb() { return eb; }, get enemies() { return enemies; }, get boss() { return boss; }, get wave() { return wave; }, get score() { return score; }, get pickups() { return pickups; },
   begin, bomb, setWave(n) { wave = n - 1; queue = []; enemies = []; eb = []; boss = null; waveClear = 0.01; }, sim(sec, dt = 1 / 60) { for (let i = 0; i < sec / dt; i++) update(dt); }, draw() { draw(); }, damageBoss, collect

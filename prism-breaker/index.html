@@ -1370,7 +1370,7 @@ window.PBS = { COLS, LINE, FLOOR, R, GAP, cvs, blockCol, ballCol, get layout() {
   get warn() { return warn; }, get beams() { return beams; }, get rings() { return rings; }, get flying() { return flying || []; }, get ghosts() { return ghosts || []; }, get particles() { return particles; },
   get toFire() { return toFire; }, get launchX() { return launchX; }, get shake() { return shake; } };
 if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => { window.PB3D = m.attach(window.PBS); }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
-if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), p = document.getElementById("play"); if (w && p) p.after(w); window.NAGFX.mount("#pauseMenu"); }
+if (window.NAGFX) { window.NAGFX.mountRow("#menu"); window.NAGFX.mountRow("#pauseMenu"); }
 if (/debug/.test(location.hash)) window.__PB = {
   get state() { return state; }, get level() { return level; }, get balls() { return balls; }, get launchX() { return launchX; }, get grid() { return grid; }, get flying() { return flying; }, get ghosts() { return ghosts; }, get turnT() { return turnT; },
   get broken() { return broken; }, get starsRun() { return starsRun; }, get best() { return best; }, get warn() { return warn; },

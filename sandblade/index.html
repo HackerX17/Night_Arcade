@@ -2275,7 +2275,7 @@ window.SBS = { WATER_Y, ABYSS, GAP, RAMP, POWER, cvs, groundY, islandAt, isl, hi
   get ghosts() { return ghosts; }, get meteors() { return meteors; }, get echo() { return echo; }, get rig() { return rig; }, get scarf() { return scarf; }, get trail() { return trail; },
   get arcPath() { return arcPath; }, get lightning() { return lightning; }, get powers() { return powers; }, get fever() { return fever; }, get islandIdx() { return islandIdx; },
   get BOUNDS() { return BOUNDS; }, get END() { return END; }, get shake() { return shake; }, get QUALITY() { return QUALITY; }, get elapsed() { return elapsed; } };
-if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), pl = $("play"); if (w && pl) pl.after(w); window.NAGFX.mount("#pauseMenu"); }
+if (window.NAGFX) { window.NAGFX.mountRow("#menu"); window.NAGFX.mountRow("#pauseMenu"); }
 if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => m.attach(window.SBS)).then((api) => { window.SB3D = api; }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
 // test hook (add #debug to the address)
 if (/debug/.test(location.hash)) window.__SB = {

@@ -1216,7 +1216,7 @@ function frame(now) {
 // read-only view of the arena for the 3D renderer (js/hd.js)
 window.GLS = { WORLD, FG, FGN, fgrid, skinCol, cvs, get snakes() { return snakes; }, get me() { return me; }, get state() { return state; }, get t() { return t; } };
 if (window.NAGFX && window.NAGFX.is3D) import("./js/hd.js").then((m) => { window.GL3D = m.attach(window.GLS); }).catch((e) => { console.warn("3D mode unavailable:", e); window.NAGFX.fallback(String((e && e.message) || e)); });
-if (window.NAGFX) { const w = window.NAGFX.mount("#menu"), p = document.getElementById("play"); if (w && p) p.after(w); window.NAGFX.mount("#pauseMenu"); }
+if (window.NAGFX) { window.NAGFX.mountRow("#menu"); window.NAGFX.mountRow("#pauseMenu"); }
 requestAnimationFrame(frame);
 if (/debug/.test(location.hash)) window.__GL = {
   get state() { return state; }, get me() { return me; }, get snakes() { return snakes; }, get foods() { return foods; }, begin, toMenu, step, draw, hud, kill: (s, by) => killSnake(s, by), think,
