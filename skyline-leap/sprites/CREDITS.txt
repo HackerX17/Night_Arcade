@@ -1,3 +1,0 @@
-robot.png: sprite frames rendered from "RobotExpressive" by Tomás Laulhé (Quaternius, https://www.patreon.com/quaternius),
-modifications by Don McCurdy. Licence: CC0 1.0. Rendered with three.js (12 running frames from its Running animation, 4 from Jump),
-recoloured neon for Night Arcade.

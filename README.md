@@ -64,5 +64,5 @@ Best scores and settings are saved in each player's own browser.
 - [three.js](https://threejs.org/) r160 (MIT licence, `shared/na3d/LICENSE-three.txt`) renders the 3D versions and the 3D games.
 - Textures (asphalt, brick, concrete, metal, rock and shutters) are from [Poly Haven](https://polyhaven.com/) under CC0.
 - "CarConcept" by Eric Chadwick, Darmstadt Graphics Group, from the Khronos glTF Sample Assets, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), simplified and recompressed for the web; it is the base of the 3D cars in Redline Nights' 3D version. The Khronos and glTF logos are not used.
-- "RobotExpressive" by Tomas Laulhe (Quaternius), modifications by Don McCurdy, under CC0, from the three.js examples: the runner in Pulse Runner and the climber in Skyline Leap (in the Original as sprites rendered from the model).
+- "RobotExpressive" by Tomas Laulhe (Quaternius), modifications by Don McCurdy, under CC0, from the three.js examples: the runner in Pulse Runner.
 - Everything else (games, characters, cars, levels, art, music and sound) is original to Night Arcade.

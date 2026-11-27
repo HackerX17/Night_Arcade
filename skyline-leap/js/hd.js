@@ -1,5 +1,5 @@
 // Skyline Leap in 3D: the same climb between two real towers. Brick and concrete facades (Poly Haven, CC0) with lit
-// windows in each district's colours, neon trim and ledges, the CC0 robot running up the walls and leaping across,
+// windows in each district's colours, neon trim and ledges, a light that follows the ninja up the walls,
 // 3D coins, power-ups, hazards, drones and debris, the district's sky and a far skyline, bloom and a film grade.
 // The camera is fitted so the play plane lines up exactly with the 2D layer (sparks, pop-ups and the best line).
 // Loaded only when the graphics switch is on 3D.
@@ -66,25 +66,8 @@ export async function attach(S) {
   const trims = [X(WL), X(WR)].map((x) => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.08, HT, 0.08), trimMat); m.position.set(x, 0, 1.24); scene.add(m); return m; });
   const LEDGES = 40, ledges = new THREE.InstancedMesh(new THREE.BoxGeometry(14 * U, 3 * U, 2.2), new THREE.MeshStandardMaterial({ color: 0x2a2a3a, roughness: 0.5, metalness: 0.6, emissive: 0xffffff, emissiveIntensity: 0.12 }), LEDGES * 2);
   ledges.frustumCulled = false; scene.add(ledges);
-  // the robot (CC0 RobotExpressive), running up the walls and leaping across
-  const gl = await K.model("robot.gltf"); const bot = gl; let mixer = null; const acts = {};
-  { bot.updateMatrixWorld(true); let lo = Infinity, hi = -Infinity; bot.traverse((m) => { if (!m.isMesh) return; m.frustumCulled = false; if (m.isSkinnedMesh) { m.computeBoundingBox(); lo = Math.min(lo, m.boundingBox.min.y); hi = Math.max(hi, m.boundingBox.max.y); } });
-    const bb = new THREE.Box3().setFromObject(bot); if (!isFinite(lo)) { lo = bb.min.y; hi = bb.max.y; } bot.scale.setScalar((58 * U) / Math.max(0.01, (bb.max.y - bb.min.y))); }
-  bot.traverse((m) => { if (!m.isMesh) return; m.material = m.material.clone(); const n = m.material.name;
-    if (n === "Main") { m.material.color.set("#6a3dff"); m.material.metalness = 0.55; m.material.roughness = 0.3; m.material.emissive = new THREE.Color("#2a0a7a"); m.material.emissiveIntensity = 0.5; }
-    else if (n === "Grey") { m.material.color.set("#262a44"); m.material.metalness = 0.7; m.material.roughness = 0.35; }
-    else if (n === "Black") { m.material.color.set("#05040c"); m.material.emissive = new THREE.Color("#00e5ff"); m.material.emissiveIntensity = 1.4; } });
-  const rig = new THREE.Group(), pose = new THREE.Group(); rig.add(pose); pose.add(bot); scene.add(rig);
-  mixer = new THREE.AnimationMixer(bot); for (const clip of gl.userData.animations || []) acts[clip.name] = mixer.clipAction(clip);
-  for (const k of ["Jump", "Death"]) if (acts[k]) { acts[k].setLoop(THREE.LoopOnce, 1); acts[k].clampWhenFinished = true; }
-  let cur = null; const play = (n, fade = 0.15) => { const a = acts[n]; if (!a || cur === a) return; a.reset(); a.enabled = true; a.setEffectiveWeight(1); a.play(); if (cur) cur.crossFadeTo(a, fade, false); cur = a; };
-  play("Running", 0);
+  // the ninja is drawn by the game's own layer, exactly as in the Original; a pink light follows them and glows on the walls
   const botLight = new THREE.PointLight(0xff2bd6, 3, 3, 2); scene.add(botLight);
-  const rocketFlame = new THREE.Mesh(new THREE.ConeGeometry(0.16, 1.1, 14), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.6, 0.2).multiplyScalar(2.6), transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })); scene.add(rocketFlame);
-  const shieldMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uC: { value: new THREE.Color(0.62, 0.94, 0.65) } },
-    vertexShader: "varying vec3 vN, vV; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }",
-    fragmentShader: "uniform vec3 uC; varying vec3 vN, vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); gl_FragColor = vec4(uC * (0.06 + f * 1.4), 1.0); }" });
-  const shield = new THREE.Mesh(new THREE.SphereGeometry(40 * U, 28, 18), shieldMat); scene.add(shield);
   // coins (gold discs, or baubles at Christmas), power-ups, hazards, drones, debris
   const MAXC = 120, coinMat = new THREE.MeshPhysicalMaterial({ color: 0xffc83a, metalness: 1, roughness: 0.2, emissive: 0xffa000, emissiveIntensity: 0.55, clearcoat: 1 });
   const coinsM = new THREE.InstancedMesh(new THREE.CylinderGeometry(9 * U, 9 * U, 2.4 * U, 24), coinMat, MAXC); coinsM.frustumCulled = false; scene.add(coinsM);
@@ -110,9 +93,8 @@ export async function attach(S) {
   let W = 0, H = 0;
   const resize = (w, h) => { if (w === W && h === H) return; W = w; H = h; const dpr = Math.min(devicePixelRatio || 1, q === "high" ? 2 : 1.5);
     renderer.setPixelRatio(dpr); renderer.setSize(W, H, false); post.composer.setPixelRatio(dpr); post.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); };
-  const M = new THREE.Matrix4(), V = new THREE.Vector3(), Q = new THREE.Quaternion(), SC3 = new THREE.Vector3(), E = new THREE.Euler(), C = new THREE.Color(), up = new THREE.Vector3(), fwd = new THREE.Vector3(), rt = new THREE.Vector3(), B = new THREE.Matrix4();
+  const M = new THREE.Matrix4(), V = new THREE.Vector3(), Q = new THREE.Quaternion(), SC3 = new THREE.Vector3(), E = new THREE.Euler(), C = new THREE.Color();
   let last = performance.now();
-  const orient = (upV, fwdV) => { up.copy(upV).normalize(); fwd.copy(fwdV).normalize(); rt.crossVectors(up, fwd).normalize(); fwd.crossVectors(rt, up).normalize(); B.makeBasis(rt, up, fwd); pose.quaternion.setFromRotationMatrix(B); };
 
   return {
     ok: true,
@@ -160,23 +142,12 @@ export async function attach(S) {
       // debris
       let nd = 0; for (const b of S.debris) { if (nd >= 80 || !vis(b.y)) continue; const s = (b.s || b.size || 10) * U; E.set(b.rot || 0, (b.rot || 0) * 0.7, b.rot || 0); M.compose(V.set(X(b.x), Y(b.y), 0.3), Q.setFromEuler(E), SC3.set(s, s, s)); debM.setMatrixAt(nd++, M); }
       debM.count = nd; debM.instanceMatrix.needsUpdate = true;
-      // the robot
-      const p = S.p; let air = true;
-      if (p) {
-        const yy = Y(p.y), k = 1;
-        if (p.dead) { rig.position.set(X(p.deadX), yy, 0.3); orient(new THREE.Vector3(Math.sin(-p.spin), Math.cos(p.spin), 0), new THREE.Vector3(0, 0, 1)); play("Death", 0.1); }
-        else if (p.rocket > 0) { rig.position.set(X(LW / 2), yy, 0.3); orient(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)); play("Jump"); }
-        else if (p.jump) { const u = p.jump.t / p.jump.T, e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2; rig.position.set(X(p.jump.x0 + (p.jump.x1 - p.jump.x0) * e), yy, 0.3);
-          orient(new THREE.Vector3(Math.sin(-(p.spin || 0)), Math.cos(p.spin || 0), 0), new THREE.Vector3(p.jump.to ? 1 : -1, 0, 0.35)); play("Jump", 0.08); }
-        else { air = false; const side = p.side ? 1 : 0; rig.position.set(side ? X(WR) : X(WL), yy, 0.3); orient(new THREE.Vector3(side ? -1 : 1, 0, 0), new THREE.Vector3(0, 1, 0)); play("Running", 0.15); }
-        void k;
-        botLight.position.set(rig.position.x, rig.position.y + 0.4, 1.2);
-        rocketFlame.visible = p.rocket > 0 && !p.dead; if (rocketFlame.visible) { rocketFlame.position.set(X(LW / 2), yy - 0.9, 0.3); rocketFlame.rotation.z = Math.PI; rocketFlame.scale.y = 0.7 + Math.random() * 0.6; }
-        const sOn = !p.dead && (S.powers.shield > 0 || p.grace > 0); shield.visible = sOn; if (sOn) { shield.position.set(rig.position.x, yy, 0.3); shieldMat.uniforms.uC.value.set(p.grace > 0 ? "#ffffff" : "#9ef0a6"); }
-      }
-      rig.visible = !!p && S.state !== "menu";
-      if (mixer) { if (cur === acts.Running) cur.timeScale = 1.4; mixer.update(dt); }
-      void air;
+      // the player's light, where the game draws the ninja (on a wall, mid-leap, riding the rocket or falling)
+      const p = S.p;
+      if (p && S.state !== "menu") {
+        const x = p.dead ? X(p.deadX) : p.rocket > 0 ? X(LW / 2) : p.jump ? X(p.jump.x0 + (p.jump.x1 - p.jump.x0) * Math.min(1, p.jump.t / p.jump.T)) : p.side ? X(WR) : X(WL);
+        botLight.intensity = 3; botLight.position.set(x, Y(p.y) + 0.4, 1.2);
+      } else botLight.intensity = 0;
       post.render(dt);
     },
   };

@@ -32,5 +32,3 @@ Pick **Christmas** on the menu (the game remembers your choice). Same game, all 
 Single file, no dependencies: HTML5 canvas and Web Audio. Bloom and afterimages switch off automatically on slow devices.
 
 Your best height is marked on the towers with a dashed gold line; climb past it for a **New height record** (the line turns green).
-
-The hero is the arcade robot, **RobotExpressive** by Tomás Laulhé ([Quaternius](https://www.patreon.com/quaternius)), CC0 1.0, rendered from 3D into 16 sprite frames (`sprites/robot.png`: 12 running, 4 in the air) and lit neon.
