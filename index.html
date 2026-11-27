@@ -84,6 +84,14 @@ footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
 .music:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 .music.on { color: #0a0420; background: var(--cyan); }
 .bar span { color: var(--dim); font-size: 14px; }
+/* Graphics for every game: the Original or the 3D version */
+.bar.gfx { margin-top: -18px; }
+.gfx-hub { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(10,4,40,.7); border: 1px solid rgba(255,255,255,.22); }
+.gfx-hub button { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: #cfc7ef; cursor: pointer; min-height: 38px; min-width: 52px; padding: 8px 16px;
+  border-radius: 999px; font: 800 13px var(--body); letter-spacing: .12em; text-transform: uppercase; touch-action: manipulation; }
+.gfx-hub button[aria-pressed="true"] { color: #fff; background: linear-gradient(90deg, #ff2bd6, #8a2bff 55%, #00e5ff); }
+.gfx-hub button[data-gfx="orig"][aria-pressed="true"] { color: #1a1030; background: #f3f0ff; }
+.gfx-hub button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -94,6 +102,10 @@ footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
   <div class="bar">
     <button class="music" id="musicBtn" type="button" data-am-open><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v10.6A4 4 0 1 0 11 17V7h8V3z"/></svg>Music &amp; sound</button>
     <span>Play your own songs while you game. They stay on your device.</span>
+  </div>
+  <div class="bar gfx">
+    <span class="gfx-hub" role="group" aria-label="Graphics for every game"><button type="button" data-gfx="orig" aria-pressed="true">Original</button><button type="button" data-gfx="3d" aria-pressed="false">3D</button></span>
+    <span id="gfxNote">Every game comes in two looks: the Original and a new 3D version. Pick one for all of them here, or switch on any game’s title screen.</span>
   </div>
   <h2 class="section" id="games">New</h2>
   <div class="grid">
@@ -196,6 +208,25 @@ footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
 </main>
 <script>
 addEventListener("arcademusic", (e) => { const b = document.getElementById("musicBtn"); if (b) b.classList.toggle("on", !!(e.detail && e.detail.playing)); });
+// Graphics for every game: sets the shared choice and clears each game's own, so every game opens in that look
+// (a game's own switch on its title screen still changes just that game afterwards)
+(() => {
+  const IDS = ["redline", "iron", "pulse", "void", "siege", "viper", "glow", "prism", "nova", "chopper", "skyline", "sandblade", "legion"];
+  const get = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const btns = [...document.querySelectorAll(".gfx-hub button")], note = document.getElementById("gfxNote");
+  const show = () => {
+    const all = get("na.gfx") === "3d" ? "3d" : "orig", own = IDS.map((id) => get("na.gfx." + id)).filter(Boolean);
+    btns.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.gfx === all)));
+    const mixed = own.some((m) => m !== all);
+    note.textContent = mixed ? `Every game comes in two looks: the Original and a new 3D version. Some games are set on their own title screen; pick one here to set them all.`
+      : `Every game comes in two looks: the Original and a new 3D version. Pick one for all of them here, or switch on any game’s title screen.`;
+  };
+  btns.forEach((b) => b.addEventListener("click", () => {
+    try { localStorage.setItem("na.gfx", b.dataset.gfx); IDS.forEach((id) => localStorage.removeItem("na.gfx." + id)); } catch (e) {}
+    show(); note.textContent = b.dataset.gfx === "3d" ? "Every game now opens in 3D. Each one can still switch back on its title screen." : "Every game now opens in the Original look. Each one can still switch to 3D on its title screen.";
+  }));
+  show();
+})();
 </script>
 <!-- arcade-music:start · generated from shared/arcade-music.html by tools/sync-music.py; edit that file, then run the script -->
 <style>

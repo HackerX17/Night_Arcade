@@ -103,6 +103,17 @@ Every game has the same skeleton, so players never hunt for a button:
 5. **Storage**: `localStorage` under a game prefix (`prism-`, `void-`, `nova-`, `glow-`, `pulse-`, `redline-`…), every read and write wrapped in `try/catch` so a blocked store never breaks the game.
 6. **Testing**: add `#debug` to the address for a test hook (`window.__XX`) with `sim()` and `draw()`; Playwright bots in the audit scripts play whole games, check the numbers and take screenshots.
 
+## 3D versions
+
+Every game has an Original and a 3D version that play identically. Keep the Original untouched when you work on the 3D version, and the other way round.
+
+- **The switch**: `shared/gfx.js`, loaded first in each page with `data-game="<id>"`. It reads `?gfx=3d|orig`, then the game's own choice (`na.gfx.<id>`), then the hub's choice for every game (`na.gfx`), defaulting to the Original. `NAGFX.mountRow(menu)` puts the **Original | 3D** switch on the same row as the menu's Music & sound button, so menus keep their height on phones (check 844 × 390 and 390 × 844); `NAGFX.mount(el)` adds it anywhere else. Switching reloads the page into its menu. If WebGL 2 is missing, call `NAGFX.fallback(why)`: the player sees a short note and gets the Original.
+- **The kit**: `shared/na3d/kit.js` (three.js r160 through an import map, plus the addons in `shared/na3d/addons/`). It provides the night-city environment light, Poly Haven textures (`pbr`, `tex`), a real planar reflection any material can sample (`mirror`, `WET_GLSL`, `wetStandard`), rain, neon signs, light beams, glow sprites, soft puffs, contact shadows, and the post chain (bloom, tone mapping, then the grade: vignette, violet shadows, grain, flash, speed blur).
+- **A 2D game's 3D version** lives in `<game>/js/hd.js`, loaded with a dynamic `import()` only in 3D mode. The game exposes a read-only bridge (`window.XXS`, getters only) and its draw function hands the frame to `XX3D.render()`. The 3D canvas sits under the game's canvas, which keeps the HUD, numbers, pop-ups and screen effects. Fit the 3D camera to the 2D layout (the same mapping or the same projection) so everything on the 2D layer lands on its 3D object.
+- **Materials**: neon is emissive with colours above 1.0 so bloom catches it; keep large surfaces below the bloom threshold so they don't wash out. Use sine-free hashes for procedural noise on big world coordinates. A material without normals that is lit renders black (NaN): give every lit mesh normals.
+- **Performance**: desktops get the high tier, touch devices the medium one (smaller reflections, lower pixel ratio). Keep the number of lights fixed (switch a light off with intensity 0, never by hiding it, or every material recompiles). When frames stay slow, drop the reflections and the pixel ratio.
+- **Testing**: capture the menu and gameplay in both looks at the three viewports, and play with the console open: no errors, no NaN-black pixels, numbers on the right objects.
+
 ## Copy
 
 - Plain words, sentence case for sentences, uppercase only for short labels and banners.

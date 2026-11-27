@@ -20,6 +20,15 @@ Thirteen original neon browser games. They run on phones and computers with noth
 | Chopper Cave | Hold-to-climb cave flyer through a neon tunnel that changes colour every 250 m. Shield, Wide Cave and Slow-Mo power-ups, and portals to Hyperspace, a synthwave bonus world. | [`chopper-cave/`](chopper-cave/) |
 | Iron Sector | First-person wave-survival shooter with an armory, attachments and air support. Neon night city by default; Settings → Style → Classic brings back the original look. | [`iron-sector/`](iron-sector/) |
 
+## Original and 3D
+
+Every game comes in two looks: the **Original** and a **3D** version. The games play exactly the same in both; only the graphics change. Switch between them on any game's title screen or pause menu (the **Original | 3D** switch next to Music & sound), or set every game at once with the switch on the home page. Each game remembers its own choice, and a link can pick one with `?gfx=3d` or `?gfx=orig`. Switching reloads the game into its menu.
+
+- The 3D versions use real-time WebGL 2 graphics: real geometry and lighting, reflections in wet streets, glass and water, bloom and a film grade, built on the shared kit in [`shared/na3d/`](shared/na3d/) (three.js r160).
+- Phones get a lighter 3D setting, and if a game's frame rate drops it turns off the costliest effects (reflections first) on its own.
+- If a device can't run WebGL 2, the game says so and plays the Original instead.
+- The 3D camera is fitted to each game's own layout, so the HUD, the numbers and the pop-ups are where they are in the Original.
+
 ## Music & sound
 
 Every game, and the home page, has a **Music & sound** button. Pick the music you want:
@@ -38,7 +47,7 @@ Plug in or pair a game controller and every game plays with it, menus included: 
 
 ## Running locally
 
-From this folder, run `python3 -m http.server 8000` and open http://localhost:8000/. Most games also work when opened directly as a file. Iron Sector, Redline Nights, Pulse Runner and Void Eater need the local server because they load JavaScript modules.
+From this folder, run `python3 -m http.server 8000` and open http://localhost:8000/. The 3D versions load JavaScript modules, so they need the local server, as do Iron Sector, Redline Nights, Pulse Runner and Void Eater in either look. The Originals of the other games also work when opened directly as a file.
 
 ## Design
 
@@ -49,3 +58,11 @@ From this folder, run `python3 -m http.server 8000` and open http://localhost:80
 GitHub Pages serves the `main` branch from the repository root. The empty `.nojekyll` file tells Pages to publish the files as they are, without running them through Jekyll.
 
 Best scores and settings are saved in each player's own browser.
+
+## Credits
+
+- [three.js](https://threejs.org/) r160 (MIT licence, `shared/na3d/LICENSE-three.txt`) renders the 3D versions and the 3D games.
+- Textures (asphalt, brick, concrete, metal, rock and shutters) are from [Poly Haven](https://polyhaven.com/) under CC0.
+- "CarConcept" by Eric Chadwick, Darmstadt Graphics Group, from the Khronos glTF Sample Assets, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), simplified and recompressed for the web; it is the base of the 3D cars in Redline Nights' 3D version. The Khronos and glTF logos are not used.
+- "RobotExpressive" by Tomas Laulhe (Quaternius), modifications by Don McCurdy, under CC0, from the three.js examples: the runner in Pulse Runner and the climber in Skyline Leap (in the Original as sprites rendered from the model).
+- Everything else (games, characters, cars, levels, art, music and sound) is original to Night Arcade.
