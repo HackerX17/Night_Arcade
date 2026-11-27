@@ -947,15 +947,16 @@ addEventListener("keydown", (e) => {
   if (e.code === "ArrowUp" || e.code === "KeyW" || e.code === "Space") act("up"); if (e.code === "ArrowDown" || e.code === "KeyS") act("down");
   if ((e.code === "Escape" || e.code === "KeyP") && state === "play") setPaused(!paused);
 });
+// Swipes start on the game itself: the 3D view (which covers the 2D canvas) or the 2D canvas, never on a button or a menu
 let sw = null;
-cvs.addEventListener("pointerdown", (e) => { initAudio(); sw = { x: e.clientX, y: e.clientY, t: performance.now(), done: false }; });
-cvs.addEventListener("pointermove", (e) => {
-  if (!sw || sw.done) return;
+addEventListener("pointerdown", (e) => { if (!(e.target instanceof HTMLCanvasElement)) return; initAudio(); sw = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), done: false }; });
+addEventListener("pointermove", (e) => {
+  if (!sw || sw.done || e.pointerId !== sw.id) return;
   const dx = e.clientX - sw.x, dy = e.clientY - sw.y, m = Math.max(Math.abs(dx), Math.abs(dy));
   if (m > 26) { sw.done = true; if (Math.abs(dx) > Math.abs(dy)) act(dx > 0 ? "right" : "left"); else act(dy > 0 ? "down" : "up"); }
 });
-cvs.addEventListener("pointerup", (e) => { if (sw && !sw.done && performance.now() - sw.t < 260) { /* a tap: jump */ act("up"); } sw = null; });
-cvs.addEventListener("pointercancel", () => { sw = null; });
+addEventListener("pointerup", (e) => { if (sw && e.pointerId === sw.id && !sw.done && performance.now() - sw.t < 260) { /* a tap: jump */ act("up"); } if (sw && e.pointerId === sw.id) sw = null; });
+addEventListener("pointercancel", () => { sw = null; });
 
 // ---------- drawing ----------
 let camX = 0, camY = 2.4;
