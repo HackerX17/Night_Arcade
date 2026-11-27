@@ -29,7 +29,7 @@ export function attach(S) {
         vec3 Vw = normalize(cameraPosition - vW); float fres = pow(1.0 - clamp(Vw.y, 0.0, 1.0), 2.0);
         float puddle = naPuddle(p * 2.0, 0.55);
         vec3 refl = naReflect(vW, (vec2(naNoise(p * 9.0 + uT), naNoise(p * 9.3 - uT)) - 0.5) * 0.006, mix(1.6, 0.0, puddle));
-        col += refl * (0.18 + 0.32 * puddle) * (0.5 + 0.5 * fres);
+        col += refl * (0.1 + 0.22 * puddle) * (0.5 + 0.5 * fres);
         if (d > uR) col = mix(col, vec3(0.16, 0.0, 0.08), 0.7);
         float f = 1.0 - exp(-uFogD * uFogD * dot(vW - cameraPosition, vW - cameraPosition)); gl_FragColor = vec4(mix(col, uFogC, f), 1.0); }` });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(R * 2 + 80, R * 2 + 80), floorMat); floor.rotation.x = -Math.PI / 2; scene.add(floor);
@@ -42,13 +42,17 @@ export function attach(S) {
     fragmentShader: "varying float vY; void main(){ gl_FragColor = vec4(vec3(1.0, 0.18, 0.3) * 0.5 * pow(1.0 - clamp(vY / 0.9, 0.0, 1.0), 2.0), 1.0); }" }));
   wallGlow.position.y = 0.45; scene.add(wallGlow);
 
-  // light to eat: glowing points, plus a small bright core
+  // light to eat: the Original's dot (a solid centre, a quick falloff, a soft rim of glow), composited normally so that
+  // thousands of dots stay separate instead of adding up into a haze; the hot centre is bright enough for the bloom
   const MAXF = 4000, fPos = new Float32Array(MAXF * 3), fCol = new Float32Array(MAXF * 3), fSize = new Float32Array(MAXF), fGeo = new THREE.BufferGeometry();
   fGeo.setAttribute("position", new THREE.BufferAttribute(fPos, 3)); fGeo.setAttribute("color", new THREE.BufferAttribute(fCol, 3)); fGeo.setAttribute("size", new THREE.BufferAttribute(fSize, 1));
-  const fMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uTex: { value: K.softTexture() }, uScale: { value: 400 } },
-    vertexShader: "attribute float size; attribute vec3 color; varying vec3 vC; uniform float uScale; void main(){ vC = color; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = size * uScale / -mv.z; gl_Position = projectionMatrix * mv; }",
-    fragmentShader: "uniform sampler2D uTex; varying vec3 vC; void main(){ float a = texture2D(uTex, gl_PointCoord).a; vec2 c = gl_PointCoord - 0.5; float core = smoothstep(0.12, 0.0, length(c)); gl_FragColor = vec4(vC * (a * 0.32 + core * 1.6), 1.0); }" });
-  const foodPts = new THREE.Points(fGeo, fMat); foodPts.frustumCulled = false; scene.add(foodPts);
+  const fMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.NormalBlending, uniforms: { uScale: { value: 400 } },
+    vertexShader: "attribute float size; attribute vec3 color; varying vec3 vC; uniform float uScale; void main(){ vC = color; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = max(3.0, size * uScale / -mv.z); gl_Position = projectionMatrix * mv; }",
+    fragmentShader: `varying vec3 vC; void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; if (d > 1.0) discard;
+      float a = d < 0.18 ? mix(1.0, 0.92, d / 0.18) : d < 0.42 ? mix(0.92, 0.3, (d - 0.18) / 0.24) : 0.3 * pow(1.0 - (d - 0.42) / 0.58, 2.0);
+      float core = 1.0 - smoothstep(0.08, 0.24, d);
+      gl_FragColor = vec4(vC * (1.0 + 1.1 * core) + vec3(0.22) * core * core, a); }` });
+  const foodPts = new THREE.Points(fGeo, fMat); foodPts.frustumCulled = false; scene.add(foodPts); mir.hide.push(foodPts);   // the floor reflects the snakes, not the dots (blurred dot reflections read as haze)
 
   // snakes: glossy beads, eyes with pupils
   const MAXB = q === "low" ? 5000 : 9000;
@@ -59,7 +63,7 @@ export function attach(S) {
   eyesW.count = eyesP.count = 0; eyesW.frustumCulled = eyesP.frustumCulled = false; scene.add(eyesW, eyesP);
   const headLight = new THREE.PointLight(0xffffff, 0, 6, 2); scene.add(headLight);
 
-  const post = K.post(renderer, scene, camera, { bloom: [0.5, 0.4, 0.95], vignette: 0.7, grain: 0.018 });
+  const post = K.post(renderer, scene, camera, { bloom: [0.65, 0.18, 0.9], vignette: 0.7, grain: 0.012 });   // a tight bloom: crisp glows, no fog
   let W = 0, H = 0;
   const resize = (w, h) => { if (w === W && h === H) return; W = w; H = h; const dpr = Math.min(devicePixelRatio || 1, q === "high" ? 2 : 1.5);
     renderer.setPixelRatio(dpr); renderer.setSize(W, H, false); post.composer.setPixelRatio(dpr); post.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); };
@@ -77,7 +81,7 @@ export function attach(S) {
       const cx = v.camX * U, cz = v.camY * U;
       camera.position.set(cx, Math.cos(TILT) * d, cz + Math.sin(TILT) * d); camera.lookAt(cx, 0, cz);
       const fogD = 0.5 / Math.max(6, d); scene.fog.density = fogD; floorMat.uniforms.uFogD.value = fogD;
-      fMat.uniforms.uScale.value = H * 0.5 / Math.tan(fov / 2);
+      fMat.uniforms.uScale.value = H * renderer.getPixelRatio() * 0.5 / Math.tan(fov / 2);   // gl_PointSize counts device pixels
       key.position.set(cx - 10, 30, cz + 10); key.target.position.set(cx, 0, cz);
       // food in view
       const pad = 200, x0 = v.x0 - pad, x1 = v.x1 + pad, y0 = v.y0 - pad, y1 = v.y1 + pad, FG = S.FG, FGN = S.FGN, grid = S.fgrid;
@@ -85,7 +89,7 @@ export function attach(S) {
       let nf = 0;
       for (let r = r0; r <= r1 && nf < MAXF; r++) for (let c = c0; c <= c1 && nf < MAXF; c++) for (const f of grid[r * FGN + c]) { if (nf >= MAXF) break;
         const pulse = 1 + 0.14 * Math.sin(t * 3 + (f.ph || 0)); fPos[nf * 3] = f.x * U; fPos[nf * 3 + 1] = f.r * U * 1.2; fPos[nf * 3 + 2] = f.y * U;
-        C.set(f.col); fCol[nf * 3] = C.r; fCol[nf * 3 + 1] = C.g; fCol[nf * 3 + 2] = C.b; fSize[nf] = f.r * U * 3.6 * pulse; nf++; }
+        C.set(f.col); fCol[nf * 3] = C.r; fCol[nf * 3 + 1] = C.g; fCol[nf * 3 + 2] = C.b; fSize[nf] = f.r * U * 5.2 * pulse; nf++; }
       fGeo.setDrawRange(0, nf); fGeo.attributes.position.needsUpdate = fGeo.attributes.color.needsUpdate = fGeo.attributes.size.needsUpdate = true;
       // snakes in view, smallest first
       let nb = 0, ne = 0; const me = S.me;
