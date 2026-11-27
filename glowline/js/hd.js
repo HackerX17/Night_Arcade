@@ -56,25 +56,55 @@ export function attach(S) {
 
   // snakes: glossy beads, eyes with pupils
   const MAXB = q === "low" ? 5000 : 9000;
-  const beads = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 18, 12), new THREE.MeshPhysicalMaterial({ roughness: 0.2, metalness: 0.08, clearcoat: 1, clearcoatRoughness: 0.05 }), MAXB);
+  const beads = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 9), new THREE.MeshStandardMaterial({ roughness: 0.2, metalness: 0.1, envMapIntensity: 1.3 }), MAXB);
   beads.count = 0; beads.frustumCulled = false; scene.add(beads);
-  const eyesW = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 10), new THREE.MeshStandardMaterial({ color: 0xf4f4ff, roughness: 0.3 }), 120);
-  const eyesP = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshBasicMaterial({ color: 0x05030a }), 120);
+  const eyesW = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshStandardMaterial({ color: 0xf4f4ff, roughness: 0.3 }), 120);
+  const eyesP = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: 0x05030a }), 120);
   eyesW.count = eyesP.count = 0; eyesW.frustumCulled = eyesP.frustumCulled = false; scene.add(eyesW, eyesP);
   const headLight = new THREE.PointLight(0xffffff, 0, 6, 2); scene.add(headLight);
 
   const post = K.post(renderer, scene, camera, { bloom: [0.65, 0.18, 0.9], vignette: 0.7, grain: 0.012 });   // a tight bloom: crisp glows, no fog
-  let W = 0, H = 0;
-  const resize = (w, h) => { if (w === W && h === H) return; W = w; H = h; const dpr = Math.min(devicePixelRatio || 1, q === "high" ? 2 : 1.5);
+  let W = 0, H = 0, dprCap = q === "high" ? 1.75 : 1.5;
+  const resize = (w, h, force) => { if (w === W && h === H && !force) return; W = w; H = h; const dpr = Math.min(devicePixelRatio || 1, dprCap);
     renderer.setPixelRatio(dpr); renderer.setSize(W, H, false); post.composer.setPixelRatio(dpr); post.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); };
   const M = new THREE.Matrix4(), V = new THREE.Vector3(), Q = new THREE.Quaternion(), SC = new THREE.Vector3(), C = new THREE.Color(), V2 = new THREE.Vector3();
   const TILT = THREE.MathUtils.degToRad(18);
+  // frame guard: if frames keep running long, give up the costliest effects one at a time (reflections, then resolution,
+  // then bloom), so the snakes always move as smoothly as in the Original
+  let lastNow = 0, warm = 0, slow = 0, level = 0;
+  const guard = (v) => {
+    const now = performance.now(), dt = lastNow ? (now - lastNow) / 1000 : 0; lastNow = now;
+    if (dt <= 0 || dt > 0.25) return;   // the first frame, or a tab that was hidden
+    warm += dt; if (warm < 2.5) return;   // shaders compile in the first seconds
+    slow = dt > 0.021 ? slow + dt : Math.max(0, slow - dt * 0.5);
+    if (slow < 1.2 || level >= 3) return;
+    slow = 0; level++;
+    if (level === 1) mir.on = false;
+    else if (level === 2) { dprCap = 1; resize(v.W, v.H, true); }
+    else post.bloom.enabled = false;
+  };
+  // beads at an even spacing measured from the head, placed between the body's points, so they glide with the body
+  const placeBeads = (s, x0, x1, y0, y1, t, nb) => {
+    const p = s.pts, n = p.length, r = s.r, sp = Math.max(r * 0.62, s.gap);
+    let total = 0; for (let i = 1; i < n; i++) total += Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y);
+    let seg = 1, segStart = 0, segLen = n > 1 ? Math.hypot(p[1].x - p[0].x, p[1].y - p[0].y) : 0;
+    for (let k = 0, D = 0; nb < MAXB; k++, D = k * sp) {
+      if (D > total + 1e-6) break;
+      while (seg < n - 1 && segStart + segLen < D) { segStart += segLen; seg++; segLen = Math.hypot(p[seg].x - p[seg - 1].x, p[seg].y - p[seg - 1].y); }
+      const a = p[seg - 1] || p[0], b = p[seg] || p[0], f = segLen > 1e-6 ? Math.min(1, (D - segStart) / segLen) : 0;
+      const x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f; if (x < x0 - r || x > x1 + r || y < y0 - r || y > y1 + r) continue;
+      const u = total > 0 ? D / total : 0, rr = (k === 0 ? r * 1.1 : u > 0.7 ? r * (1 - ((u - 0.7) / 0.3) * 0.38) : r) * U;
+      M.compose(V.set(x * U, rr, y * U), Q.identity(), SC.set(rr, rr * 0.92, rr)); beads.setMatrixAt(nb, M);
+      C.setStyle(S.skinCol(s.skin, Math.min(n - 1, Math.round(u * (n - 1))), n, t)); if (k % 3 === 1) C.multiplyScalar(0.8); beads.setColorAt(nb, C); nb++;
+    }
+    return nb;
+  };
 
   return {
     ok: true,
     project(x, y, h = 0) { V.set(x * U, h, y * U).project(camera); return [(V.x + 1) / 2 * W, (1 - V.y) / 2 * H]; },
     render(v) {
-      resize(v.W, v.H);
+      guard(v); resize(v.W, v.H);
       const t = S.t; floorMat.uniforms.uT.value = t;
       // camera: the same view the 2D game shows, from a little behind
       const span = (v.H / v.zoom) * U, fov = THREE.MathUtils.degToRad(camera.fov), d = span / (2 * Math.tan(fov / 2));
@@ -97,14 +127,7 @@ export function attach(S) {
       for (const s of order) {
         const p = s.pts, n = p.length, r = s.r; if (!n) continue;
         let vis = false; for (let i = 0; i < n; i += 6) { const qq = p[i]; if (qq.x > x0 - r && qq.x < x1 + r && qq.y > y0 - r && qq.y < y1 + r) { vis = true; break; } } if (!vis) continue;
-        const step = Math.max(1, Math.round((r * 0.5) / Math.max(1e-3, s.gap)));
-        for (let i = n - 1; i >= 0 && nb < MAXB; i -= (i > step ? step : 1)) {
-          const pt = p[i]; if (pt.x < x0 - r || pt.x > x1 + r || pt.y < y0 - r || pt.y > y1 + r) continue;
-          const u = i / n, rr = (i === 0 ? r * 1.1 : u > 0.7 ? r * (1 - ((u - 0.7) / 0.3) * 0.38) : r) * U;
-          M.compose(V.set(pt.x * U, rr, pt.y * U), Q.identity(), SC.set(rr, rr * 0.92, rr)); beads.setMatrixAt(nb, M);
-          C.setStyle(S.skinCol(s.skin, i, n, t)); if ((i / step) % 3 < 1) C.multiplyScalar(0.8); beads.setColorAt(nb, C); nb++;
-          if (i === 0) break;
-        }
+        nb = placeBeads(s, x0, x1, y0, y1, t, nb);
         // eyes looking where it's heading
         if (ne < 118) { const ca = Math.cos(s.a), sa = Math.sin(s.a), look = s.ta, er = r * 0.34 * U, ru = r * U;
           for (const side of [-1, 1]) { const ex = s.x * U + ca * ru * 0.36 - sa * side * ru * 0.46, ez = s.y * U + sa * ru * 0.36 + ca * side * ru * 0.46;

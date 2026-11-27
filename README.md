@@ -4,6 +4,8 @@ Thirteen original neon browser games. They run on phones and computers with noth
 
 **Play:** https://hackerx17.github.io/Night_Arcade/
 
+**Watch:** the 45-second commercial is on the home page ([`media/night-arcade-commercial.mp4`](media/night-arcade-commercial.mp4), with captions).
+
 | Game | What it is | Folder |
 | --- | --- | --- |
 | Redline Nights | Street racer in 3D: free-roam a neon city at night, win sprints, circuits, drift battles and speed traps, run from the police (heat, roadblocks, spike strips, a helicopter) and beat the Redline Ten for their cars. Tilt, touch, keyboard or gamepad. | [`redline-nights/`](redline-nights/) |
@@ -65,4 +67,5 @@ Best scores and settings are saved in each player's own browser.
 - Textures (asphalt, brick, concrete, metal, rock and shutters) are from [Poly Haven](https://polyhaven.com/) under CC0.
 - "CarConcept" by Eric Chadwick, Darmstadt Graphics Group, from the Khronos glTF Sample Assets, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), simplified and recompressed for the web; it is the base of the 3D cars in Redline Nights' 3D version. The Khronos and glTF logos are not used.
 - "RobotExpressive" by Tomas Laulhe (Quaternius), modifications by Don McCurdy, under CC0, from the three.js examples: the runner in Pulse Runner.
+- The commercial: every shot is footage captured from the games. The narration is an original voice made with Qwen3-TTS (Apache 2.0), and the score is an original track generated with ACE-Step 1.5 (MIT), cut to picture with synthesized sound design.
 - Everything else (games, characters, cars, levels, art, music and sound) is original to Night Arcade.

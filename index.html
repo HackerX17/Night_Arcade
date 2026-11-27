@@ -75,6 +75,19 @@ h1 { animation: neon-on 1.4s ease-out 1 both; }
 @keyframes neon-on { 0% { opacity: .15; text-shadow: none; } 12% { opacity: .9; } 16% { opacity: .3; } 24% { opacity: 1; } 30% { opacity: .55; } 40%, 100% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { h1 { animation: none; } .card, .card .shot, .play { transition: none; } .card:hover, .card:focus-within, .card:hover .shot { transform: none; } }
 footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
+/* the commercial: a framed 16:9 player under the controls, loaded only when someone presses play */
+.spot { margin: 0; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(0,0,0,.45), 0 0 40px rgba(255,43,214,.12); }
+.spot video { display: block; width: 100%; max-width: 100%; height: auto; aspect-ratio: 16 / 9; background: #000; }
+.spot figcaption { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 12px 16px 14px; background: var(--card); border-top: 1px solid var(--line); color: var(--dim); font-size: 14px; }
+.spot figcaption b { font: 400 16px var(--display); color: var(--ink); }
+.spot-frame { position: relative; }
+.spot-play { position: absolute; inset: 0; margin: auto; width: max-content; height: max-content; display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding: 12px 24px 12px 12px;
+  border-radius: 999px; border: 1px solid rgba(255,255,255,.32); background: rgba(10,4,32,.72); color: #fff; cursor: pointer; font: 700 15px var(--body); letter-spacing: .14em; text-transform: uppercase;
+  box-shadow: 0 0 30px rgba(255,43,214,.45), inset 0 0 0 1px rgba(0,240,255,.22); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); touch-action: manipulation; }
+.spot-play svg { width: 40px; height: 40px; padding: 10px 9px 10px 11px; border-radius: 50%; fill: #0a0420; background: linear-gradient(135deg, var(--cyan), var(--magenta)); flex: none; }
+.spot-play:hover { background: rgba(22,8,60,.84); box-shadow: 0 0 40px rgba(255,43,214,.6), inset 0 0 0 1px rgba(0,240,255,.35); }
+.spot-play:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+@media (max-width: 520px) { .spot-play { font-size: 13px; padding: 8px 18px 8px 8px; gap: 10px; } .spot-play svg { width: 34px; height: 34px; padding: 8px 7px 8px 9px; } }
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: -14px 0 30px; }
 .music { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 18px 9px 14px; border-radius: 999px; cursor: pointer;
   font: 700 14px var(--body); letter-spacing: .12em; text-transform: uppercase; color: #b9fbff;
@@ -107,6 +120,25 @@ footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
     <span class="gfx-hub" role="group" aria-label="Graphics for every game"><button type="button" data-gfx="orig" aria-pressed="true">Original</button><button type="button" data-gfx="3d" aria-pressed="false">3D</button></span>
     <span id="gfxNote">Every game comes in two looks: the Original and a new 3D version. Pick one for all of them here, or switch on any game’s title screen.</span>
   </div>
+  <h2 class="section" id="spot">Watch</h2>
+  <figure class="spot">
+    <div class="spot-frame">
+      <video id="spotVideo" controls playsinline preload="none" poster="media/night-arcade-commercial-poster.jpg" aria-label="Night Arcade commercial, 45 seconds">
+        <source src="media/night-arcade-commercial.mp4" type="video/mp4">
+        <track kind="captions" src="media/night-arcade-commercial.vtt" srclang="en" label="English">
+      </video>
+      <button class="spot-play" id="spotPlay" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Watch · 0:45</button>
+    </div>
+    <script>
+      // a clean poster with one big play button; the player's own controls appear once it's running
+      (() => { const v = document.getElementById("spotVideo"), b = document.getElementById("spotPlay"); if (!v || !b) return;
+        v.controls = false; b.hidden = false; b.setAttribute("aria-label", "Play the Night Arcade commercial, 45 seconds, with sound");
+        const go = () => { b.hidden = true; v.controls = true; };
+        b.addEventListener("click", () => { go(); const p = v.play(); if (p && p.catch) p.catch(() => {}); });
+        v.addEventListener("play", go); })();
+    </script>
+    <figcaption><b>Play the night</b><span>The 45-second spot: all 13 games, the Original and 3D switch, phone, laptop and controller.</span></figcaption>
+  </figure>
   <h2 class="section" id="games">New</h2>
   <div class="grid">
     <article class="card feature" style="--accent:#ff2e4d">
