@@ -4,6 +4,7 @@
 // the game keeps its 2D drawing.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { loadPackedGLTF } from "../../shared/na3d/gltfpack.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
@@ -121,7 +122,8 @@ scene.add(flames);
 let robot = null, mixer = null, acts = {}, curAct = null, heroH = 1.5;
 const fallback = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.7, 6, 12), new THREE.MeshStandardMaterial({ color: 0x2b0f5c, emissive: 0xff2bd6, emissiveIntensity: 0.6 }));
 fallback.position.y = 0.65; hero.add(fallback);
-new GLTFLoader().load(new URL("../models/runner.json", import.meta.url).href, (gltf) => {
+// the robot's data is inside runner.json; it is unpacked in memory so strict pages (an artifact) can load it too
+loadPackedGLTF(new URL("../models/runner.json", import.meta.url).href, GLTFLoader).then((gltf) => {
   robot = gltf.scene; robot.traverse((o) => { if (!o.isMesh) return; o.frustumCulled = false;
     const n = o.material && o.material.name; const m = o.material = o.material.clone();
     if (n === "Main") { m.color.set("#5b16d6"); m.metalness = 0.55; m.roughness = 0.28; m.emissive = new THREE.Color("#3a0a8a"); m.emissiveIntensity = 0.55; }
@@ -136,7 +138,7 @@ new GLTFLoader().load(new URL("../models/runner.json", import.meta.url).href, (g
   for (const clip of gltf.animations) acts[clip.name] = mixer.clipAction(clip);
   for (const k of ["Jump", "Death"]) if (acts[k]) { acts[k].setLoop(THREE.LoopOnce, 1); acts[k].clampWhenFinished = true; }
   play("Running", 0);
-}, undefined, () => { /* keep the capsule if the model can't load */ });
+}, (e) => { console.warn("runner model:", e); /* keep the capsule if the model can't load */ });
 function play(name, fade = 0.15, from = 0) { const a = acts[name]; if (!a || curAct === a) return; a.reset(); a.time = from; a.enabled = true; a.setEffectiveWeight(1); a.play(); if (curAct) curAct.crossFadeTo(a, fade, false); curAct = a; }
 
 // ---------- things on the highway ----------

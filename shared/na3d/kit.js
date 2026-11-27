@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { RGBELoader } from './addons/loaders/RGBELoader.js';
 import { GLTFLoader } from './addons/loaders/GLTFLoader.js';
+import { loadPackedGLTF } from './gltfpack.js';
 import { Reflector } from './addons/objects/Reflector.js';
 import { EffectComposer } from './addons/postprocessing/EffectComposer.js';
 import { RenderPass } from './addons/postprocessing/RenderPass.js';
@@ -92,9 +93,9 @@ export function cityEnv(renderer, { sky = [0.02, 0.01, 0.06], horizon = [0.5, 0.
 }
 
 // ---------- models ----------
-const gltfLoader = new GLTFLoader(), gltfCache = new Map();
+const gltfCache = new Map();
 export async function model(file, { shadows = false } = {}) {
-  if (!gltfCache.has(file)) gltfCache.set(file, gltfLoader.loadAsync(file.startsWith('http') || file.startsWith('.') || file.startsWith('/') ? file : `${ASSETS}models/${file}`));
+  if (!gltfCache.has(file)) gltfCache.set(file, loadPackedGLTF(file.startsWith('http') || file.startsWith('.') || file.startsWith('/') ? file : `${ASSETS}models/${file}`, GLTFLoader));   // models with their data inside load without data: requests
   const g = await gltfCache.get(file); const o = g.scene.clone(true);
   o.traverse((m) => { if (m.isMesh) { m.castShadow = shadows; m.receiveShadow = shadows; } });
   o.userData.animations = g.animations; return o;
