@@ -82,7 +82,7 @@ Every page includes the shared player (`shared/arcade-music.html`, copied in by 
 | Grid Viper | electro |
 | Pulse Runner | outrun |
 
-Sound effects check `ArcadeSound.sfx` and the game's own mute. Opening Music & sound (`arcademusicpanel`) or leaving the tab (`visibilitychange`) pauses the game.
+Sound effects check `ArcadeSound.sfx` and the game's own mute. Visuals can move in time with the soundtrack: `ArcadeSound.beat` is where the music is in its beat (0 on the kick, rising toward 1), or -1 when the game's music isn't playing, so fall back to a gentle free-running pulse (Chopper Cave's 3D edges, crystals and sky grid pulse on the kick). Opening Music & sound (`arcademusicpanel`) or leaving the tab (`visibilitychange`) pauses the game.
 
 ## Controllers
 

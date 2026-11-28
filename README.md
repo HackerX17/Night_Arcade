@@ -19,7 +19,7 @@ Thirteen original neon browser games. They run on phones and computers with noth
 | Skyline Leap | Wall climber: leap between two towers, dodge window hazards and smash drones mid-air. 7 power-ups, and a Christmas version. | [`skyline-leap/`](skyline-leap/) |
 | Sandblade Legion | Crowd runner: steer your army down a neon road through multiplier gates, blast through walls to the big bonus, and charge the horde. Every fight is one for one, so only the bigger army wins. Each level has its own colour scheme. | [`sandblade-legion/`](sandblade-legion/) |
 | Sandblade Siege | Army flood in 3D: a huge horde pours in through portals and charges your gate, with giants on some levels; aim a cannon of riders through multiplier gates and mow it down one for one. Each level wears one of Sandblade's neon colour schemes; a level select shows your stars. | [`sandblade-siege/`](sandblade-siege/) |
-| Chopper Cave | Hold-to-climb cave flyer through a neon tunnel that changes colour every 250 m. Shield, Wide Cave and Slow-Mo power-ups, and portals to Hyperspace, a synthwave bonus world. | [`chopper-cave/`](chopper-cave/) |
+| Chopper Cave | Hold-to-climb cave flyer through a neon tunnel that changes colour every 250 m. Shield, Wide Cave and Slow-Mo power-ups, and portals to Hyperspace, a synthwave bonus world. In 3D, a lightning storm rolls through the cavern behind the tunnel, arcs crackle between the crystals, every new colour zone opens with a thunder strike, and the neon pulses with the beat. | [`chopper-cave/`](chopper-cave/) |
 | Iron Sector | First-person wave-survival shooter with an armory, attachments and air support. Neon night city by default; Settings → Style → Classic brings back the original look. | [`iron-sector/`](iron-sector/) |
 
 ## Original and 3D

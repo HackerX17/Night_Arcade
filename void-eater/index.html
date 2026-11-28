@@ -535,7 +535,7 @@ window.ARCADE_CALM = (() => { try { return matchMedia("(prefers-reduced-motion: 
       prog: [[41, [53, 57, 60, 64]], [40, [52, 55, 59, 62]], [38, [53, 57, 60, 62]], [36, [52, 55, 59, 60]]] }
   };
   let mctx = null, mout, mbus, mduck, mdelay, mverb, mnoise, mstyle = null, mnextStyle = null;
-  let mwant = false, mpaused = false, mmuted = false, mrunning = false, mtimer = 0, mnext = 0, mstep = 0, mbar = 0;
+  let mwant = false, mpaused = false, mmuted = false, mrunning = false, mtimer = 0, mnext = 0, mstep = 0, mbar = 0, mbeats = [];
   function mbuild(c) {                                           // the mixer: drums and a ducking bus for the rest, an echo, a room, a compressor
     mctx = c;
     mout = c.createGain(); mout.gain.value = 0; mout.connect(c.destination);
@@ -649,6 +649,7 @@ window.ARCADE_CALM = (() => { try { return matchMedia("(prefers-reduced-motion: 
     while (mnext < mctx.currentTime + 0.14) {
       const S = STYLES[mstyle], sd = 60 / S.bpm / 4, sw = mstep % 2 ? (S.swing - 0.5) * 2 * sd : 0;
       try { schedStep(mnext + sw, mstep, mbar); } catch (e) { /* one bad note never stops the beat */ }
+      if (mstep % 4 === 0) { mbeats.push(mnext); if (mbeats.length > 8) mbeats.shift(); }   // when each beat sounds, for visuals that pulse in time
       mnext += sd;
       if (++mstep >= 16) { mstep = 0; mbar++; if (mnextStyle) { mstyle = mnextStyle; mnextStyle = null; } }
     }
@@ -657,7 +658,7 @@ window.ARCADE_CALM = (() => { try { return matchMedia("(prefers-reduced-motion: 
   function mapply() {                                            // play exactly when this game wants music, it's on, and nothing stops it
     const run = mwant && !!mstyle && !mpaused && !mmuted && scfg.source === "game" && !document.hidden && !!mctx && mctx.state === "running";
     if (run && !mrunning) {
-      mrunning = true; mnext = mctx.currentTime + 0.06; mstep = 0;
+      mrunning = true; mnext = mctx.currentTime + 0.06; mstep = 0; mbeats = [];
       clearInterval(mtimer); mtimer = setInterval(mtick, 25); mtick();
       mout.gain.cancelScheduledValues(mctx.currentTime); mout.gain.setTargetAtTime(0.7 * scfg.vol, mctx.currentTime, 0.08);
     } else if (!run && mrunning) {
@@ -696,6 +697,9 @@ window.ARCADE_CALM = (() => { try { return matchMedia("(prefers-reduced-motion: 
   renderSound();
   window.ArcadeSound = {
     get sfx() { return scfg.sfx; }, get music() { return scfg.source === "game"; }, get source() { return scfg.source; }, get playing() { return musicPlaying(); },
+    // where the soundtrack is in its beat (0 on the kick, rising to 1 just before the next), or -1 when it isn't playing
+    get beat() { if (!mrunning || !mctx || !mstyle) return -1; const now = mctx.currentTime - (mctx.outputLatency || mctx.baseLatency || 0); let k = -1;
+      for (const b of mbeats) if (b <= now) k = b; return k < 0 ? -1 : ((now - k) * STYLES[mstyle].bpm / 60) % 1; },
     style(name) { if (!STYLES[name]) return; if (mrunning && mstyle && name !== mstyle) mnextStyle = name; else mstyle = name; renderSound(); },
     play() { mwant = true; mensure(); },                      // call from the tap that starts a game
     pause(on) { mpaused = !!on; mapply(); },
