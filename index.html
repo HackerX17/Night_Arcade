@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Night Arcade</title>
-<meta name="description" content="Thirteen free neon browser games: a street racer, a space shooter, a block breaker, runners, flyers and more. Tap a game to play on your phone or computer.">
+<meta name="description" content="Fourteen free neon browser games: a street racer, a glowing reef to grow up in, a space shooter, a block breaker, runners, flyers and more. Tap a game to play on your phone or computer.">
 <meta name="theme-color" content="#0a0420">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Night Arcade">
-<meta property="og:description" content="Thirteen free neon games for your phone or computer: a street racer, a space shooter, a block breaker, runners, flyers and more.">
+<meta property="og:description" content="Fourteen free neon games for your phone or computer: a street racer, a glowing reef to grow up in, a space shooter, a block breaker, runners, flyers and more.">
 <meta property="og:image" content="https://hackerx17.github.io/Night_Arcade/shared/covers/share.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -112,7 +112,7 @@ footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
 <a class="skip" href="#games">Skip to the games</a>
 <main>
   <h1 translate="no">Night Arcade</h1>
-  <p class="lede">13 free games that run right in your browser, on a phone or a computer, with touch, a keyboard or a game controller. Tap one to play. Tip: on a phone, use “Add to Home Screen” to keep your favourite like an app.</p>
+  <p class="lede">14 free games that run right in your browser, on a phone or a computer, with touch, a keyboard or a game controller. Tap one to play. Tip: on a phone, use “Add to Home Screen” to keep your favourite like an app.</p>
   <div class="bar">
     <button class="music" id="musicBtn" type="button" data-am-open><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v10.6A4 4 0 1 0 11 17V7h8V3z"/></svg>Music &amp; sound</button>
     <span>Play your own songs while you game. They stay on your device.</span>
@@ -148,6 +148,13 @@ footer { margin-top: 40px; color: var(--dim); font-size: 14px; }
       <p>Free-roam a neon city at night in eight original cars. Win sprints, circuits, drift battles and speed traps, then run from the police when your heat climbs: roadblocks, spike strips and a helicopter. Beat the Redline Ten one by one to win their cars.</p>
       <span class="how">Drag or tilt your phone to steer, or use a keyboard or controller.</span>
       <a class="play" href="redline-nights/">Play</a>
+    </article>
+    <article class="card" style="--accent:#3dffb0">
+      <img class="shot" src="shared/covers/reef.webp" width="640" height="360" alt="A glowing fish swimming over a neon coral reef in Night Reef, with jellyfish and a seahorse" loading="lazy" decoding="async">
+      <div class="top"><span class="tag">Eat and grow</span><span class="new">New</span></div><h3 translate="no">Night Reef</h3>
+      <p>Start as a tiny fish on a reef that glows like paint under a black light. Eat anything smaller, keep clear of anything bigger, dash in before the puffers puff up, and grow through six sizes to rule all fourteen dives.</p>
+      <span class="how">Swim with your mouse, a finger or a stick. Tap Dash for a burst.</span>
+      <a class="play" href="night-reef/">Play</a>
     </article>
     <article class="card" style="--accent:#b6ff00">
       <img class="shot" src="shared/covers/prism.webp" width="640" height="360" alt="A stream of light breaking numbered blocks in Prism Breaker" loading="lazy" decoding="async">
@@ -244,7 +251,7 @@ addEventListener("arcademusic", (e) => { const b = document.getElementById("musi
 // Graphics for every game: sets the shared choice and clears each game's own, so every game opens in that look
 // (a game's own switch on its title screen still changes just that game afterwards)
 (() => {
-  const IDS = ["redline", "iron", "pulse", "void", "siege", "viper", "glow", "prism", "nova", "chopper", "skyline", "sandblade", "legion"];
+  const IDS = ["reef", "redline", "iron", "pulse", "void", "siege", "viper", "glow", "prism", "nova", "chopper", "skyline", "sandblade", "legion"];
   const get = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const btns = [...document.querySelectorAll(".gfx-hub button")], note = document.getElementById("gfxNote");
   const show = () => {
@@ -673,7 +680,9 @@ window.ARCADE_CALM = (() => { try { return matchMedia("(prefers-reduced-motion: 
     trance:  { label: "Trance", bpm: 138, swing: 0.5, drums: "techno", bass: "offbeat", stab: "pump", lead: "arp",
       prog: [[38, [57, 62, 65, 69]], [46, [58, 62, 65, 70]], [41, [57, 60, 65, 69]], [36, [55, 60, 64, 67]]] },
     chill:   { label: "Chill house", bpm: 102, swing: 0.58, drums: "deep", bass: "deep", stab: "deep", lead: "pluck",
-      prog: [[41, [53, 57, 60, 64]], [40, [52, 55, 59, 62]], [38, [53, 57, 60, 62]], [36, [52, 55, 59, 60]]] }
+      prog: [[41, [53, 57, 60, 64]], [40, [52, 55, 59, 62]], [38, [53, 57, 60, 62]], [36, [52, 55, 59, 60]]] },
+    reef:    { label: "Deep dub", bpm: 112, swing: 0.56, drums: "deep", bass: "deep", stab: "dub", lead: "pluck",
+      prog: [[40, [52, 55, 59, 62, 66]], [36, [52, 55, 59, 64]], [43, [55, 59, 62, 66]], [38, [54, 57, 62, 64]]] }
   };
   let mctx = null, mout, mbus, mduck, mdelay, mverb, mnoise, mstyle = null, mnextStyle = null;
   let mwant = false, mpaused = false, mmuted = false, mrunning = false, mtimer = 0, mnext = 0, mstep = 0, mbar = 0, mbeats = [];

@@ -1,6 +1,6 @@
 # Night Arcade
 
-Thirteen original neon browser games. They run on phones and computers with nothing to install.
+Fourteen original neon browser games. They run on phones and computers with nothing to install.
 
 **Play:** https://hackerx17.github.io/Night_Arcade/
 
@@ -9,6 +9,7 @@ Thirteen original neon browser games. They run on phones and computers with noth
 | Game | What it is | Folder |
 | --- | --- | --- |
 | Redline Nights | Street racer in 3D: free-roam a neon city at night, win sprints, circuits, drift battles and speed traps, run from the police (heat, roadblocks, spike strips, a helicopter) and beat the Redline Ten for their cars. Tilt, touch, keyboard or gamepad. | [`redline-nights/`](redline-nights/) |
+| Night Reef | Eat-and-grow fish game on a reef that glows like paint under a black light: eat anything smaller, avoid anything bigger, dash in before the puffers puff up, and grow through six sizes to become the apex of each of 14 dives (one per colour scheme). Jellies, eels, a lurejaw, rays and the Gloomjaw shark; power-up pearls, Feast streaks, unlockable fish. In 3D every creature is modelled and the reef rolls away into the dark. | [`night-reef/`](night-reef/) |
 | Prism Breaker | Block breaker: aim and fire a stream of light at numbered blocks before they cross the line. Lasers, prisms, bombs, and ball colours to unlock. | [`prism-breaker/`](prism-breaker/) |
 | Void Eater | City swallower in 3D: a tiny void that grows by swallowing everything smaller, from cones to whole buildings. Two-minute battles against three rival voids, or solo. | [`void-eater/`](void-eater/) |
 | Nova Strike | Vertical space shooter: waves of invaders, five gun levels, lasers and homing missiles, and three bosses with three phases each. | [`nova-strike/`](nova-strike/) |
@@ -35,7 +36,7 @@ Every game comes in two looks: the **Original** and a **3D** version. The games 
 
 Every game, and the home page, has a **Music & sound** button. Pick the music you want:
 
-- **Game music**: each game's own soundtrack, synthesised live in the browser (no audio files): house in Sandblade Legion, deep house in Sandblade, electro house in Skyline Leap (Christmas house in its Christmas version), Void Eater and Grid Viper, battle techno in Sandblade Siege, techno in Chopper Cave (electro in Hyperspace) and Glowline, outrun in Redline Nights (battle techno in pursuits) and Pulse Runner, chill house in Prism Breaker, trance in Nova Strike, and Iron Sector's own score. It starts when you start playing, pauses with the game, and has its own volume.
+- **Game music**: each game's own soundtrack, synthesised live in the browser (no audio files): house in Sandblade Legion, deep house in Sandblade, electro house in Skyline Leap (Christmas house in its Christmas version), Void Eater and Grid Viper, battle techno in Sandblade Siege, techno in Chopper Cave (electro in Hyperspace) and Glowline, outrun in Redline Nights (battle techno in pursuits) and Pulse Runner, chill house in Prism Breaker, trance in Nova Strike, deep dub in Night Reef, and Iron Sector's own score. It starts when you start playing, pauses with the game, and has its own volume.
 - **My music**: your own songs or your music app (below).
 - **Off**: no music.
 
